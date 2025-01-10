@@ -301,7 +301,7 @@ def main(args):
     torch.distributed.barrier()
     import pykeops
     import tempfile
-    with tempfile.TemporaryDirectory() as dirname:
+    with tempfile.TemporaryDirectory(dir=cfg.TEMP_DIR) as dirname:
         pykeops.set_build_folder(dirname)
 
         if args.eval_only:
