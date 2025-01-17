@@ -404,18 +404,19 @@ class MRML(nn.Module):
         patches_scale_coords = patches_scale_coords.repeat(B, 1, 1)
         outs = {}
         for l_idx in range(len(self.layers)):
+            out_idx = self.n_scales - l_idx + 1
             x = self.layers[l_idx](x)
-            outs["res{}".format(l_idx + 2)] = x
-            outs["res{}_pos".format(l_idx + 2)] = patches_scale_coords[:, :, 1:]
-            outs["res{}_spatial_shape".format(l_idx + 2)] = min_patched_im_size
+            outs["res{}".format(out_idx)] = x
+            outs["res{}_pos".format(out_idx)] = patches_scale_coords[:, :, 1:]
+            outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx,
                                                                                        patched_im_size, im)
                 PS /= 2
                 patched_im_size *= 2
                 x = self.downsamplers[l_idx](x)
-                outs["metaloss{}".format(l_idx + 2)] = meta_loss
-                outs["metaloss{}_pos".format(l_idx + 2)] = meta_loss_coord
+                outs["metaloss{}".format(out_idx)] = meta_loss
+                outs["metaloss{}_pos".format(out_idx)] = meta_loss_coord
 
         return outs
 
