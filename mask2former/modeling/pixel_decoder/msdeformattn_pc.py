@@ -536,7 +536,7 @@ class MSDeformAttnPixelDecoder(nn.Module):
                 multi_scale_features.append(o)
                 num_cur_levels += 1
         for i, o in enumerate(out):
-            print("Feature map {} from msdeformpoint has shape: {}".format(o.shape))
+            print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
 
 
         return self.mask_features(out[-1]), last_pos, out[0], multi_scale_features, poss[:self.maskformer_num_feature_levels]
