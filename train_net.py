@@ -46,6 +46,7 @@ from detectron2.evaluation import (
 from detectron2.projects.deeplab import add_deeplab_config, build_lr_scheduler
 from detectron2.solver.build import maybe_add_gradient_clipping
 from detectron2.utils.logger import setup_logger
+import wandb
 
 # MaskFormer
 from mask2former import (
@@ -300,10 +301,11 @@ def main(args):
     cfg = setup(args)
     torch.distributed.barrier()
     import pykeops
-    #import tempfile
     dirname = os.getenv('TMPDIR')
-    #with tempfile.TemporaryDirectory(dir=) as dirname:
     pykeops.set_build_folder(dirname)
+    wandb.login()
+    wandb.init(sync_tensorboard=True,
+               settings=wandb.Settings(start_method="thread", console="off"))
 
     if args.eval_only:
         model = Trainer.build_model(cfg)
