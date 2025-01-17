@@ -304,7 +304,7 @@ def main(args):
     dirname = os.getenv('TMPDIR')
     pykeops.set_build_folder(dirname)
     wandb.login()
-    wandb.init(sync_tensorboard=True,
+    wandb.init(sync_tensorboard=True, project="CandidateNet", entity="eiphodos", config=cfg,
                settings=wandb.Settings(start_method="thread", console="off"))
 
     if args.eval_only:
