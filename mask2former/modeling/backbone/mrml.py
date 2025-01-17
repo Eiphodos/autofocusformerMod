@@ -444,7 +444,8 @@ class MixResMetaLoss(MRML, Backbone):
             dropout=drop_rate,
             drop_path_rate=drop_path_rate,
             split_ratio=split_ratio,
-            n_scales=num_scales
+            n_scales=num_scales,
+            channels=in_chans
         )
 
         self._out_features = cfg.MODEL.MRML.OUT_FEATURES
