@@ -417,7 +417,12 @@ class MRML(nn.Module):
                 x = self.downsamplers[l_idx](x)
                 outs["metaloss{}".format(out_idx)] = meta_loss
                 outs["metaloss{}_pos".format(out_idx)] = meta_loss_coord
-
+        for k, v in outs.items():
+            if "spatial_shape" in k:
+                print("AFF Model - Key: {}, Value: {}".format(k, v))
+            else:
+                print("AFF Model -  Key: {}, Value shape: {}, Value min: {}, Value max: {}".format(k, v.shape, v.min(),
+                                                                                                   v.max()))
         return outs
 
 
