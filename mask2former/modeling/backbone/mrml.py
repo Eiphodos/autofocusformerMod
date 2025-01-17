@@ -430,9 +430,10 @@ class MixResMetaLoss(MRML, Backbone):
         drop_path_rate = cfg.MODEL.MRML.DROP_PATH_RATE
         split_ratio = cfg.MODEL.MRML.SPLIT_RATIO
         num_scales = cfg.MODEL.MRML.NUM_SCALES
+        image_size = cfg.INPUT.CROP.SIZE
 
         super().__init__(
-            image_size=input_shape,
+            image_size=image_size,
             patch_size=initial_patch_size,
             n_layers=depths,
             d_model=embed_dim,
