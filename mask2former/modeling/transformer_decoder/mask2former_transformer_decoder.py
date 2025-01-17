@@ -433,6 +433,8 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
 
         # prediction heads on learnable query features
         outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[0])  # b x q x nc, b x q x n, b*h x q x n
+        print("shape of outputs before point2img: {}".format(outputs_mask.shape))
+        print("shape of mf_pos before point2img: {}".format(mf_pos.shape))
         outputs_mask = point2img(outputs_mask, mf_pos)
         predictions_class.append(outputs_class)
         predictions_mask.append(outputs_mask)
