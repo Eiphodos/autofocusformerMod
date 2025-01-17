@@ -535,5 +535,8 @@ class MSDeformAttnPixelDecoder(nn.Module):
             if num_cur_levels < self.maskformer_num_feature_levels:
                 multi_scale_features.append(o)
                 num_cur_levels += 1
+        print("First feature map from msdeformpoint: {}".format(out[0].shape))
+        print("Last feature map from msdeformpoint: {}".format(out[-1].shape))
+
 
         return self.mask_features(out[-1]), last_pos, out[0], multi_scale_features, poss[:self.maskformer_num_feature_levels]
