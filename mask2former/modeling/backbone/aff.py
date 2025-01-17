@@ -678,11 +678,6 @@ class AFF(nn.Module):
                 outs["res{}".format(i_layer + 2)] = x_out
                 outs["res{}_pos".format(i_layer + 2)] = pos_out
                 outs["res{}_spatial_shape".format(i_layer + 2)] = spatial_shape
-        for k,v in outs.items():
-            if "spatial_shape" in k:
-                print("AFF Model - Key: {}, Value: {}".format(k, v))
-            else:
-                print("AFF Model -  Key: {}, Value shape: {}, Value min: {}, Value max: {}".format(k, v.shape, v.min(), v.max()))
         return outs
 
 
