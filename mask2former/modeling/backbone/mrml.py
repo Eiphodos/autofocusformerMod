@@ -254,6 +254,9 @@ class MRML(nn.Module):
         self.n_scales = n_scales
         self.min_patch_size = patch_size // (2 ** (n_scales - 1))
 
+        num_features = d_model
+        self.num_features = num_features
+
         # Pos Embs
         self.pos_embed = nn.Parameter(torch.randn(1, self.patch_embed.num_patches, d_model[0]))
         self.rel_pos_embs = nn.ParameterList(
