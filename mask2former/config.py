@@ -91,6 +91,19 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.AFF.SHEPARD_POWER = 6.0
     cfg.MODEL.AFF.SHEPARD_POWER_LEARNABLE = True
 
+
+    # metaloss backbone
+    cfg.MODEL.MRML = CN()
+    cfg.MODEL.MRML.EMBED_DIM = [32, 128, 256, 384]
+    cfg.MODEL.MRML.DEPTHS = [2, 2, 6, 2]
+    cfg.MODEL.MRML.NUM_HEADS = [3, 6, 12, 24]
+    cfg.MODEL.MRML.PATCH_SIZES = [32, 16, 8, 4]
+    cfg.MODEL.MRML.SPLIT_RATIO = 4
+    cfg.MODEL.MRML.NUM_SCALES = 4
+    cfg.MODEL.MRML.DROP_RATE = 0.0
+    cfg.MODEL.MRML.DROP_PATH_RATE = 0.0
+    cfg.MODEL.MRML.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
+
     # NOTE: maskformer2 extra configs
     # transformer module
     cfg.MODEL.MASK_FORMER.TRANSFORMER_DECODER_NAME = "MultiScaleMaskedTransformerDecoder"
