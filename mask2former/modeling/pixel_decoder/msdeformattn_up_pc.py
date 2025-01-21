@@ -526,7 +526,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             output_conv = self.output_convs[idx]
             cur_fpn = lateral_conv(x)
             print("Upsample curr_fpn shape: {} for {}".format(cur_fpn.shape, f))
-            print("Upsample last pos shape: {} for {}".format(last_pos.shape(), f))
+            print("Upsample last pos shape: {} for {}".format(last_pos.shape, f))
             # Following FPN implementation, we use nearest upsampling here
             last_pos = scale_pos(last_pos, last_ss, spatial_shape, no_bias=True)
             print("Upsample last pos max: {} for {}".format(last_pos.max(), f))
