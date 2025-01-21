@@ -5,4 +5,5 @@ from .backbone.aff import AutoFocusFormer
 from .backbone.mrml import MixResMetaLoss
 
 from .pixel_decoder.msdeformattn_pc import MSDeformAttnPixelDecoder
+from .pixel_decoder.msdeformattn_up_pc import MSDeformAttnPixelDecoderUp
 from .meta_arch.mask_former_head import MaskFormerHead
