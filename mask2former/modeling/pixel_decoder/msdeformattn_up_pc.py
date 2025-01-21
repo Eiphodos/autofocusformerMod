@@ -13,6 +13,7 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn.init import xavier_uniform_, constant_, normal_
 from torch.cuda.amp import autocast
+from einops import rearrange
 
 from detectron2.config import configurable
 from detectron2.layers import ShapeSpec
@@ -525,12 +526,12 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             output_conv = self.output_convs[idx]
             cur_fpn = lateral_conv(x)
             print("Upsample curr_fpn shape: {} for {}".format(cur_fpn.shape, f))
-            print("Upsample before last pos max: {} for {}".format(last_pos.max(), f))
+            print("Upsample last pos shape: {} for {}".format(last_pos.shape(), f))
             # Following FPN implementation, we use nearest upsampling here
             last_pos = scale_pos(last_pos, last_ss, spatial_shape, no_bias=True)
-            print("Upsample after last pos max: {} for {}".format(last_pos.max(), f))
+            print("Upsample last pos max: {} for {}".format(last_pos.max(), f))
             print("Upsample last_ss: {} for {}".format(last_ss, f))
-            print("Upsample pos max: {} for {}".format(last_pos.max(), f))
+            print("Upsample pos shape: {} for {}".format(pos.shape(), f))
             upfeat = upsample_feature_shepard(pos, last_pos, out[-1], custom_kernel=True)
             print("Upsampled feature shape: {} for {}".format(upfeat.shape, f))
             y = cur_fpn + upfeat
@@ -547,5 +548,26 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         for i, o in enumerate(out):
             print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
 
+        ugly_up = []
+        ugly_pos = []
+        for i, o in out[:-1]:
+            print("Feature map shape before repeat {}".format(o.shape))
+            upscale_factor = 4 ** (self.maskformer_num_feature_levels - i)
+            upscale_pos_factor = 2 ** (self.maskformer_num_feature_levels - i)
+            new_feat = o.unsqueeze(3).repeat(1,1,1,upscale_factor)
+            new_feat = rearrange(new_feat, 'b n c k -> b (n k) c')
+            print("Feature map shape after repeat {}".format(new_feat.shape))
+            pos = poss[i]
+            print("Pos map shape before add {}".format(pos.shape))
+            new_pos = torch.stack(torch.meshgrid(torch.arange(0, upscale_pos_factor), torch.arange(0, upscale_pos_factor), indexing='ij')).view(2,-1).permute(1, 0)
+            new_pos = new_pos.to(pos.device)
+            new_pos = pos + new_pos
+            print("Pos map shape before add {}".format(new_pos.shape))
+            ugly_up.append(new_feat)
+            ugly_pos.append(new_pos)
 
-        return self.mask_features(out[-1]), last_pos, out[0], multi_scale_features, poss[:self.maskformer_num_feature_levels]
+        full_high_res_features = torch.cat(ugly_up, dim=1)
+        full_high_res_pos = torch.cat(ugly_pos, dim=1)
+
+
+        return self.mask_features(full_high_res_features), full_high_res_pos, out[0], multi_scale_features, poss[:self.maskformer_num_feature_levels]
