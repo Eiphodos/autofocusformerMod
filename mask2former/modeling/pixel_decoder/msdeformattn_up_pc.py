@@ -515,7 +515,8 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
 
         # append `out` with extra FPN levels
         # Reverse feature maps into top-down order (from low to high resolution) only res2
-        print("last out shape before Upsample: {}".format(out[-1].shape))
+        for i, o in enumerate(out):
+            print("Before Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
         for idx, f in enumerate(self.in_features[:self.num_fpn_levels][::-1]):
             x = features[f].float()
             pos = features[f+"_pos"].float()
