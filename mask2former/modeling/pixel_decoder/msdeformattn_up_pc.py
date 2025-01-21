@@ -550,7 +550,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
 
         ugly_up = []
         ugly_pos = []
-        for i, o in out[:-1]:
+        for i, o in enumerate(out[:-1]):
             print("Feature map shape before repeat {}".format(o.shape))
             upscale_factor = 4 ** (self.maskformer_num_feature_levels - i)
             upscale_pos_factor = 2 ** (self.maskformer_num_feature_levels - i)
