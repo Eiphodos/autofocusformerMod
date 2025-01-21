@@ -561,8 +561,9 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             print("Pos map shape before add {}".format(pos.shape))
             new_pos = torch.stack(torch.meshgrid(torch.arange(0, upscale_pos_factor), torch.arange(0, upscale_pos_factor), indexing='ij')).view(2,-1).permute(1, 0)
             new_pos = new_pos.to(pos.device)
-            new_pos = pos + new_pos
-            print("Pos map shape before add {}".format(new_pos.shape))
+            new_pos = pos.unsqueeze(2) + new_pos.unsqueeze(0).unsqueeze(0)
+            print("Pos map shape after add {}".format(new_pos.shape))
+            new_pos = rearrange(new_pos, 'b n k c -> b (n k) c')
             ugly_up.append(new_feat)
             ugly_pos.append(new_pos)
 
