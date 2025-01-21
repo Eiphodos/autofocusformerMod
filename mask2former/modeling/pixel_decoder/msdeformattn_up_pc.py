@@ -531,7 +531,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             last_pos = scale_pos(last_pos, last_ss, spatial_shape, no_bias=True)
             print("Upsample last pos max: {} for {}".format(last_pos.max(), f))
             print("Upsample last_ss: {} for {}".format(last_ss, f))
-            print("Upsample pos shape: {} for {}".format(pos.shape(), f))
+            print("Upsample pos shape: {} for {}".format(pos.shape, f))
             upfeat = upsample_feature_shepard(pos, last_pos, out[-1], custom_kernel=True)
             print("Upsampled feature shape: {} for {}".format(upfeat.shape, f))
             y = cur_fpn + upfeat
