@@ -395,11 +395,9 @@ class MRML(nn.Module):
     def forward(self, im):
         B, _, H, W = im.shape
         PS = self.patch_size
-        patched_im_size = H // PS
-        min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
         x = self.patch_embed(im)
         x = x + self.pos_embed
-
+        patched_im_size = (H // PS, W // PS)
         patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to('cuda')
         patches_scale_coords = patches_scale_coords.repeat(B, 1, 1)
         outs = {}
@@ -408,12 +406,12 @@ class MRML(nn.Module):
             x = self.layers[l_idx](x)
             outs["res{}".format(out_idx)] = x
             outs["res{}_pos".format(out_idx)] = patches_scale_coords[:, :, 1:]
-            outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
+            outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx,
-                                                                                       patched_im_size, im)
+                                                                                       patched_im_size[0], im)
                 PS /= 2
-                patched_im_size *= 2
+                patched_im_size = (H // PS, W // PS)
                 x = self.downsamplers[l_idx](x)
                 outs["metaloss{}".format(out_idx)] = meta_loss
                 outs["metaloss{}_pos".format(out_idx)] = meta_loss_coord
