@@ -405,8 +405,9 @@ class MaskFormerML(nn.Module):
 
 
     def compute_meta_loss(self, out, tar, im_shape, meta_losses_pred, meta_losses_pos):
-        print("Metaloss tar mask shape: {}".format(tar['masks'].shape))
-        print("Metaloss tar labels shape: {}".format(tar['labels'].shape))
+        print("Metaloss tar len shape: {}".format(len(tar)))
+        print("Metaloss tar mask shape: {}".format(tar[0]['masks'].shape))
+        print("Metaloss tar labels shape: {}".format(tar[0]['labels'].shape))
         out = out.detach()
         mask_cls_results = out["pred_logits"]
         mask_pred_results = out["pred_masks"]
