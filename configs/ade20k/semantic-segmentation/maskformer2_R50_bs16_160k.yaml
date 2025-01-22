@@ -1,4 +1,4 @@
-_BASE_: Base-ADE20K-SemanticSegmentation.yaml
+_BASE_: Base-ADE20K-noMS-SemanticSegmentation.yaml
 MODEL:
   META_ARCHITECTURE: "MaskFormer"
   SEM_SEG_HEAD:
