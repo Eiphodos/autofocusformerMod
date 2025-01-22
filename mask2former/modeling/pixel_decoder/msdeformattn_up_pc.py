@@ -516,8 +516,8 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
 
         # append `out` with extra FPN levels
         # Reverse feature maps into top-down order (from low to high resolution) only res2
-        for i, o in enumerate(out):
-            print("Before Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
+        #for i, o in enumerate(out):
+        #    print("Before Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
         for idx, f in enumerate(self.in_features[:self.num_fpn_levels][::-1]):
             x = features[f].float()
             pos = features[f+"_pos"].float()
@@ -525,15 +525,15 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             lateral_conv = self.lateral_convs[idx]
             output_conv = self.output_convs[idx]
             cur_fpn = lateral_conv(x)
-            print("Upsample curr_fpn shape: {} for {}".format(cur_fpn.shape, f))
-            print("Upsample last pos shape: {} for {}".format(last_pos.shape, f))
+            #print("Upsample curr_fpn shape: {} for {}".format(cur_fpn.shape, f))
+            #print("Upsample last pos shape: {} for {}".format(last_pos.shape, f))
             # Following FPN implementation, we use nearest upsampling here
             last_pos = scale_pos(last_pos, last_ss, spatial_shape, no_bias=True)
-            print("Upsample last pos max: {} for {}".format(last_pos.max(), f))
-            print("Upsample last_ss: {} for {}".format(last_ss, f))
-            print("Upsample pos shape: {} for {}".format(pos.shape, f))
+            #print("Upsample last pos max: {} for {}".format(last_pos.max(), f))
+            #print("Upsample last_ss: {} for {}".format(last_ss, f))
+            #print("Upsample pos shape: {} for {}".format(pos.shape, f))
             upfeat = upsample_feature_shepard(pos, last_pos, out[-1], custom_kernel=True)
-            print("Upsampled feature shape: {} for {}".format(upfeat.shape, f))
+            #print("Upsampled feature shape: {} for {}".format(upfeat.shape, f))
             y = cur_fpn + upfeat
             y = output_conv((y, pos))
             last_pos = pos
@@ -545,24 +545,24 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             if num_cur_levels < self.maskformer_num_feature_levels:
                 multi_scale_features.append(o)
                 num_cur_levels += 1
-        for i, o in enumerate(out):
-            print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
+        #for i, o in enumerate(out):
+        #    print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
 
         ugly_up = []
         ugly_pos = []
         for i, o in enumerate(out[:-1]):
-            print("Feature map shape before repeat {}".format(o.shape))
+            #print("Feature map shape before repeat {}".format(o.shape))
             upscale_factor = 4 ** (self.maskformer_num_feature_levels - i)
             upscale_pos_factor = 2 ** (self.maskformer_num_feature_levels - i)
             new_feat = o.unsqueeze(3).repeat(1,1,1,upscale_factor)
             new_feat = rearrange(new_feat, 'b n c k -> b (n k) c')
-            print("Feature map shape after repeat {}".format(new_feat.shape))
+            #print("Feature map shape after repeat {}".format(new_feat.shape))
             pos = poss[i]
-            print("Pos map shape before add {}".format(pos.shape))
+            #print("Pos map shape before add {}".format(pos.shape))
             new_pos = torch.stack(torch.meshgrid(torch.arange(0, upscale_pos_factor), torch.arange(0, upscale_pos_factor), indexing='ij')).view(2,-1).permute(1, 0)
             new_pos = new_pos.to(pos.device)
             new_pos = pos.unsqueeze(2) + new_pos.unsqueeze(0).unsqueeze(0)
-            print("Pos map shape after add {}".format(new_pos.shape))
+            #print("Pos map shape after add {}".format(new_pos.shape))
             new_pos = rearrange(new_pos, 'b n k c -> b (n k) c')
             ugly_up.append(new_feat)
             ugly_pos.append(new_pos)

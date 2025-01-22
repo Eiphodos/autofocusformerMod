@@ -410,10 +410,10 @@ class MaskFormerML(nn.Module):
 
 
     def compute_meta_loss(self, out, tar, im_shape, meta_losses_pred, meta_losses_pos):
-        print("meta loss pred 0 grad_fn: {}".format(meta_losses_pred[0].grad_fn))
-        print("Metaloss tar len shape: {}".format(len(tar)))
-        print("Metaloss tar mask shape: {}".format(tar[0]['masks'].shape))
-        print("Metaloss tar labels shape: {}".format(tar[0]['labels'].shape))
+        #print("meta loss pred 0 grad_fn: {}".format(meta_losses_pred[0].grad_fn))
+        #print("Metaloss tar len shape: {}".format(len(tar)))
+        #print("Metaloss tar mask shape: {}".format(tar[0]['masks'].shape))
+        #print("Metaloss tar labels shape: {}".format(tar[0]['labels'].shape))
         all_targets = []
         for i in range(len(tar)):
             t_mask = tar[i]['masks'].float()
@@ -421,12 +421,12 @@ class MaskFormerML(nn.Module):
             t_mask_label = torch.einsum("qhw,q->hw", t_mask, t_label)
             all_targets.append(t_mask_label)
         batched_target = torch.stack(all_targets, dim=0).long()
-        print("Metaloss b-target shape: {}".format(batched_target.shape))
-        print("Metaloss b-target max: {}".format(batched_target.max()))
+        #print("Metaloss b-target shape: {}".format(batched_target.shape))
+        #print("Metaloss b-target max: {}".format(batched_target.max()))
         mask_cls_results = out["pred_logits"].detach()
         mask_pred_results = out["pred_masks"].detach()
-        print("Metaloss logit shape: {}".format(mask_cls_results.shape))
-        print("Metaloss mask shape: {}".format(mask_pred_results.shape))
+        #print("Metaloss logit shape: {}".format(mask_cls_results.shape))
+        #print("Metaloss mask shape: {}".format(mask_pred_results.shape))
         # upsample masks
         mask_pred_results = F.interpolate(
             mask_pred_results,
@@ -434,32 +434,32 @@ class MaskFormerML(nn.Module):
             mode="bilinear",
             align_corners=False,
         )
-        print("Metaloss mask shape after interpolate: {}".format(mask_pred_results.shape))
+        #print("Metaloss mask shape after interpolate: {}".format(mask_pred_results.shape))
 
         del out
 
         mask_cls = F.softmax(mask_cls_results, dim=-1)[..., :-1]
         mask_pred = mask_pred_results.sigmoid()
         semseg = torch.einsum("bqc,bqhw->bchw", mask_cls, mask_pred)
-        print("Metaloss semseg shape: {}".format(semseg.shape))
+        #print("Metaloss semseg shape: {}".format(semseg.shape))
         loss = F.cross_entropy(semseg, batched_target, reduction="none")
-        print("Metaloss loss shape: {}".format(loss.shape))
+        #print("Metaloss loss shape: {}".format(loss.shape))
 
         res_meta_losses = []
         i = 0
         for ml, mlp, ps in zip(meta_losses_pred, meta_losses_pos, self.patch_sizes_used):
             patched_target = rearrange(loss, 'b (nph psh) (npw psw) -> b nph npw (psh psw)', psh=ps, psw=ps)
-            print("Metaloss patched target shape: {} for {}".format(patched_target.shape, i))
+            #print("Metaloss patched target shape: {} for {}".format(patched_target.shape, i))
             target = patched_target.mean(dim=3)
             #target = rearrange(target, 'b nph npw -> b (nph npw)')
-            mlp_x = mlp[..., 0] // 2**(len(self.patch_sizes_used) - i - 1)
-            mlp_y = mlp[..., 0] // 2**(len(self.patch_sizes_used) - i - 1)
+            mlp_x = torch.div(mlp[..., 0], 2**(len(self.patch_sizes_used) - i - 1), rounding_mode='trunc')
+            mlp_y = torch.div(mlp[..., 0], 2**(len(self.patch_sizes_used) - i - 1), rounding_mode='trunc')
             b = torch.arange(mlp.shape[0]).unsqueeze(-1).expand(-1, mlp.shape[1])
             filtered_targets = target[b, mlp_x, mlp_y]
             res = self.meta_loss_criterion(ml, filtered_targets)
             res_meta_losses.append(res)
             i += 1
         meta_loss = torch.stack(res_meta_losses).mean()
-        print("meta loss shape: {}".format(meta_loss.shape))
-        print("meta loss grad_fn: {}".format(meta_loss.grad_fn))
+        #print("meta loss shape: {}".format(meta_loss.shape))
+        #print("meta loss grad_fn: {}".format(meta_loss.grad_fn))
         return meta_loss

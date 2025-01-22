@@ -368,8 +368,8 @@ class MRML(nn.Module):
     def add_high_res_features(self, tokens, coords, curr_scale, image):
         patched_im = self.high_res_patchers[curr_scale](image)
         b = torch.arange(coords.shape[0]).unsqueeze(-1).expand(-1, coords.shape[1])
-        x = coords[..., 0] // 2 ** (self.n_scales - curr_scale - 2)
-        y = coords[..., 1] // 2 ** (self.n_scales - curr_scale - 2)
+        x = torch.div(coords[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc')
+        y = torch.div(coords[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc')
         patched_im = patched_im[b, :, x, y]
         tokens = tokens + patched_im
 
@@ -423,12 +423,14 @@ class MRML(nn.Module):
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B)
             outs["res{}".format(out_idx)] = out_scale
             outs["res{}_pos".format(out_idx)] = pos_scale
+        '''
         for k, v in outs.items():
             if "spatial_shape" in k:
                 print("AFF Model - Key: {}, Value: {}".format(k, v))
             else:
                 print("AFF Model -  Key: {}, Value shape: {}, Value min: {}, Value max: {}".format(k, v.shape, v.min(),
-                                                                                                   v.max()))
+                                                                                            v.max()))
+        '''
         return outs
 
 
@@ -463,10 +465,10 @@ class MixResMetaLoss(MRML, Backbone):
         self._out_features = cfg.MODEL.MRML.OUT_FEATURES
 
         self._out_feature_strides = { "res{}".format(i+2): list(reversed(cfg.MODEL.MRML.PATCH_SIZES))[i] for i in range(num_scales)}
-        print("backbone strides: {}".format(self._out_feature_strides))
+        #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
         self._out_feature_channels = {"res{}".format(i + 2): self.num_features[-1] for i in range(num_scales)}
-        print("backbone channels: {}".format(self._out_feature_channels))
+        #print("backbone channels: {}".format(self._out_feature_channels))
 
     def forward(self, x):
         """
