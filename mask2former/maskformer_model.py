@@ -195,6 +195,8 @@ class MaskFormer(nn.Module):
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
 
+        print("Image sizes: {}".format(images.shape))
+
         features = self.backbone(images.tensor)
         outputs = self.sem_seg_head(features)
 
