@@ -64,6 +64,9 @@ def add_maskformer2_config(cfg):
     # you can use this config to override
     cfg.MODEL.MASK_FORMER.SIZE_DIVISIBILITY = 32
 
+    # Only used by MetaLoss version
+    cfg.MODEL.MASK_FORMER.METALOSS_WEIGHT = 5.0
+
     # pixel decoder config
     cfg.MODEL.SEM_SEG_HEAD.MASK_DIM = 256
     # adding transformer in pixel decoder

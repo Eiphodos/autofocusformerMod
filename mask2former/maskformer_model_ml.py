@@ -46,6 +46,8 @@ class MaskFormerML(nn.Module):
         panoptic_on: bool,
         instance_on: bool,
         test_topk_per_image: int,
+        metaloss_weight: float,
+        patch_sizes_used: Tuple[int]
     ):
         """
         Args:
@@ -93,6 +95,9 @@ class MaskFormerML(nn.Module):
         self.panoptic_on = panoptic_on
         self.test_topk_per_image = test_topk_per_image
 
+        self.metaloss_weight = metaloss_weight
+        self.patch_sizes_used = patch_sizes_used
+
         if not self.semantic_on:
             assert self.sem_seg_postprocess_before_inference
 
@@ -109,6 +114,7 @@ class MaskFormerML(nn.Module):
         class_weight = cfg.MODEL.MASK_FORMER.CLASS_WEIGHT
         dice_weight = cfg.MODEL.MASK_FORMER.DICE_WEIGHT
         mask_weight = cfg.MODEL.MASK_FORMER.MASK_WEIGHT
+        metaloss_weight = cfg.MODEL.MASK_FORMER.METALOSS_WEIGHT
 
         # building criterion
         matcher = HungarianMatcher(
@@ -161,6 +167,9 @@ class MaskFormerML(nn.Module):
             "instance_on": cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON,
             "panoptic_on": cfg.MODEL.MASK_FORMER.TEST.PANOPTIC_ON,
             "test_topk_per_image": cfg.TEST.DETECTIONS_PER_IMAGE,
+            "metaloss_weight": metaloss_weight,
+            "patch_sizes_used": cfg.MODEL.MRML.PATCH_SIZES
+
         }
 
     @property
@@ -199,10 +208,10 @@ class MaskFormerML(nn.Module):
 
         features = self.backbone(images.tensor)
         n_metalosses = self.backbone.n_scales - 1
-        metalosses = []
+        metalosses_pred = []
         metalosses_pos = []
         for i in range(n_metalosses):
-            metalosses.append(features['metaloss{}'.format(i)])
+            metalosses_pred.append(features['metaloss{}'.format(i)])
             metalosses_pos.append(features['metaloss{}_pos'.format(i)])
 
         outputs = self.sem_seg_head(features)
@@ -223,6 +232,11 @@ class MaskFormerML(nn.Module):
                 else:
                     # remove this loss if not specified in `weight_dict`
                     losses.pop(k)
+
+            meta_losses = self.compute_meta_loss(outputs, targets,
+                                                 (images.tensor.shape[-2], images.tensor.shape[-1]),
+                                                 metalosses_pred, metalosses_pos)
+            losses['meta_loss'] = meta_losses * self.metaloss_weight
 
             return losses
         else:
@@ -390,11 +404,36 @@ class MaskFormerML(nn.Module):
         return result
 
 
-    def compute_meta_loss(self, loss_target, meta_losses, meta_losses_coords):
+    def compute_meta_loss(self, out, tar, im_shape, meta_losses_pred, meta_losses_pos):
+        print("Metaloss tar shape: {}".format(out.shape))
+        out = out.detach()
+        mask_cls_results = out["pred_logits"]
+        mask_pred_results = out["pred_masks"]
+        print("Metaloss logit shape: {}".format(mask_cls_results.shape))
+        print("Metaloss mask shape: {}".format(mask_pred_results.shape))
+        # upsample masks
+        mask_pred_results = F.interpolate(
+            mask_pred_results,
+            size=(im_shape[0], im_shape[1]),
+            mode="bilinear",
+            align_corners=False,
+        )
+        print("Metaloss mask shape after interpolate: {}".format(mask_pred_results.shape))
+
+        del out
+
+        mask_cls = F.softmax(mask_cls_results, dim=-1)[..., :-1]
+        mask_pred = mask_pred_results.sigmoid()
+        semseg = torch.einsum("bqc,bqhw->bchw", mask_cls, mask_pred)
+        print("Metaloss semseg shape: {}".format(semseg.shape))
+        loss = F.cross_entropy(semseg, tar, reduction="none")
+        print("Metaloss loss shape: {}".format(loss.shape))
+
         res_meta_losses = []
         i = 0
-        for ml, mlp, ps in zip(meta_losses, meta_losses_coords, self.patch_sizes_used):
-            patched_target = rearrange(loss_target, 'b (nph psh) (npw psw) -> b nph npw (psh psw)', psh=ps, psw=ps)
+        for ml, mlp, ps in zip(meta_losses_pred, meta_losses_pos, self.patch_sizes_used):
+            patched_target = rearrange(loss, 'b (nph psh) (npw psw) -> b nph npw (psh psw)', psh=ps, psw=ps)
+            print("Metaloss patched target shape: {} for {}".format(patched_target.shape, i))
             target = patched_target.mean(dim=3)
             #target = rearrange(target, 'b nph npw -> b (nph npw)')
             mlp_x = mlp[..., 0] // 2**(len(self.patch_sizes_used) - i - 1)
