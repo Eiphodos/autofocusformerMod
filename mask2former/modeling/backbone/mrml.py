@@ -404,8 +404,6 @@ class MRML(nn.Module):
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
             x = self.layers[l_idx](x)
-            outs["res{}".format(out_idx)] = x
-            outs["res{}_pos".format(out_idx)] = patches_scale_coords[:, :, 1:]
             outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx,
@@ -415,6 +413,16 @@ class MRML(nn.Module):
                 x = self.downsamplers[l_idx](x)
                 outs["metaloss{}".format(out_idx)] = meta_loss
                 outs["metaloss{}_pos".format(out_idx)] = meta_loss_coord
+
+        for s in range(self.n_scales):
+            out_idx = self.n_scales - s + 1
+            b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:,:,0] == s)
+            pos_scale = patches_scale_coords[b_scale_idx, n_scale_idx, 1:]
+            pos_scale = rearrange(pos_scale, '(b n) p -> b n p', b=B)
+            out_scale = x[b_scale_idx, n_scale_idx, :]
+            out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B)
+            outs["res{}".format(out_idx)] = out_scale
+            outs["res{}_pos".format(out_idx)] = pos_scale
         for k, v in outs.items():
             if "spatial_shape" in k:
                 print("AFF Model - Key: {}, Value: {}".format(k, v))
