@@ -555,7 +555,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             upscale_factor = 4 ** (self.maskformer_num_feature_levels - i)
             upscale_pos_factor = 2 ** (self.maskformer_num_feature_levels - i)
             new_feat = o.unsqueeze(3).repeat(1,1,1,upscale_factor)
-            new_feat = rearrange(new_feat, 'b n c k -> b (n k) c')
+            new_feat = rearrange(new_feat, 'b n c k -> b (n k) c').contiguous()
             #print("Feature map shape after repeat {}".format(new_feat.shape))
             pos = poss[i]
             #print("Pos map shape before add {}".format(pos.shape))
@@ -563,7 +563,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             new_pos = new_pos.to(pos.device)
             new_pos = pos.unsqueeze(2) + new_pos.unsqueeze(0).unsqueeze(0)
             #print("Pos map shape after add {}".format(new_pos.shape))
-            new_pos = rearrange(new_pos, 'b n k c -> b (n k) c')
+            new_pos = rearrange(new_pos, 'b n k c -> b (n k) c').contiguous()
             ugly_up.append(new_feat)
             ugly_pos.append(new_pos)
         ugly_up.append(out[-1])

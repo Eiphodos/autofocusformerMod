@@ -341,9 +341,9 @@ class MRML(nn.Module):
 
     def split_tokens(self, tokens_to_split, curr_scale):
         x_splitted = self.splits[curr_scale](tokens_to_split)
-        x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio)
+        x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
         x_splitted = x_splitted + self.rel_pos_embs[curr_scale] + self.scale_embs[curr_scale]
-        x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio)
+        x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
     def split_coords(self, coords_to_split, patch_size, curr_scale):
@@ -356,7 +356,7 @@ class MRML(nn.Module):
         d = torch.stack([coords_to_split[:, :, 1] + new_coord_ratio, coords_to_split[:, :, 2] + new_coord_ratio], dim=2)
 
         new_coords_2dim = torch.stack([a, b, c, d], dim=2)
-        new_coords_2dim = rearrange(new_coords_2dim, 'b n s c -> b (n s) c', s=self.split_ratio, c=2)
+        new_coords_2dim = rearrange(new_coords_2dim, 'b n s c -> b (n s) c', s=self.split_ratio, c=2).contiguous()
 
         scale_lvl = torch.tensor([new_scale] * new_coords_2dim.shape[1])
         scale_lvl = scale_lvl.repeat(batch_size, 1)
@@ -418,9 +418,9 @@ class MRML(nn.Module):
             out_idx = self.n_scales - s + 1
             b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:,:,0] == s)
             pos_scale = patches_scale_coords[b_scale_idx, n_scale_idx, 1:]
-            pos_scale = rearrange(pos_scale, '(b n) p -> b n p', b=B)
+            pos_scale = rearrange(pos_scale, '(b n) p -> b n p', b=B).contiguous()
             out_scale = x[b_scale_idx, n_scale_idx, :]
-            out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B)
+            out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = out_scale
             outs["res{}_pos".format(out_idx)] = pos_scale
         '''

@@ -240,9 +240,6 @@ class MaskFormerML(nn.Module):
                                                  metalosses_pred, metalosses_pos)
             losses['meta_loss'] = meta_losses * self.metaloss_weight
 
-            for k, v in losses.items():
-                print("For {} loss is {}".format(k, v))
-
             return losses
         else:
             mask_cls_results = outputs["pred_logits"]
@@ -448,7 +445,7 @@ class MaskFormerML(nn.Module):
         res_meta_losses = []
         i = 0
         for ml, mlp, ps in zip(meta_losses_pred, meta_losses_pos, self.patch_sizes_used):
-            patched_target = rearrange(loss, 'b (nph psh) (npw psw) -> b nph npw (psh psw)', psh=ps, psw=ps)
+            patched_target = rearrange(loss, 'b (nph psh) (npw psw) -> b nph npw (psh psw)', psh=ps, psw=ps).contiguous()
             #print("Metaloss patched target shape: {} for {}".format(patched_target.shape, i))
             target = patched_target.mean(dim=3)
             #target = rearrange(target, 'b nph npw -> b (nph npw)')
