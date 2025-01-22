@@ -240,6 +240,9 @@ class MaskFormerML(nn.Module):
                                                  metalosses_pred, metalosses_pos)
             losses['meta_loss'] = meta_losses * self.metaloss_weight
 
+            for k, v in losses.items():
+                print("For {} loss is {}".format(k, v))
+
             return losses
         else:
             mask_cls_results = outputs["pred_logits"]
@@ -407,6 +410,7 @@ class MaskFormerML(nn.Module):
 
 
     def compute_meta_loss(self, out, tar, im_shape, meta_losses_pred, meta_losses_pos):
+        print("meta loss pred 0 grad_fn: {}".format(meta_losses_pred[0].grad_fn))
         print("Metaloss tar len shape: {}".format(len(tar)))
         print("Metaloss tar mask shape: {}".format(tar[0]['masks'].shape))
         print("Metaloss tar labels shape: {}".format(tar[0]['labels'].shape))
@@ -456,4 +460,6 @@ class MaskFormerML(nn.Module):
             res_meta_losses.append(res)
             i += 1
         meta_loss = torch.stack(res_meta_losses).mean()
+        print("meta loss shape: {}".format(meta_loss.shape))
+        print("meta loss grad_fn: {}".format(meta_loss.grad_fn))
         return meta_loss
