@@ -566,6 +566,8 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             new_pos = rearrange(new_pos, 'b n k c -> b (n k) c')
             ugly_up.append(new_feat)
             ugly_pos.append(new_pos)
+        ugly_up.append(out[-1])
+        ugly_pos.append(last_pos)
 
         full_high_res_features = torch.cat(ugly_up, dim=1)
         full_high_res_pos = torch.cat(ugly_pos, dim=1)
