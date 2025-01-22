@@ -408,6 +408,11 @@ class MaskFormerML(nn.Module):
         print("Metaloss tar len shape: {}".format(len(tar)))
         print("Metaloss tar mask shape: {}".format(tar[0]['masks'].shape))
         print("Metaloss tar labels shape: {}".format(tar[0]['labels'].shape))
+        tar_masks = torch.stack([t['masks'] for t in tar], dim=0)
+        tar_labels = torch.stack([t['masks'] for t in tar], dim=0)
+        batched_target = torch.einsum("bqhw,bq->bhw", tar_masks, tar_labels)
+        print("Metaloss b-target shape: {}".format(batched_target.shape))
+        print("Metaloss b-target max: {}".format(batched_target.max()))
         mask_cls_results = out["pred_logits"].detach()
         mask_pred_results = out["pred_masks"].detach()
         print("Metaloss logit shape: {}".format(mask_cls_results.shape))
@@ -427,7 +432,7 @@ class MaskFormerML(nn.Module):
         mask_pred = mask_pred_results.sigmoid()
         semseg = torch.einsum("bqc,bqhw->bchw", mask_cls, mask_pred)
         print("Metaloss semseg shape: {}".format(semseg.shape))
-        loss = F.cross_entropy(semseg, tar, reduction="none")
+        loss = F.cross_entropy(semseg, batched_target, reduction="none")
         print("Metaloss loss shape: {}".format(loss.shape))
 
         res_meta_losses = []
