@@ -408,9 +408,13 @@ class MaskFormerML(nn.Module):
         print("Metaloss tar len shape: {}".format(len(tar)))
         print("Metaloss tar mask shape: {}".format(tar[0]['masks'].shape))
         print("Metaloss tar labels shape: {}".format(tar[0]['labels'].shape))
-        tar_masks = torch.stack([t['masks'] for t in tar], dim=0)
-        tar_labels = torch.stack([t['masks'] for t in tar], dim=0)
-        batched_target = torch.einsum("bqhw,bq->bhw", tar_masks, tar_labels)
+        all_targets = []
+        for i in range(len(tar)):
+            t_mask = tar[i]['masks']
+            t_label = tar[i]['labels']
+            t_mask_label = torch.einsum("qhw,q->hw", t_mask, t_label)
+            all_targets.append(t_mask_label)
+        batched_target = torch.stack(all_targets, dim=0)
         print("Metaloss b-target shape: {}".format(batched_target.shape))
         print("Metaloss b-target max: {}".format(batched_target.max()))
         mask_cls_results = out["pred_logits"].detach()
