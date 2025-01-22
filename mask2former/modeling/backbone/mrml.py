@@ -270,11 +270,11 @@ class MRML(nn.Module):
         )
 
         # Downsamplers
-        self.downsamplers = nn.ModuleList([nn.Linear(d_model[i], d_model[i + 1]) for i in range(len(n_layers) - 1)])
+        self.downsamplers = nn.ModuleList([nn.Linear(d_model[i], d_model[i + 1]) for i in range(n_scales - 1)])
 
         # Split layers
         self.splits = nn.ModuleList(
-            [nn.Linear(d_model[i], d_model[i] * self.split_ratio) for i in range(len(n_scales) - 1)]
+            [nn.Linear(d_model[i], d_model[i] * self.split_ratio) for i in range(n_scales - 1)]
         )
 
         # Metaloss predictions
@@ -282,7 +282,7 @@ class MRML(nn.Module):
             nn.Linear(d_model[i], d_model[i]),
             nn.LeakyReLU(),
             nn.LayerNorm(d_model[i]),
-            nn.Linear(d_model[i], 1)) for i in range(len(n_layers) - 1)])
+            nn.Linear(d_model[i], 1)) for i in range(n_scales - 1)])
 
         self.high_res_patchers = nn.ModuleList(
             [nn.Conv2d(channels, d_model[i - 1], kernel_size=patch_size // (2 ** i), stride=patch_size // (2 ** i)) for
