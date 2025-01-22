@@ -134,7 +134,7 @@ class DownSampleConvBlock(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.conv = nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1)
-        self.instance_norm = nn.InstanceNorm2d(out_dim, affine=True)
+        #self.instance_norm = nn.InstanceNorm2d(out_dim, affine=True)
         self.relu = nn.LeakyReLU()
 
     def forward(self, x):
@@ -274,7 +274,7 @@ class MRML(nn.Module):
 
         # Split layers
         self.splits = nn.ModuleList(
-            [nn.Linear(d_model[i], d_model[i] * self.split_ratio) for i in range(len(n_layers))]
+            [nn.Linear(d_model[i], d_model[i] * self.split_ratio) for i in range(len(n_scales) - 1)]
         )
 
         # Metaloss predictions
@@ -282,7 +282,7 @@ class MRML(nn.Module):
             nn.Linear(d_model[i], d_model[i]),
             nn.LeakyReLU(),
             nn.LayerNorm(d_model[i]),
-            nn.Linear(d_model[i], 1)) for i in range(len(n_layers))])
+            nn.Linear(d_model[i], 1)) for i in range(len(n_layers) - 1)])
 
         self.high_res_patchers = nn.ModuleList(
             [nn.Conv2d(channels, d_model[i - 1], kernel_size=patch_size // (2 ** i), stride=patch_size // (2 ** i)) for
