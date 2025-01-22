@@ -411,8 +411,8 @@ class MRML(nn.Module):
                 PS /= 2
                 patched_im_size = (H // PS, W // PS)
                 x = self.downsamplers[l_idx](x)
-                outs["metaloss{}".format(out_idx)] = meta_loss
-                outs["metaloss{}_pos".format(out_idx)] = meta_loss_coord
+                outs["metaloss{}".format(l_idx)] = meta_loss
+                outs["metaloss{}_pos".format(l_idx)] = meta_loss_coord
 
         for s in range(self.n_scales):
             out_idx = self.n_scales - s + 1
