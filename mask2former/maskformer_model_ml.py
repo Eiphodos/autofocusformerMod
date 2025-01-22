@@ -97,6 +97,8 @@ class MaskFormerML(nn.Module):
 
         self.metaloss_weight = metaloss_weight
         self.patch_sizes_used = patch_sizes_used
+        self.meta_loss_criterion = nn.L1Loss()
+
 
         if not self.semantic_on:
             assert self.sem_seg_postprocess_before_inference
