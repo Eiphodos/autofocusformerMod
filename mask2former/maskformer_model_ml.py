@@ -408,9 +408,8 @@ class MaskFormerML(nn.Module):
         print("Metaloss tar len shape: {}".format(len(tar)))
         print("Metaloss tar mask shape: {}".format(tar[0]['masks'].shape))
         print("Metaloss tar labels shape: {}".format(tar[0]['labels'].shape))
-        out = out.detach()
-        mask_cls_results = out["pred_logits"]
-        mask_pred_results = out["pred_masks"]
+        mask_cls_results = out["pred_logits"].detach()
+        mask_pred_results = out["pred_masks"].detach()
         print("Metaloss logit shape: {}".format(mask_cls_results.shape))
         print("Metaloss mask shape: {}".format(mask_pred_results.shape))
         # upsample masks
