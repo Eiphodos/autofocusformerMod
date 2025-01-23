@@ -208,7 +208,8 @@ class MaskFormerML(nn.Module):
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
 
-        print("Image sizes: {}".format(images.shape))
+        for j, i in enumerate(images):
+            print("Image {} size: {}".format(j, i.shape))
 
         features = self.backbone(images.tensor)
         n_metalosses = self.backbone.n_scales - 1
