@@ -291,7 +291,7 @@ class MRML(nn.Module):
              i in
              range(1, len(n_layers))])
 
-        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+        #nn.init.trunc_normal_(self.pos_embed, std=0.02)
         self.pre_logits = nn.Identity()
 
         self.apply(init_weights)
