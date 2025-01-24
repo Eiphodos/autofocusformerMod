@@ -344,7 +344,7 @@ class MRML(nn.Module):
     def split_tokens(self, tokens_to_split, curr_scale):
         x_splitted = self.splits[curr_scale](tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = x_splitted + self.scale_embs[curr_scale + 1] # + self.rel_pos_embs[curr_scale]
+        #x_splitted = x_splitted + self.scale_embs[curr_scale] # + self.rel_pos_embs[curr_scale]
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
@@ -415,7 +415,7 @@ class MRML(nn.Module):
                 patched_im_size = (H // PS, W // PS)
                 x = self.downsamplers[l_idx](x)
                 pos_embed = self.pe_layers[l_idx + 1](patches_scale_coords[:,:,1:])
-                x = x + pos_embed
+                x = x + pos_embed + self.scale_embs[l_idx + 1]
                 outs["metaloss{}".format(l_idx)] = meta_loss
                 outs["metaloss{}_pos".format(l_idx)] = meta_loss_coord
 
