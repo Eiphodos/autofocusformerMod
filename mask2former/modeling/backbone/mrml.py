@@ -6,6 +6,7 @@ https://github.com/rwightman/pytorch-image-models
 import torch
 import torch.nn as nn
 from einops import rearrange
+from ..transformer_decoder.position_encoding import PositionEmbeddingSine
 
 from detectron2.modeling import BACKBONE_REGISTRY, Backbone, ShapeSpec
 
@@ -258,9 +259,10 @@ class MRML(nn.Module):
         self.num_features = num_features
 
         # Pos Embs
-        self.pos_embed = nn.Parameter(torch.randn(1, self.patch_embed.num_patches, d_model[0]))
+        #self.pos_embed = nn.Parameter(torch.randn(1, self.patch_embed.num_patches, d_model[0]))
         self.rel_pos_embs = nn.ParameterList(
             [nn.Parameter(torch.randn(1, self.split_ratio, d_model[i])) for i in range(n_scales - 1)])
+        self.pe_layer = PositionEmbeddingSine(d_model[0] // 2, normalize=True)
         self.scale_embs = nn.ParameterList([nn.Parameter(torch.randn(1, 1, d_model[i])) for i in range(n_scales - 1)])
 
         # transformer layers
@@ -289,7 +291,7 @@ class MRML(nn.Module):
              i in
              range(1, len(n_layers))])
 
-        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+        #nn.init.trunc_normal_(self.pos_embed, std=0.02)
         self.pre_logits = nn.Identity()
 
         self.apply(init_weights)
@@ -396,10 +398,11 @@ class MRML(nn.Module):
         B, _, H, W = im.shape
         PS = self.patch_size
         x = self.patch_embed(im)
-        x = x + self.pos_embed
         patched_im_size = (H // PS, W // PS)
         patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to('cuda')
         patches_scale_coords = patches_scale_coords.repeat(B, 1, 1)
+        pos_embed = self.pe_layer(patches_scale_coords[:,:,1:])
+        x = x + pos_embed
         outs = {}
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
