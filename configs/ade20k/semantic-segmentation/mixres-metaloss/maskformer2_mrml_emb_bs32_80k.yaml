@@ -4,7 +4,7 @@ MODEL:
     NAME: "MixResMetaLoss"
   MRML:
     EMBED_DIM: [768,512,256,128]
-    DEPTHS: [4, 2, 2, 8]
+    DEPTHS: [4, 2, 2, 6]
     NUM_HEADS: [64, 32, 16, 8]
     PATCH_SIZES: [32, 16, 8, 4]
     DROP_RATE: 0.0
