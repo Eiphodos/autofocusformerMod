@@ -102,6 +102,7 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MRML.NUM_HEADS = [3, 6, 12, 24]
     cfg.MODEL.MRML.PATCH_SIZES = [32, 16, 8, 4]
     cfg.MODEL.MRML.SPLIT_RATIO = 4
+    cfg.MODEL.MRML.UPSCALE_RATIO = 0.25
     cfg.MODEL.MRML.NUM_SCALES = 4
     cfg.MODEL.MRML.DROP_RATE = 0.0
     cfg.MODEL.MRML.DROP_PATH_RATE = 0.0

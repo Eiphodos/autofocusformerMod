@@ -3,14 +3,15 @@ MODEL:
   BACKBONE:
     NAME: "MixResMetaLoss"
   MRML:
-    EMBED_DIM: [256,128,128,64]
-    DEPTHS: [12, 4, 4, 12]
-    NUM_HEADS: [16, 8, 8, 4]
+    EMBED_DIM: [256,128,128,128]
+    DEPTHS: [8, 2, 2, 8]
+    NUM_HEADS: [16, 8, 8, 8]
     PATCH_SIZES: [16, 8, 4, 2]
     DROP_RATE: 0.0
     DROP_PATH_RATE: 0.0
     SPLIT_RATIO: 4
     NUM_SCALES: 4
+    UPSCALE_RATIO: 0.25
   WEIGHTS: "mrml_mini.pkl"
   PIXEL_MEAN: [123.675, 116.280, 103.530]
   PIXEL_STD: [58.395, 57.120, 57.375]

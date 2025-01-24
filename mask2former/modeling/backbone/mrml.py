@@ -236,7 +236,8 @@ class MRML(nn.Module):
             drop_path_rate=0.0,
             channels=1,
             split_ratio=4,
-            n_scales=2
+            n_scales=2,
+            upscale_ratio=0.25
     ):
         super().__init__()
         self.patch_embed = OverlapPatchEmbedding(
@@ -253,6 +254,7 @@ class MRML(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.split_ratio = split_ratio
         self.n_scales = n_scales
+        self.upscale_ratio = upscale_ratio
         self.min_patch_size = patch_size // (2 ** (n_scales - 1))
 
         num_features = d_model
@@ -304,7 +306,7 @@ class MRML(nn.Module):
         _load_weights(self, checkpoint_path, prefix)
 
     def divide_tokens_to_split_and_keep(self, tokens_at_curr_scale, patches_scale_coords_curr_scale, curr_scale):
-        k_split = tokens_at_curr_scale.shape[1] // self.split_ratio
+        k_split = tokens_at_curr_scale.shape[1] * self.upscale_ratio
         k_keep = tokens_at_curr_scale.shape[1] - k_split
         pred_meta_loss = self.metalosses[curr_scale](tokens_at_curr_scale.detach()).squeeze(2)
         tkv, tki = torch.topk(pred_meta_loss, k=k_split, dim=1, sorted=False)
@@ -407,6 +409,7 @@ class MRML(nn.Module):
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
             x = self.layers[l_idx](x)
+            outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx,
                                                                                        patched_im_size[0], im)
@@ -425,7 +428,7 @@ class MRML(nn.Module):
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = out_scale
             outs["res{}_pos".format(out_idx)] = pos_scale
-            outs["res{}_spatial_shape".format(out_idx)] = org_patched_im_size
+            #outs["res{}_spatial_shape".format(out_idx)] = org_patched_im_size
         '''
         for k, v in outs.items():
             if "spatial_shape" in k:
@@ -451,6 +454,7 @@ class MixResMetaLoss(MRML, Backbone):
         split_ratio = cfg.MODEL.MRML.SPLIT_RATIO
         num_scales = cfg.MODEL.MRML.NUM_SCALES
         image_size = cfg.INPUT.CROP.SIZE
+        upscale_ratio = cfg.MODEL.MRML.UPSCALE_RATIO
 
         super().__init__(
             image_size=image_size,
@@ -462,7 +466,8 @@ class MixResMetaLoss(MRML, Backbone):
             drop_path_rate=drop_path_rate,
             split_ratio=split_ratio,
             n_scales=num_scales,
-            channels=in_chans
+            channels=in_chans,
+            upscale_ratio=upscale_ratio
         )
 
         self._out_features = cfg.MODEL.MRML.OUT_FEATURES
