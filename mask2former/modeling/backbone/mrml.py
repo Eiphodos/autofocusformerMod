@@ -398,6 +398,7 @@ class MRML(nn.Module):
         PS = self.patch_size
         x = self.patch_embed(im)
         patched_im_size = (H // PS, W // PS)
+        org_patched_im_size = patched_im_size
         patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to('cuda')
         patches_scale_coords = patches_scale_coords.repeat(B, 1, 1)
         pos_embed = self.pe_layer(patches_scale_coords[:,:,1:])
@@ -406,7 +407,6 @@ class MRML(nn.Module):
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
             x = self.layers[l_idx](x)
-            outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx,
                                                                                        patched_im_size[0], im)
@@ -425,6 +425,7 @@ class MRML(nn.Module):
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = out_scale
             outs["res{}_pos".format(out_idx)] = pos_scale
+            outs["res{}_spatial_shape".format(out_idx)] = org_patched_im_size
         '''
         for k, v in outs.items():
             if "spatial_shape" in k:
