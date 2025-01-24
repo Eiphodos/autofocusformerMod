@@ -262,7 +262,7 @@ class MRML(nn.Module):
         self.rel_pos_embs = nn.ParameterList(
             [nn.Parameter(torch.randn(1, self.split_ratio, d_model[i])) for i in range(n_scales - 1)])
         self.pe_layer = PositionEmbeddingSine(d_model[0] // 2, normalize=True)
-        self.scale_embs = nn.ParameterList([nn.Parameter(torch.randn(1, 1, d_model[i])) for i in range(n_scales)])
+        self.scale_embs = nn.ParameterList([nn.Parameter(torch.randn(1, 1, d_model[i])) for i in range(n_scales - 1)])
 
         # transformer layers
         self.layers = nn.ModuleList(
@@ -343,7 +343,7 @@ class MRML(nn.Module):
     def split_tokens(self, tokens_to_split, curr_scale):
         x_splitted = self.splits[curr_scale](tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = x_splitted + self.scale_embs[curr_scale + 1] + self.rel_pos_embs[curr_scale]
+        x_splitted = x_splitted + self.scale_embs[curr_scale] + self.rel_pos_embs[curr_scale]
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
@@ -402,7 +402,7 @@ class MRML(nn.Module):
         patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to('cuda')
         patches_scale_coords = patches_scale_coords.repeat(B, 1, 1)
         pos_embed = self.pe_layer(patches_scale_coords[:,:,1:])
-        x = x + pos_embed + self.scale_embs[0]
+        x = x + pos_embed
         outs = {}
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
