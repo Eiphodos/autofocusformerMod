@@ -3,9 +3,9 @@ MODEL:
   BACKBONE:
     NAME: "MixResMetaLoss"
   MRML:
-    EMBED_DIM: [1024,512,512,256]
+    EMBED_DIM: [768,512,256,128]
     DEPTHS: [4, 2, 2, 8]
-    NUM_HEADS: [64, 32, 32, 16]
+    NUM_HEADS: [64, 32, 16, 8]
     PATCH_SIZES: [32, 16, 8, 4]
     DROP_RATE: 0.0
     DROP_PATH_RATE: 0.0
