@@ -307,7 +307,7 @@ class MRML(nn.Module):
     def divide_tokens_to_split_and_keep(self, tokens_at_curr_scale, patches_scale_coords_curr_scale, curr_scale):
         k_split = tokens_at_curr_scale.shape[1] // self.split_ratio
         k_keep = tokens_at_curr_scale.shape[1] - k_split
-        pred_meta_loss = self.metalosses[curr_scale](tokens_at_curr_scale).squeeze(2)
+        pred_meta_loss = self.metalosses[curr_scale](tokens_at_curr_scale.detach()).squeeze(2)
         tkv, tki = torch.topk(pred_meta_loss, k=k_split, dim=1, sorted=False)
         bkv, bki = torch.topk(pred_meta_loss, k=k_keep, dim=1, sorted=False, largest=False)
 
