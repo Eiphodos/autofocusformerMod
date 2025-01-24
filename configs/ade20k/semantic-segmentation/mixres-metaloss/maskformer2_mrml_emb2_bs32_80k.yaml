@@ -5,8 +5,8 @@ MODEL:
   MRML:
     EMBED_DIM: [256,256,256,256]
     DEPTHS: [10, 2, 2, 10]
-    NUM_HEADS: [64, 32, 32, 16]
-    PATCH_SIZES: [32, 32, 32, 32]
+    NUM_HEADS: [32, 32, 32, 32]
+    PATCH_SIZES: [32, 16, 8, 4]
     DROP_RATE: 0.0
     DROP_PATH_RATE: 0.0
     SPLIT_RATIO: 4
