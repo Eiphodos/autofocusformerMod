@@ -323,22 +323,18 @@ class MRML(nn.Module):
         return tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep, pred_meta_loss
 
     def divide_tokens_coords_on_scale(self, tokens, patches_scale_coords, curr_scale):
-        indx_curr_scale = patches_scale_coords[:, :, 0] == curr_scale
-        indx_old_scales = patches_scale_coords[:, :, 0] != curr_scale
-        curr_coords = []
-        old_coords = []
-        curr_tokens = []
-        old_tokens = []
-        for b in range(patches_scale_coords.shape[0]):
-            curr_coords.append(patches_scale_coords[b, indx_curr_scale[b]])
-            old_coords.append(patches_scale_coords[b, indx_old_scales[b]])
-            curr_tokens.append(tokens[b, indx_curr_scale[b], :])
-            old_tokens.append(tokens[b, indx_old_scales[b], :])
+        B, _, _ = tokens.shape
+        b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:, :, 0] == curr_scale)
+        coords_at_curr_scale = patches_scale_coords[b_scale_idx, n_scale_idx, :]
+        coords_at_curr_scale = rearrange(coords_at_curr_scale, '(b n) p -> b n p', b=B).contiguous()
+        tokens_at_curr_scale = tokens[b_scale_idx, n_scale_idx, :]
+        tokens_at_curr_scale = rearrange(tokens_at_curr_scale, '(b n) c -> b n c', b=B).contiguous()
 
-        coords_at_curr_scale = torch.stack(curr_coords, dim=0)
-        coords_at_older_scales = torch.stack(old_coords, dim=0)
-        tokens_at_curr_scale = torch.stack(curr_tokens, dim=0)
-        tokens_at_older_scale = torch.stack(old_tokens, dim=0)
+        b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:, :, 0] != curr_scale)
+        coords_at_older_scales = patches_scale_coords[b_scale_idx, n_scale_idx, :]
+        coords_at_older_scales = rearrange(coords_at_older_scales, '(b n) p -> b n p', b=B).contiguous()
+        tokens_at_older_scale = tokens[b_scale_idx, n_scale_idx, :]
+        tokens_at_older_scale = rearrange(tokens_at_older_scale, '(b n) c -> b n c', b=B).contiguous()
 
         return tokens_at_curr_scale, coords_at_curr_scale, tokens_at_older_scale, coords_at_older_scales
 
@@ -368,7 +364,7 @@ class MRML(nn.Module):
 
         return patches_scale_coords
 
-    def add_high_res_features(self, tokens, coords, curr_scale, image):
+    def add_high_res_feat(self, tokens, coords, curr_scale, image):
         patched_im = self.high_res_patchers[curr_scale](image)
         b = torch.arange(coords.shape[0]).unsqueeze(-1).expand(-1, coords.shape[1])
         x = torch.div(coords[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc')
@@ -387,8 +383,7 @@ class MRML(nn.Module):
         tokens_after_split = self.split_tokens(tokens_to_split, curr_scale)
         coords_after_split = self.split_coords(coords_to_split, patch_size, curr_scale)
 
-        tokens_after_split = self.add_high_res_features(tokens_after_split, coords_after_split[:, :, 1:], curr_scale,
-                                                        im)
+        tokens_after_split = self.add_high_res_feat(tokens_after_split, coords_after_split[:, :, 1:], curr_scale, im)
 
         all_tokens = torch.cat([tokens_at_older_scale, tokens_to_keep, tokens_after_split], dim=1)
         all_coords = torch.cat([coords_at_older_scales, coords_to_keep, coords_after_split], dim=1)
