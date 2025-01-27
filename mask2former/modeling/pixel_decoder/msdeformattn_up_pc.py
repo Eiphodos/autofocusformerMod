@@ -483,6 +483,13 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         Args
             features - a dictionary of a list of point clouds with their features, positions and canvas sizes
         """
+        for f in self.in_features:
+            print("Feature shape for {}: {}".format(f, features[f].shape))
+            print("Pos shape for {}: {}".format(f, features[f+ "_pos"].shape))
+            print("Pos min for {}: {}".format(f, features[f + "_pos"].min()))
+            print("Pos max for {}: {}".format(f, features[f + "_pos"].max()))
+            print("Spatial shape for {}: {}".format(f, features[f + '_spatial_shape']))
+
         srcs = []
         poss = []
         pos_embed = []
