@@ -483,13 +483,6 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         Args
             features - a dictionary of a list of point clouds with their features, positions and canvas sizes
         """
-        for f in self.in_features:
-            print("Feature shape for {}: {}".format(f, features[f].shape))
-            print("Pos shape for {}: {}".format(f, features[f+ "_pos"].shape))
-            print("Pos min for {}: {}".format(f, features[f + "_pos"].min()))
-            print("Pos max for {}: {}".format(f, features[f + "_pos"].max()))
-            print("Spatial shape for {}: {}".format(f, features[f + '_spatial_shape']))
-
         srcs = []
         poss = []
         pos_embed = []
@@ -554,7 +547,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
                 num_cur_levels += 1
         #for i, o in enumerate(out):
         #    print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
-        '''
+
         ugly_up = []
         ugly_pos = []
         for i, o in enumerate(out[:-1]):
@@ -576,13 +569,13 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         ugly_up.append(out[-1])
         ugly_pos.append(last_pos)
 
-        full_high_res_features = torch.cat(ugly_up, dim=1)
-        full_high_res_pos = torch.cat(ugly_pos, dim=1)
+        full_features = torch.cat(ugly_up, dim=1)
+        full_pos = torch.cat(ugly_pos, dim=1)
         '''
         all_features = torch.cat(out, dim=1)
         all_pos = torch.cat(poss + [last_pos], dim=1)
         full_pos = torch.stack(torch.meshgrid(torch.arange(0, spatial_shape[0]), torch.arange(0, spatial_shape[1]), indexing='ij')).view(2,-1).permute(1, 0)
         full_pos = full_pos.to(pos.device).repeat(b, 1, 1)
         full_features = upsample_feature_shepard(full_pos, all_pos, all_features, custom_kernel=True)
-
+        '''
         return self.mask_features(full_features), full_pos, out[0], multi_scale_features, poss[:self.maskformer_num_feature_levels]
