@@ -1,4 +1,4 @@
-_BASE_: ../maskformer2_R50_bs16_160k.yaml
+_BASE_: ../maskformer2_act_R50_bs16_160k.yaml
 MODEL:
   BACKBONE:
     NAME: "MixResMeanAct"
