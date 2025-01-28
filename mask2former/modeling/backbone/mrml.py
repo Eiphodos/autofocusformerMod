@@ -261,8 +261,8 @@ class MRML(nn.Module):
         self.num_features = num_features
 
         # Pos Embs
-        self.rel_pos_embs = nn.ParameterList(
-            [nn.Parameter(torch.randn(1, self.split_ratio, d_model[i])) for i in range(n_scales - 1)])
+        #self.rel_pos_embs = nn.ParameterList(
+        #    [nn.Parameter(torch.randn(1, self.split_ratio, d_model[i])) for i in range(n_scales - 1)])
         self.pe_layer = PositionEmbeddingSine(d_model[0] // 2, normalize=True)
         self.scale_embs = nn.ParameterList([nn.Parameter(torch.randn(1, 1, d_model[i])) for i in range(n_scales - 1)])
 
@@ -341,7 +341,7 @@ class MRML(nn.Module):
     def split_tokens(self, tokens_to_split, curr_scale):
         x_splitted = self.splits[curr_scale](tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = x_splitted + self.scale_embs[curr_scale] + self.rel_pos_embs[curr_scale]
+        x_splitted = x_splitted + self.scale_embs[curr_scale]# + self.rel_pos_embs[curr_scale]
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
