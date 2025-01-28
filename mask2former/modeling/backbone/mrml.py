@@ -467,7 +467,9 @@ class MixResMetaLoss(MRML, Backbone):
 
         self._out_features = cfg.MODEL.MRML.OUT_FEATURES
 
-        self._out_feature_strides = { "res{}".format(i+2): list(reversed(cfg.MODEL.MRML.PATCH_SIZES))[i] for i in range(num_scales)}
+        #self._out_feature_strides = { "res{}".format(i+2): list(reversed(cfg.MODEL.MRML.PATCH_SIZES))[i] for i in range(num_scales)}
+        self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in
+                                     range(num_scales)}
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
         self._out_feature_channels = {"res{}".format(i + 2): self.num_features[-1] for i in range(num_scales)}
