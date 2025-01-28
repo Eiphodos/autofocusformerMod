@@ -264,7 +264,7 @@ class MRML(nn.Module):
         self.rel_pos_embs = nn.ParameterList(
             [nn.Parameter(torch.randn(1, self.split_ratio, d_model[i])) for i in range(n_scales - 1)])
         self.pe_layer = PositionEmbeddingSine(d_model[0] // 2, normalize=True)
-        #self.scale_embs = nn.ParameterList([nn.Parameter(torch.randn(1, 1, d_model[i])) for i in range(n_scales - 1)])
+        self.scale_embs = nn.ParameterList([nn.Parameter(torch.randn(1, 1, d_model[i])) for i in range(n_scales - 1)])
 
         # transformer layers
         self.layers = nn.ModuleList(
@@ -286,12 +286,12 @@ class MRML(nn.Module):
             nn.LeakyReLU(),
             nn.LayerNorm(d_model[i]),
             nn.Linear(d_model[i], 1)) for i in range(n_scales - 1)])
-
+        '''
         self.high_res_patchers = nn.ModuleList(
             [nn.Conv2d(channels, d_model[i - 1], kernel_size=patch_size // (2 ** i), stride=patch_size // (2 ** i)) for
              i in
              range(1, len(n_layers))])
-
+        '''
         #nn.init.trunc_normal_(self.pos_embed, std=0.02)
         self.pre_logits = nn.Identity()
 
@@ -341,7 +341,7 @@ class MRML(nn.Module):
     def split_tokens(self, tokens_to_split, curr_scale):
         x_splitted = self.splits[curr_scale](tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = x_splitted + self.rel_pos_embs[curr_scale] #+ self.scale_embs[curr_scale]
+        x_splitted = x_splitted + self.rel_pos_embs[curr_scale] + self.scale_embs[curr_scale]
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
@@ -383,7 +383,7 @@ class MRML(nn.Module):
         tokens_after_split = self.split_tokens(tokens_to_split, curr_scale)
         coords_after_split = self.split_coords(coords_to_split, patch_size, curr_scale)
 
-        tokens_after_split = self.add_high_res_feat(tokens_after_split, coords_after_split[:, :, 1:], curr_scale, im)
+        #tokens_after_split = self.add_high_res_feat(tokens_after_split, coords_after_split[:, :, 1:], curr_scale, im)
 
         all_tokens = torch.cat([tokens_at_older_scale, tokens_to_keep, tokens_after_split], dim=1)
         all_coords = torch.cat([coords_at_older_scales, coords_to_keep, coords_after_split], dim=1)
