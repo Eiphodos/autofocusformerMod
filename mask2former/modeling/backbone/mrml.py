@@ -404,7 +404,7 @@ class MRML(nn.Module):
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
             x = self.layers[l_idx](x)
-            #outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
+            outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx,
                                                                                        patched_im_size[0], im)
@@ -422,8 +422,8 @@ class MRML(nn.Module):
             out_scale = x[b_scale_idx, n_scale_idx, :]
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = out_scale
-            outs["res{}_pos".format(out_idx)] = pos_scale
-            outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
+            outs["res{}_pos".format(out_idx)] = torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
+            #outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
         '''
         for k, v in outs.items():
             if "spatial_shape" in k:
@@ -467,9 +467,8 @@ class MixResMetaLoss(MRML, Backbone):
 
         self._out_features = cfg.MODEL.MRML.OUT_FEATURES
 
-        #self._out_feature_strides = { "res{}".format(i+2): list(reversed(cfg.MODEL.MRML.PATCH_SIZES))[i] for i in range(num_scales)}
-        self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in
-                                     range(num_scales)}
+        self._out_feature_strides = { "res{}".format(i+2): list(reversed(cfg.MODEL.MRML.PATCH_SIZES))[i] for i in range(num_scales)}
+        #self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in range(num_scales)}
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
         self._out_feature_channels = {"res{}".format(i + 2): self.num_features[-1] for i in range(num_scales)}

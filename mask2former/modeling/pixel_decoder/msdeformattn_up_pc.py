@@ -547,7 +547,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             last_ss = spatial_shape
             out.append(y)
         for i, o in enumerate(out):
-            print("Affter Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
+            print("After Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
         num_cur_levels = 0
         for o in out:
             if num_cur_levels < self.maskformer_num_feature_levels:
