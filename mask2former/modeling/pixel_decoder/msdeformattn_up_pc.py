@@ -483,13 +483,14 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         Args
             features - a dictionary of a list of point clouds with their features, positions and canvas sizes
         """
+        '''
         for f in self.in_features:
             print("Feature shape for {}: {}".format(f, features[f].shape))
             print("Pos shape for {}: {}".format(f, features[f+ "_pos"].shape))
             print("Pos min for {}: {}".format(f, features[f + "_pos"].min()))
             print("Pos max for {}: {}".format(f, features[f + "_pos"].max()))
             print("Spatial shape for {}: {}".format(f, features[f + '_spatial_shape']))
-
+        '''
         srcs = []
         poss = []
         pos_embed = []
@@ -523,8 +524,8 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
 
         # append `out` with extra FPN levels
         # Reverse feature maps into top-down order (from low to high resolution) only res2
-        for i, o in enumerate(out):
-            print("Before Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
+        #for i, o in enumerate(out):
+        #    print("Before Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
         for idx, f in enumerate(self.in_features[:self.num_fpn_levels][::-1]):
             x = features[f].float()
             pos = features[f+"_pos"].float()
@@ -546,8 +547,8 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             last_pos = pos
             last_ss = spatial_shape
             out.append(y)
-        for i, o in enumerate(out):
-            print("After Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
+        #for i, o in enumerate(out):
+        #    print("After Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
         num_cur_levels = 0
         for o in out:
             if num_cur_levels < self.maskformer_num_feature_levels:
