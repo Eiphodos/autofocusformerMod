@@ -261,10 +261,10 @@ class MRML(nn.Module):
         self.num_features = num_features
 
         # Pos Embs
-        #self.rel_pos_embs = nn.ParameterList(
-        #    [nn.Parameter(torch.randn(1, self.split_ratio, d_model[i])) for i in range(n_scales - 1)])
+        self.rel_pos_embs = nn.ParameterList(
+            [nn.Parameter(torch.randn(1, self.split_ratio, d_model[i])) for i in range(n_scales - 1)])
         self.pe_layer = PositionEmbeddingSine(d_model[0] // 2, normalize=True)
-        self.scale_embs = nn.ParameterList([nn.Parameter(torch.randn(1, 1, d_model[i])) for i in range(n_scales - 1)])
+        #self.scale_embs = nn.ParameterList([nn.Parameter(torch.randn(1, 1, d_model[i])) for i in range(n_scales - 1)])
 
         # transformer layers
         self.layers = nn.ModuleList(
