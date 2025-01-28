@@ -341,7 +341,7 @@ class MRML(nn.Module):
     def split_tokens(self, tokens_to_split, curr_scale):
         x_splitted = self.splits[curr_scale](tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = x_splitted + self.scale_embs[curr_scale]# + self.rel_pos_embs[curr_scale]
+        x_splitted = x_splitted + self.rel_pos_embs[curr_scale] #+ self.scale_embs[curr_scale]
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
