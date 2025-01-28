@@ -383,7 +383,7 @@ class MRML(nn.Module):
         tokens_after_split = self.split_tokens(tokens_to_split, curr_scale)
         coords_after_split = self.split_coords(coords_to_split, patch_size, curr_scale)
 
-        #tokens_after_split = self.add_high_res_feat(tokens_after_split, coords_after_split[:, :, 1:], curr_scale, im)
+        tokens_after_split = self.add_high_res_feat(tokens_after_split, coords_after_split[:, :, 1:], curr_scale, im)
 
         all_tokens = torch.cat([tokens_at_older_scale, tokens_to_keep, tokens_after_split], dim=1)
         all_coords = torch.cat([coords_at_older_scales, coords_to_keep, coords_after_split], dim=1)
