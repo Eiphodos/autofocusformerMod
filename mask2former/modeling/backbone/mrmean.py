@@ -90,7 +90,7 @@ class Attention(nn.Module):
     def unwrapped(self):
         return self
 
-    def forward(self, x, mask=None):
+    def forward(self, x):
         B, N, C = x.shape
         qkv = (
             self.qkv(x)
@@ -123,8 +123,8 @@ class Block(nn.Module):
         self.mlp = FeedForward(dim, mlp_dim, dropout)
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
-    def forward(self, x, mask=None, return_attention=False):
-        y, attn = self.attn(self.norm1(x), mask)
+    def forward(self, x, return_attention=False):
+        y, attn = self.attn(self.norm1(x))
         if return_attention:
             return attn
         x = x + self.drop_path(y)
@@ -153,6 +153,8 @@ def init_weights(m):
     elif isinstance(m, nn.LayerNorm):
         nn.init.constant_(m.bias, 0)
         nn.init.constant_(m.weight, 1.0)
+    elif isinstance(m, nn.Parameter):
+        nn.init.trunc_normal_(m, std=0.02)
 
 class PatchEmbedding(nn.Module):
     def __init__(self, image_size, patch_size, embed_dim, channels):
@@ -334,7 +336,7 @@ class MRMean(nn.Module):
     def split_tokens(self, tokens_to_split, curr_scale):
         x_splitted = self.splits[curr_scale](tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = x_splitted + self.scale_embs[curr_scale] + self.rel_pos_embs[curr_scale]
+        x_splitted = x_splitted + self.rel_pos_embs[curr_scale] + self.scale_embs[curr_scale]
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
@@ -352,7 +354,7 @@ class MRMean(nn.Module):
 
         scale_lvl = torch.tensor([new_scale] * new_coords_2dim.shape[1])
         scale_lvl = scale_lvl.repeat(batch_size, 1)
-        scale_lvl = scale_lvl.to('cuda').int().unsqueeze(2)
+        scale_lvl = scale_lvl.to(coords_to_split.device).int().unsqueeze(2)
         patches_scale_coords = torch.cat([scale_lvl, new_coords_2dim], dim=2)
 
         return patches_scale_coords
@@ -396,7 +398,7 @@ class MRMean(nn.Module):
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
             x = self.layers[l_idx](x)
-            #outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
+            outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords = self.split_input(x, patches_scale_coords, l_idx, patched_im_size[0], im)
                 PS /= 2
@@ -411,8 +413,8 @@ class MRMean(nn.Module):
             out_scale = x[b_scale_idx, n_scale_idx, :]
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = out_scale
-            outs["res{}_pos".format(out_idx)] = pos_scale
-            outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
+            outs["res{}_pos".format(out_idx)] = torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
+            #outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
         '''
         for k, v in outs.items():
             if "spatial_shape" in k:
