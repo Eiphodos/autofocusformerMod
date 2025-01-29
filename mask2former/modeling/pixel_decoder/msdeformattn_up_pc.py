@@ -490,7 +490,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             print("Pos max for {}: {}".format(f, features[f + "_pos"].max()))
             print("Spatial shape for {}: {}".format(f, features[f + '_spatial_shape']))
         '''
-        max_res_pos = []
+        scaled_poss = []
         srcs = []
         poss = []
         pos_embed = []
@@ -507,14 +507,13 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         for idx, f in enumerate(self.transformer_in_features[::-1]):
             x = features[f].float()  # deformable detr does not support half precision
             pos = features[f+"_pos"].float()
-            max_res_pos.append(pos)
-            pos = torch.div(pos, 2 ** (len(self.in_features) - idx - 1), rounding_mode='trunc')
             spatial_shape = features[f+"_spatial_shape"]
             srcs.append(self.input_proj[idx](x))
             poss.append(pos)
             pos_embed.append(self.pe_layer(pos))
             spatial_shapes.append(spatial_shape)
             scaled_pos = scale_pos(pos, spatial_shape, grid_hw, no_bias=True)
+            scaled_poss.append(scaled_pos)
             nb_idx.append(knn_keops(grid_pos, scaled_pos, 4))
         last_pos = poss[-1]
         last_ss = spatial_shapes[-1]
@@ -584,7 +583,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         full_pos = torch.cat(ugly_pos, dim=1)
         '''
         all_features = torch.cat(out, dim=1)
-        all_pos = torch.cat(poss + [last_pos], dim=1)
+        all_pos = torch.cat(scaled_poss + [last_pos], dim=1)
         full_pos = torch.stack(torch.meshgrid(torch.arange(0, spatial_shape[0]), torch.arange(0, spatial_shape[1]), indexing='ij')).view(2,-1).permute(1, 0)
         full_pos = full_pos.to(pos.device).repeat(b, 1, 1)
         full_features = upsample_feature_shepard(full_pos, all_pos, all_features, custom_kernel=True)
