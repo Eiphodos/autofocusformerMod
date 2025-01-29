@@ -507,12 +507,16 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         for idx, f in enumerate(self.transformer_in_features[::-1]):
             x = features[f].float()  # deformable detr does not support half precision
             pos = features[f+"_pos"].float()
+            print("Pos min for {}: {}".format(f, pos.min()))
+            print("Pos max for {}: {}".format(f, pos.max()))
             spatial_shape = features[f+"_spatial_shape"]
             srcs.append(self.input_proj[idx](x))
             poss.append(pos)
             pos_embed.append(self.pe_layer(pos))
             spatial_shapes.append(spatial_shape)
             scaled_pos = scale_pos(pos, spatial_shape, grid_hw, no_bias=True)
+            print("Scaled Pos min for {}: {}".format(f, scaled_pos.min()))
+            print("Scaled Pos max for {}: {}".format(f, scaled_pos.max()))
             scaled_poss.append(scaled_pos)
             nb_idx.append(knn_keops(grid_pos, scaled_pos, 4))
         last_pos = poss[-1]
@@ -546,6 +550,8 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             y = cur_fpn + upfeat
             y = output_conv((y, pos))
             last_pos = pos
+            print("Pos min for {}: {}".format(f, last_pos.min()))
+            print("Pos max for {}: {}".format(f, last_pos.max()))
             last_ss = spatial_shape
             out.append(y)
         #for i, o in enumerate(out):
