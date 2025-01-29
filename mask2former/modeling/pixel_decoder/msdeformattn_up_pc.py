@@ -547,31 +547,6 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
                 num_cur_levels += 1
         #for i, o in enumerate(out):
         #    print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
-        '''
-        ugly_up = []
-        ugly_pos = []
-        for i, o in enumerate(out[:-1]):
-            #print("Feature map shape before repeat {}".format(o.shape))
-            upscale_factor = 4 ** (self.maskformer_num_feature_levels - i)
-            upscale_pos_factor = 2 ** (self.maskformer_num_feature_levels - i)
-            new_feat = o.unsqueeze(3).repeat(1,1,1,upscale_factor)
-            new_feat = rearrange(new_feat, 'b n c k -> b (n k) c').contiguous()
-            #print("Feature map shape after repeat {}".format(new_feat.shape))
-            pos = poss[i]
-            #print("Pos map shape before add {}".format(pos.shape))
-            new_pos = torch.stack(torch.meshgrid(torch.arange(0, upscale_pos_factor), torch.arange(0, upscale_pos_factor), indexing='ij')).view(2,-1).permute(1, 0)
-            new_pos = new_pos.to(pos.device)
-            new_pos = pos.unsqueeze(2) + new_pos.unsqueeze(0).unsqueeze(0)
-            #print("Pos map shape after add {}".format(new_pos.shape))
-            new_pos = rearrange(new_pos, 'b n k c -> b (n k) c').contiguous()
-            ugly_up.append(new_feat)
-            ugly_pos.append(new_pos)
-        ugly_up.append(out[-1])
-        ugly_pos.append(last_pos)
-
-        full_features = torch.cat(ugly_up, dim=1)
-        full_pos = torch.cat(ugly_pos, dim=1)
-        '''
         all_features = torch.cat(out, dim=1)
         all_pos = torch.cat(poss + [last_pos], dim=1)
         full_pos = torch.stack(torch.meshgrid(torch.arange(0, spatial_shape[0]), torch.arange(0, spatial_shape[1]), indexing='ij')).view(2,-1).permute(1, 0)

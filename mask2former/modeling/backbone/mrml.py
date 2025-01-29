@@ -90,7 +90,7 @@ class Attention(nn.Module):
     def unwrapped(self):
         return self
 
-    def forward(self, x, mask=None):
+    def forward(self, x):
         B, N, C = x.shape
         qkv = (
             self.qkv(x)
@@ -123,8 +123,8 @@ class Block(nn.Module):
         self.mlp = FeedForward(dim, mlp_dim, dropout)
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
-    def forward(self, x, mask=None, return_attention=False):
-        y, attn = self.attn(self.norm1(x), mask)
+    def forward(self, x, return_attention=False):
+        y, attn = self.attn(self.norm1(x))
         if return_attention:
             return attn
         x = x + self.drop_path(y)
@@ -153,6 +153,8 @@ def init_weights(m):
     elif isinstance(m, nn.LayerNorm):
         nn.init.constant_(m.bias, 0)
         nn.init.constant_(m.weight, 1.0)
+    elif isinstance(m, nn.Parameter):
+        nn.init.trunc_normal_(m, std=0.02)
 
 class PatchEmbedding(nn.Module):
     def __init__(self, image_size, patch_size, embed_dim, channels):
@@ -359,7 +361,7 @@ class MRML(nn.Module):
 
         scale_lvl = torch.tensor([new_scale] * new_coords_2dim.shape[1])
         scale_lvl = scale_lvl.repeat(batch_size, 1)
-        scale_lvl = scale_lvl.to('cuda').int().unsqueeze(2)
+        scale_lvl = scale_lvl.to(coords_to_split.device).int().unsqueeze(2)
         patches_scale_coords = torch.cat([scale_lvl, new_coords_2dim], dim=2)
 
         return patches_scale_coords
@@ -396,7 +398,7 @@ class MRML(nn.Module):
         x = self.patch_embed(im)
         patched_im_size = (H // PS, W // PS)
         org_patched_im_size = patched_im_size
-        patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to('cuda')
+        patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to(im.device)
         patches_scale_coords = patches_scale_coords.repeat(B, 1, 1)
         pos_embed = self.pe_layer(patches_scale_coords[:,:,1:])
         x = x + pos_embed
