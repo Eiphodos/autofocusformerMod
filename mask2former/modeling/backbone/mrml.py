@@ -422,7 +422,7 @@ class MRML(nn.Module):
             out_scale = x[b_scale_idx, n_scale_idx, :]
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = out_scale
-            outs["res{}_pos".format(out_idx)] = torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
+            outs["res{}_pos".format(out_idx)] = pos_scale
             #outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
         '''
         for k, v in outs.items():

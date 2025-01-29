@@ -370,7 +370,6 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         transformer_input_shape = {
             k: v for k, v in input_shape.items() if k in transformer_in_features
         }
-
         # this is the input shape of pixel decoder
         input_shape = sorted(input_shape.items(), key=lambda x: x[1].stride)
         self.in_features = [k for k, v in input_shape]  # starting from "res2" to "res5"
@@ -491,6 +490,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             print("Pos max for {}: {}".format(f, features[f + "_pos"].max()))
             print("Spatial shape for {}: {}".format(f, features[f + '_spatial_shape']))
         '''
+        max_res_pos = []
         srcs = []
         poss = []
         pos_embed = []
@@ -507,6 +507,8 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         for idx, f in enumerate(self.transformer_in_features[::-1]):
             x = features[f].float()  # deformable detr does not support half precision
             pos = features[f+"_pos"].float()
+            max_res_pos.append(pos)
+            pos = torch.div(pos, 2 ** (len(self.in_features) - idx - 1), rounding_mode='trunc')
             spatial_shape = features[f+"_spatial_shape"]
             srcs.append(self.input_proj[idx](x))
             poss.append(pos)
