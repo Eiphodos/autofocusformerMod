@@ -7,8 +7,8 @@ MODEL:
     DEPTHS: [8, 2, 2, 8]
     NUM_HEADS: [64, 32, 16, 8]
     PATCH_SIZES: [32, 16, 8, 4]
-    DROP_RATE: 0.0
-    DROP_PATH_RATE: 0.0
+    DROP_RATE: 0.1
+    DROP_PATH_RATE: 0.3
     SPLIT_RATIO: 4
     NUM_SCALES: 4
     UPSCALE_RATIO: 0.25

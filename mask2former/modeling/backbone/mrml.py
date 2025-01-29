@@ -284,13 +284,10 @@ class MRML(nn.Module):
 
         # Metaloss predictions
         self.metalosses = nn.ModuleList([nn.Sequential(
-            nn.Linear(d_model[i], d_model[i] // 2),
+            nn.Linear(d_model[i], d_model[i]),
             nn.LeakyReLU(),
-            nn.LayerNorm(d_model[i] // 2),
-            nn.Linear(d_model[i] // 2, d_model[i] // 4),
-            nn.LeakyReLU(),
-            nn.LayerNorm(d_model[i] // 4),
-            nn.Linear(d_model[i] // 4, 1)) for i in range(n_scales - 1)])
+            nn.LayerNorm(d_model[i]),
+            nn.Linear(d_model[i], 1)) for i in range(n_scales - 1)])
 
         self.high_res_patchers = nn.ModuleList(
             [nn.Conv2d(channels, d_model[i - 1], kernel_size=patch_size // (2 ** i), stride=patch_size // (2 ** i)) for
