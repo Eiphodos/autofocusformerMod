@@ -343,7 +343,7 @@ class MRML(nn.Module):
     def split_tokens(self, tokens_to_split, curr_scale):
         x_splitted = self.splits[curr_scale](tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = x_splitted + self.scale_embs[curr_scale] + self.rel_pos_embs[curr_scale]
+        x_splitted = x_splitted + self.rel_pos_embs[curr_scale] + self.scale_embs[curr_scale]
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
@@ -397,8 +397,8 @@ class MRML(nn.Module):
         PS = self.patch_size
         x = self.patch_embed(im)
         patched_im_size = (H // PS, W // PS)
-        org_patched_im_size = patched_im_size
-        patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to(im.device)
+        min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
+        patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to('cuda')
         patches_scale_coords = patches_scale_coords.repeat(B, 1, 1)
         pos_embed = self.pe_layer(patches_scale_coords[:,:,1:])
         x = x + pos_embed
@@ -424,8 +424,8 @@ class MRML(nn.Module):
             out_scale = x[b_scale_idx, n_scale_idx, :]
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = out_scale
-            outs["res{}_pos".format(out_idx)] = pos_scale
-            #outs["res{}_spatial_shape".format(out_idx)] = org_patched_im_size
+            outs["res{}_pos".format(out_idx)] = torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
+            #outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
         '''
         for k, v in outs.items():
             if "spatial_shape" in k:
@@ -470,6 +470,7 @@ class MixResMetaLoss(MRML, Backbone):
         self._out_features = cfg.MODEL.MRML.OUT_FEATURES
 
         self._out_feature_strides = { "res{}".format(i+2): list(reversed(cfg.MODEL.MRML.PATCH_SIZES))[i] for i in range(num_scales)}
+        #self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in range(num_scales)}
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
         self._out_feature_channels = {"res{}".format(i + 2): self.num_features[-1] for i in range(num_scales)}
