@@ -539,7 +539,7 @@ class MSDeformAttnPixelDecoder(nn.Module):
             last_pos = pos
             last_ss = spatial_shape
             out.append(y)
-            print("Out feature {} with extra FPN levels shape".format(f, y.shape))
+            print("Out feature {} with extra FPN levels shape: {}".format(f, y.shape))
 
         num_cur_levels = 0
         for o in out:
