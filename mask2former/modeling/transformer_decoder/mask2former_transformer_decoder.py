@@ -487,7 +487,7 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         outputs_class = self.class_embed(decoder_output)  # b x q x nc
         mask_embed = self.mask_embed(decoder_output)  # b x q x c
         outputs_mask = mask_embed @ mask_features.permute(0, 2, 1)  # b x q x n
-
+        print("Mask output shape before upsampling: {}".format(outputs_mask.shape))
         # NOTE: prediction is of higher-resolution
         # [B, Q, H, W] -> [B, Q, H*W] -> [B, h, Q, H*W] -> [B*h, Q, HW]
         # attn_mask = F.interpolate(outputs_mask, size=attn_mask_target_size, mode="bilinear", align_corners=False)
@@ -496,7 +496,7 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         attn_mask = upsample_feature_shepard(target_pos, mf_pos, outputs_mask.permute(0, 2, 1)).permute(0, 2, 1)  # b x q x n
         attn_mask = (attn_mask.sigmoid().unsqueeze(1).repeat(1, self.num_heads, 1, 1).flatten(0, 1) < 0.5).bool()  # b*h x q x n
         attn_mask = attn_mask.detach()
-
+        print("Final Attn Mask output shape: {}".format(attn_mask.shape))
         return outputs_class, outputs_mask, attn_mask
 
     @torch.jit.unused
