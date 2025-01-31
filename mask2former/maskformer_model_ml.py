@@ -449,8 +449,8 @@ class MaskFormerML(nn.Module):
             #print("Metaloss patched target shape: {} for {}".format(patched_target.shape, i))
             target = patched_target.mean(dim=3)
             #target = rearrange(target, 'b nph npw -> b (nph npw)')
-            mlp_x = torch.div(mlp[..., 0], 2**(len(self.patch_sizes_used) - i - 1), rounding_mode='trunc')
-            mlp_y = torch.div(mlp[..., 0], 2**(len(self.patch_sizes_used) - i - 1), rounding_mode='trunc')
+            mlp_x = torch.div(mlp[..., 0], 2**(len(self.patch_sizes_used) - i - 1), rounding_mode='trunc').long()
+            mlp_y = torch.div(mlp[..., 0], 2**(len(self.patch_sizes_used) - i - 1), rounding_mode='trunc').long()
             b = torch.arange(mlp.shape[0]).unsqueeze(-1).expand(-1, mlp.shape[1])
             filtered_targets = target[b, mlp_x, mlp_y]
             res = self.meta_loss_criterion(ml, filtered_targets)
