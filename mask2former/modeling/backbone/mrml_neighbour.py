@@ -470,7 +470,7 @@ class BasicLayer(nn.Module):
                        cluster_mask=cluster_mask,
                        pe_idx=pe_idx,
                        global_attn=global_attn)
-        pos = torch.cat([pos, pos_scale], dim=2)
+        pos = torch.cat([pos_scale, pos], dim=2)
         return pos, feat
 
     def extra_repr(self) -> str:
