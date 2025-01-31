@@ -103,10 +103,14 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MRML.PATCH_SIZES = [32, 16, 8, 4]
     cfg.MODEL.MRML.SPLIT_RATIO = 4
     cfg.MODEL.MRML.UPSCALE_RATIO = 0.25
+    cfg.MODEL.MRML.MLP_RATIO = 4.0
     cfg.MODEL.MRML.NUM_SCALES = 4
     cfg.MODEL.MRML.DROP_RATE = 0.0
     cfg.MODEL.MRML.DROP_PATH_RATE = 0.0
+    cfg.MODEL.MRML.ATTN_DROP_RATE = 0.0
     cfg.MODEL.MRML.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
+    cfg.MODEL.MRML.CLUSTER_SIZE = 8
+    cfg.MODEL.MRML.NBHD_SIZE = [48, 48, 48, 48]
 
     # NOTE: maskformer2 extra configs
     # transformer module

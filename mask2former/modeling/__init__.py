@@ -3,6 +3,7 @@
 
 from .backbone.aff import AutoFocusFormer
 from .backbone.mrml import MixResMetaLoss
+from .backbone.mrml_neighbour import MixResMetaLossNeighbour
 from .backbone.mrmean import MixResMeanAct
 
 from .pixel_decoder.msdeformattn_pc import MSDeformAttnPixelDecoder
