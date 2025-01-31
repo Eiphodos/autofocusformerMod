@@ -687,14 +687,14 @@ class MRMLNB(nn.Module):
             out_idx = self.n_scales - l_idx + 1
             patches_scale_coords, x = self.layers[l_idx](patches_scale_coords, x, h=min_patched_im_size[0],
                                                          w=min_patched_im_size[1], on_grid=l_idx == 0)
-            print("Feature shape after layer {}: {}".format(x.shape))
-            print("Pos shape after layer {}: {}".format(patches_scale_coords.shape))
+            print("Feature shape after layer {}: {}".format(l_idx, x.shape))
+            print("Pos shape after layer {}: {}".format(l_idx, patches_scale_coords.shape))
             #outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx,
                                                                                        patched_im_size[0], im)
-                print("Feature shape after split in layer {}: {}".format(x.shape))
-                print("Pos shape after split in layer {}: {}".format(patches_scale_coords.shape))
+                print("Feature shape after split in layer {}: {}".format(l_idx, x.shape))
+                print("Pos shape after split in layer {}: {}".format(l_idx, patches_scale_coords.shape))
                 PS /= 2
                 patched_im_size = (H // PS, W // PS)
                 x = self.downsamplers[l_idx](x)
