@@ -561,8 +561,11 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             if num_cur_levels < self.maskformer_num_feature_levels:
                 multi_scale_features.append(o)
                 num_cur_levels += 1
-        #for i, o in enumerate(out):
-        #    print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
+        for i, o in enumerate(out):
+            print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
+        for i, o in enumerate(poss):
+            print("Poss map {} from msdeformpoint has shape: {}".format(i, o.shape))
+        print("Last pos map has shape: {}".format(last_pos))
         all_features = torch.cat(out, dim=1)
         all_pos = torch.cat(poss + [last_pos], dim=1)
         full_pos = torch.stack(torch.meshgrid(torch.arange(0, spatial_shape[0]), torch.arange(0, spatial_shape[1]), indexing='ij')).view(2,-1).permute(1, 0)
