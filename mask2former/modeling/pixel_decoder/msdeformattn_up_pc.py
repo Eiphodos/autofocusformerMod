@@ -564,7 +564,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         #for i, o in enumerate(out):
         #    print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
         all_features = torch.cat(out, dim=1)
-        all_pos = torch.cat(scaled_poss + [last_pos], dim=1)
+        all_pos = torch.cat(poss + [last_pos], dim=1)
         full_pos = torch.stack(torch.meshgrid(torch.arange(0, spatial_shape[0]), torch.arange(0, spatial_shape[1]), indexing='ij')).view(2,-1).permute(1, 0)
         full_pos = full_pos.to(pos.device).repeat(b, 1, 1)
         full_features = upsample_feature_shepard(full_pos, all_pos, all_features, custom_kernel=True)
