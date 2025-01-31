@@ -647,8 +647,8 @@ class MRMLNB(nn.Module):
     def add_high_res_feat(self, tokens, coords, curr_scale, image):
         patched_im = self.high_res_patchers[curr_scale](image)
         b = torch.arange(coords.shape[0]).unsqueeze(-1).expand(-1, coords.shape[1])
-        x = torch.div(coords[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc')
-        y = torch.div(coords[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc')
+        x = torch.div(coords[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
+        y = torch.div(coords[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
         patched_im = patched_im[b, :, x, y]
         tokens = tokens + patched_im
 
