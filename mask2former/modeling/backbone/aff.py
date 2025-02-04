@@ -467,6 +467,7 @@ class BasicLayer(nn.Module):
                         cluster_mask = cluster_mask[:b]
                 else:
                     pos, cluster_mean_pos, member_idx, cluster_mask, reorder = space_filling_cluster(pos, self.cluster_size, h, w, no_reorder=False)
+                    print("Reorder max: {}".format(reorder.max()))
                     feat = feat[torch.arange(b).to(feat.device).repeat_interleave(n), reorder.view(-1)].reshape(b, n, c)
 
             assert member_idx.shape[1] == k and member_idx.shape[2] == self.cluster_size, "member_idx shape incorrect!"
@@ -662,9 +663,13 @@ class AFF(nn.Module):
         '''
         x - b x c x h x w
         '''
+        print("Image shape is {}".format(x.shape))
         pos, x, h, w = self.patch_embed(x)  # b x n x c, b x n x d
         x = self.pos_drop(x)
         spatial_shape = (h, w)
+        print("Feature shape after PE: {}".format(x.shape))
+        print("Pos h max after PE: {}".format(pos[:, :, 0].max()))
+        print("Pos w max after PE: {}".format(pos[:, :, 1].max()))
 
         outs = {}
         for i_layer in range(self.num_layers):
