@@ -1,17 +1,20 @@
 _BASE_: ../maskformer2_ml_R50_bs16_160k.yaml
 MODEL:
   BACKBONE:
-    NAME: "MixResMetaLoss"
+    NAME: "MixResMetaLossNeighbour"
   MRML:
     EMBED_DIM: [1024,512,256,128]
-    DEPTHS: [4, 2, 2, 8]
+    DEPTHS: [8, 2, 2, 8]
     NUM_HEADS: [64, 32, 16, 8]
     PATCH_SIZES: [32, 16, 8, 4]
     DROP_RATE: 0.0
     DROP_PATH_RATE: 0.2
     SPLIT_RATIO: 4
+    MLP_RATIO: 4.0
     NUM_SCALES: 4
     UPSCALE_RATIO: 0.5
+    CLUSTER_SIZE: 8
+    NBHD_SIZE: [ 48, 48, 48, 48 ]
   WEIGHTS: "mrml_mini.pkl"
   PIXEL_MEAN: [123.675, 116.280, 103.530]
   PIXEL_STD: [58.395, 57.120, 57.375]
