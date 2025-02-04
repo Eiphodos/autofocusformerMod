@@ -30,8 +30,8 @@ pre_table[torch.bitwise_or(pre_table.isnan(), pre_table.isinf()).nonzero(as_tupl
 pre_table = pre_table.reshape(-1, 5)
 
 def get_2dpos_of_curr_ps_in_min_ps(height, width, patch_size, min_patch_size, scale):
-    patches_coords = torch.meshgrid(torch.arange(0, height // min_patch_size, patch_size // min_patch_size),
-                                    torch.arange(0, width // min_patch_size, patch_size // min_patch_size),
+    patches_coords = torch.meshgrid(torch.arange(0, width // min_patch_size, patch_size // min_patch_size),
+                                    torch.arange(0, height // min_patch_size, patch_size // min_patch_size),
                                     indexing='ij')
     patches_coords = torch.stack([patches_coords[0], patches_coords[1]])
     patches_coords = patches_coords.permute(1, 2, 0)
@@ -627,7 +627,7 @@ class MRMLNB(nn.Module):
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
-    def split_coords(self, coords_to_split, patch_size, curr_scale):
+    def split_coords(self, coords_to_split, curr_scale):
         batch_size = coords_to_split.shape[0]
         new_scale = curr_scale + 1
         new_coord_ratio = 2 ** (self.n_scales - new_scale - 1)
@@ -651,19 +651,19 @@ class MRMLNB(nn.Module):
         b = torch.arange(coords.shape[0]).unsqueeze(-1).expand(-1, coords.shape[1])
         x = torch.div(coords[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
         y = torch.div(coords[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
-        patched_im = patched_im[b, :, x, y]
+        patched_im = patched_im[b, :, y, x]
         tokens = tokens + patched_im
 
         return tokens
 
-    def split_input(self, tokens, patches_scale_coords, curr_scale, patch_size, im):
+    def split_input(self, tokens, patches_scale_coords, curr_scale, im):
         tokens_at_curr_scale, coords_at_curr_scale, tokens_at_older_scale, coords_at_older_scales = self.divide_tokens_coords_on_scale(
             tokens, patches_scale_coords, curr_scale)
         meta_loss_coords = coords_at_curr_scale[:, :, 1:]
         tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep, pred_meta_loss = self.divide_tokens_to_split_and_keep(
             tokens_at_curr_scale, coords_at_curr_scale, curr_scale)
         tokens_after_split = self.split_tokens(tokens_to_split, curr_scale)
-        coords_after_split = self.split_coords(coords_to_split, patch_size, curr_scale)
+        coords_after_split = self.split_coords(coords_to_split, curr_scale)
 
         tokens_after_split = self.add_high_res_feat(tokens_after_split, coords_after_split[:, :, 1:], curr_scale, im)
 
@@ -683,24 +683,24 @@ class MRMLNB(nn.Module):
         #pos_embed = self.pe_layer(patches_scale_coords[:,:,1:])
         #x = x + pos_embed
         outs = {}
-        print("Feature shape after PE: {}".format(x.shape))
-        print("Pos shape after PE: {}".format(patches_scale_coords.shape))
+        #print("Feature shape after PE: {}".format(x.shape))
+        #print("Pos h max after PE: {}".format(patches_scale_coords[:, :, 1].max()))
+        #print("Pos w max after PE: {}".format(patches_scale_coords[:, :, 2].max()))
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
             patches_scale_coords, x = self.layers[l_idx](patches_scale_coords, x, h=min_patched_im_size[0],
                                                          w=min_patched_im_size[1], on_grid=l_idx == 0)
-            print("Feature shape after layer {}: {}".format(l_idx, x.shape))
-            print("Pos shape after layer {}: {}".format(l_idx, patches_scale_coords.shape))
-            print("Feature is contiguous after layer {}: {}".format(l_idx, x.is_contiguous()))
-            print("Pos is contiguous after layer {}: {}".format(l_idx, patches_scale_coords.is_contiguous()))
+            #print("Feature shape after layer {}: {}".format(l_idx, x.shape))
+            #print("Pos shape after layer {}: {}".format(l_idx, patches_scale_coords.shape))
+            #print("Feature is contiguous after layer {}: {}".format(l_idx, x.is_contiguous()))
+            #print("Pos is contiguous after layer {}: {}".format(l_idx, patches_scale_coords.is_contiguous()))
             #outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
-                x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx,
-                                                                                       patched_im_size[0], im)
-                print("Feature shape after split in layer {}: {}".format(l_idx, x.shape))
-                print("Pos shape after split in layer {}: {}".format(l_idx, patches_scale_coords.shape))
-                print("Feature is contiguous after split in layer {}: {}".format(l_idx, x.is_contiguous()))
-                print("Pos is contiguous after split in layer {}: {}".format(l_idx, patches_scale_coords.is_contiguous()))
+                x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx, im)
+                #print("Feature shape after split in layer {}: {}".format(l_idx, x.shape))
+                #print("Pos shape after split in layer {}: {}".format(l_idx, patches_scale_coords.shape))
+                #print("Feature is contiguous after split in layer {}: {}".format(l_idx, x.is_contiguous()))
+                #print("Pos is contiguous after split in layer {}: {}".format(l_idx, patches_scale_coords.is_contiguous()))
                 PS /= 2
                 patched_im_size = (H // PS, W // PS)
                 x = self.downsamplers[l_idx](x)

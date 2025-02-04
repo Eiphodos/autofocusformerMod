@@ -8,5 +8,4 @@ from .backbone.mrmean import MixResMeanAct
 
 from .pixel_decoder.msdeformattn_pc import MSDeformAttnPixelDecoder
 from .pixel_decoder.msdeformattn_up_pc import MSDeformAttnPixelDecoderUp
-from .pixel_decoder.msdeformattn_up_pc_nb import MSDeformAttnPixelDecoderUpNb
 from .meta_arch.mask_former_head import MaskFormerHead
