@@ -1,4 +1,4 @@
-_BASE_: ../maskformer2_ml_R50_bs16_160k.yaml
+_BASE_: ../maskformer2_mlnb_R50_bs16_160k.yaml
 MODEL:
   BACKBONE:
     NAME: "MixResMetaLossNeighbour"

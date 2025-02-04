@@ -73,6 +73,7 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.SEM_SEG_HEAD.TRANSFORMER_ENC_LAYERS = 0
     # pixel decoder
     cfg.MODEL.SEM_SEG_HEAD.PIXEL_DECODER_NAME = "MSDeformAttnPixelDecoder"
+    cfg.MODEL.SEM_SEG_HEAD.FPN_COMMON_STRIDE = 4
 
     # autofocusformer backbone
     cfg.MODEL.AFF = CN()
