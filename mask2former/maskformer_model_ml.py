@@ -486,7 +486,8 @@ class MaskFormerML(nn.Module):
         x_pos = pos_to_split[...,0].long()
         y_pos = pos_to_split[...,1].long()
         pred_map_low_res[y_pos, x_pos] = 1
-        pred_map_new = F.interpolate(pred_map_low_res.unsqueeze(0).unsqueeze(0), size=(prediction_map.shape[0], prediction_map.shape[1]))
+        pred_map_new = F.interpolate(pred_map_low_res.unsqueeze(0).unsqueeze(0),
+                                     size=(1, 1, prediction_map.shape[0], prediction_map.shape[1])).squeeze()
         pred_map_new_indx = pred_map_new != 0
         prediction_map[pred_map_new_indx] = scale
 
