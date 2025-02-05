@@ -303,7 +303,7 @@ def save_sem_seg_metaloss_predictions(results):
         ss = r["sem_seg"]
         ss_pred = draw_segmentation_masks(empty_im, ss, alpha=1)
         if 'meta_loss_candidates_scale_0' in results.keys():
-
+            return r
 
 def main(args):
     cfg = setup(args)
