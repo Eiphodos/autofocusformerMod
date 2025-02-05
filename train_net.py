@@ -296,6 +296,14 @@ def setup(args):
     setup_logger(output=cfg.OUTPUT_DIR, distributed_rank=comm.get_rank(), name="mask2former")
     return cfg
 
+def save_sem_seg_metaloss_predictions(results):
+    for r in results:
+        h = r["sem_seg"].shape[1]
+        w = r["sem_seg"].shape[2]
+        ss = r["sem_seg"]
+        ss_pred = draw_segmentation_masks(empty_im, ss, alpha=1)
+        if 'meta_loss_candidates_scale_0' in results.keys():
+
 
 def main(args):
     cfg = setup(args)

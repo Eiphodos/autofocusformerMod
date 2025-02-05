@@ -252,6 +252,10 @@ class MaskFormerML(nn.Module):
                 align_corners=False,
             )
 
+            n_metalosses = self.backbone.n_scales - 1
+            upscale_ratio = self.backbone.upscale_ratio
+            i = 0
+
             del outputs
 
             processed_results = []
@@ -261,6 +265,17 @@ class MaskFormerML(nn.Module):
                 height = input_per_image.get("height", image_size[0])
                 width = input_per_image.get("width", image_size[1])
                 processed_results.append({})
+
+                prediction_map = torch.zeros(image_size[0], image_size[1])
+                for j in range(n_metalosses):
+                    name = 'meta_loss_candidates_scale_{}'.format(j)
+                    ml_pred = features['metaloss{}'.format(j)][i]
+                    ml_pos = features['metaloss{}_pos'.format(j)][i]
+
+                    prediction_map = self.create_meta_loss_prediction_map(prediction_map, ml_pred, ml_pos, upscale_ratio, j+1)
+                    processed_results[-1][name] = prediction_map
+
+                i += 1
 
                 if self.sem_seg_postprocess_before_inference:
                     mask_pred_result = retry_if_cuda_oom(sem_seg_postprocess)(
@@ -450,7 +465,7 @@ class MaskFormerML(nn.Module):
             target = patched_target.mean(dim=3)
             #target = rearrange(target, 'b nph npw -> b (nph npw)')
             mlp_x = torch.div(mlp[..., 0], 2**(len(self.patch_sizes_used) - i - 1), rounding_mode='trunc').long()
-            mlp_y = torch.div(mlp[..., 0], 2**(len(self.patch_sizes_used) - i - 1), rounding_mode='trunc').long()
+            mlp_y = torch.div(mlp[..., 1], 2**(len(self.patch_sizes_used) - i - 1), rounding_mode='trunc').long()
             b = torch.arange(mlp.shape[0]).unsqueeze(-1).expand(-1, mlp.shape[1])
             filtered_targets = target[b, mlp_y, mlp_x]
             res = self.meta_loss_criterion(ml, filtered_targets)
@@ -460,3 +475,19 @@ class MaskFormerML(nn.Module):
         #print("meta loss shape: {}".format(meta_loss.shape))
         #print("meta loss grad_fn: {}".format(meta_loss.grad_fn))
         return meta_loss
+
+    def create_meta_loss_prediction_map(self, prediction_map, meta_loss, meta_loss_pos, upscale_factor, scale):
+        n_tokens = len(meta_loss)
+        pred_map_low_res = torch.zeros(prediction_map.shape[0], prediction_map.shape[1])
+        k_split = int(n_tokens * upscale_factor)
+        tkv, tki = torch.topk(meta_loss, k=k_split, dim=0, sorted=False)
+
+        pos_to_split = meta_loss_pos[tki]
+        x_pos = pos_to_split[...,0]
+        y_pos = pos_to_split[...,1]
+        pred_map_low_res[y_pos, x_pos] = 1
+        pred_map_new = F.interpolate(pred_map_low_res.unsqueeze(0).unsqueeze(0), size=(prediction_map.shape[1], prediction_map.shape[2]))
+        pred_map_new_indx = pred_map_new != 0
+        prediction_map[pred_map_new_indx] = scale
+
+        return prediction_map
