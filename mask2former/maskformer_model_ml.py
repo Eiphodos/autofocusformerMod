@@ -483,8 +483,8 @@ class MaskFormerML(nn.Module):
         tkv, tki = torch.topk(meta_loss, k=k_split, dim=0, sorted=False)
 
         pos_to_split = meta_loss_pos[tki]
-        x_pos = pos_to_split[...,0]
-        y_pos = pos_to_split[...,1]
+        x_pos = pos_to_split[...,0].long()
+        y_pos = pos_to_split[...,1].long()
         pred_map_low_res[y_pos, x_pos] = 1
         pred_map_new = F.interpolate(pred_map_low_res.unsqueeze(0).unsqueeze(0), size=(prediction_map.shape[1], prediction_map.shape[2]))
         pred_map_new_indx = pred_map_new != 0
