@@ -266,6 +266,7 @@ class MaskFormerML(nn.Module):
                 width = input_per_image.get("width", image_size[1])
                 processed_results.append({})
 
+                print("Keys for item {}: {}".format(i, input_per_image.keys()))
                 prediction_map = torch.zeros(image_size[0], image_size[1])
                 for j in range(n_metalosses):
                     name = 'meta_loss_candidates_scale_{}'.format(j)

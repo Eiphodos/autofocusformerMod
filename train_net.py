@@ -22,6 +22,8 @@ from collections import OrderedDict
 from typing import Any, Dict, List, Set
 
 import torch
+import matplotlib.pyplot as plt
+from torchvision.utils import draw_segmentation_masks
 
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
@@ -296,14 +298,21 @@ def setup(args):
     setup_logger(output=cfg.OUTPUT_DIR, distributed_rank=comm.get_rank(), name="mask2former")
     return cfg
 
-def save_sem_seg_metaloss_predictions(results):
-    for r in results:
+def save_sem_seg_metaloss_predictions(cfg, results):
+    inference_out_dir = os.path.join(cfg.OUTPUT_DIR, 'inference_output')
+    os.makedirs(inference_out_dir, exist_ok=True)
+    for j, r in enumerate(results):
         h = r["sem_seg"].shape[1]
         w = r["sem_seg"].shape[2]
         ss = r["sem_seg"]
+        empty_im = torch.zeros((3, h, w), dtype=torch.uint8)
         ss_pred = draw_segmentation_masks(empty_im, ss, alpha=1)
+        plt.imsave(os.path.join(inference_out_dir, "sem_seg_{}.png".format(j)), ss_pred)
         if 'meta_loss_candidates_scale_0' in results.keys():
-            return r
+            for i in range(cfg.MODEL.MRML.NUM_SCALES - 1):
+                ml_out = r["meta_loss_candidates_scale_{}".format(i)]
+                plt.imsave(os.path.join(inference_out_dir, "meta_loss_{}_scale_{}.png".format(j, i)), ml_out)
+    return True
 
 def main(args):
     cfg = setup(args)
