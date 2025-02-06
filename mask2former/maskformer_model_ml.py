@@ -478,33 +478,23 @@ class MaskFormerML(nn.Module):
 
     def create_meta_loss_prediction_map(self, prediction_map, meta_loss, meta_loss_pos, scale):
         n_tokens = len(meta_loss)
-        low_res_y = prediction_map.shape[0] // self.backbone.min_patch_size
-        low_res_x = prediction_map.shape[1] // self.backbone.min_patch_size
-        pred_map_low_res = torch.zeros(low_res_y, low_res_x)
+        patch_size = self.backbone.patch_size // (2 ** (scale - 1))
         k_split = int(n_tokens * self.backbone.upscale_ratio)
         tkv, tki = torch.topk(meta_loss, k=k_split, dim=0, sorted=False)
         pos_to_split = meta_loss_pos[tki]
+        pos_at_org_scale = pos_to_split * self.backbone.min_patch_size
+        new_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
+        new_coords = new_coords.view(2,-1).permute(1,0).to(pos_to_split.device)
+        pos_at_org_scale = pos_at_org_scale.unsqueeze(1) + new_coords
+        pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
         #print("pos_to_split shape before: {}".format(pos_to_split.shape))
         #print("max x pos before: {}".format(pos_to_split[...,0].max()))
         #print("max y pos before: {}".format(pos_to_split[...,1].max()))
-        pps = (self.backbone.patch_size // (2 ** (scale - 1))) // self.backbone.min_patch_size
-        all_pos = torch.meshgrid(torch.arange(pps), torch.arange(pps))
-        all_pos = torch.stack([all_pos[0], all_pos[0]]).view(2,-1).permute(1,0).to(pos_to_split.device)
-        pos_to_split = pos_to_split.unsqueeze(1) + all_pos
-        pos_to_split = pos_to_split.reshape(-1, 2)
-        #print("pos_to_split shape after: {}".format(pos_to_split.shape))
 
-        x_pos = pos_to_split[...,0].long()
-        y_pos = pos_to_split[...,1].long()
+        x_pos = pos_at_org_scale[...,0].long()
+        y_pos = pos_at_org_scale[...,1].long()
         #print("max x pos: {}".format(x_pos.max()))
         #print("max y pos: {}".format(y_pos.max()))
         #print("pred_map_low_res shape: {}".format(pred_map_low_res.shape))
-        pred_map_low_res[y_pos, x_pos] = 1
-        assert pred_map_low_res.sum() != pos_to_split.shape[0]
-        pred_map_new = F.interpolate(pred_map_low_res.unsqueeze(0).unsqueeze(0),
-                                     size=(prediction_map.shape[0], prediction_map.shape[1])).squeeze()
-        assert pred_map_new.sum() != (pos_to_split.shape[0] * 4)
-        pred_map_new_indx = pred_map_new != 0
-        prediction_map[pred_map_new_indx] = scale
-
+        prediction_map[y_pos, x_pos] = scale
         return prediction_map
