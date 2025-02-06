@@ -307,13 +307,14 @@ def save_sem_seg_metaloss_predictions(cfg, results):
         h = r["sem_seg"].shape[1]
         w = r["sem_seg"].shape[2]
         ss = r["sem_seg"]
+        fn = r['file_name']
         empty_im = torch.zeros((3, h, w), dtype=torch.uint8)
         ss_pred = to_pil_image(draw_segmentation_masks(empty_im, ss, alpha=1))
-        plt.imsave(os.path.join(inference_out_dir, "sem_seg_{}.png".format(j)), np.asarray(ss_pred))
+        plt.imsave(os.path.join(inference_out_dir, fn + '_sem_seg.png'), np.asarray(ss_pred))
         if 'meta_loss_candidates_scale_0' in results.keys():
             for i in range(cfg.MODEL.MRML.NUM_SCALES - 1):
                 ml_out = to_pil_image(r["meta_loss_candidates_scale_{}".format(i)])
-                plt.imsave(os.path.join(inference_out_dir, "meta_loss_{}_scale_{}.png".format(j, i)), np.asarray(ml_out))
+                plt.imsave(os.path.join(inference_out_dir, fn + 'meta_loss_scale_{}.png'.format(i)), np.asarray(ml_out))
     return True
 
 def main(args):

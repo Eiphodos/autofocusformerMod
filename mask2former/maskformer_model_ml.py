@@ -266,6 +266,8 @@ class MaskFormerML(nn.Module):
                 width = input_per_image.get("width", image_size[1])
                 processed_results.append({})
 
+                processed_results[-1]["file_name"] = input_per_image["file_name"]
+
                 print("Keys for item {}: {}".format(i, input_per_image.keys()))
                 prediction_map = torch.zeros(image_size[0], image_size[1])
                 for j in range(n_metalosses):
