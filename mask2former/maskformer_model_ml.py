@@ -485,6 +485,8 @@ class MaskFormerML(nn.Module):
         tkv, tki = torch.topk(meta_loss, k=k_split, dim=0, sorted=False)
         pos_to_split = meta_loss_pos[tki]
         print("pos_to_split shape before: {}".format(pos_to_split.shape))
+        print("max x pos before: {}".format(pos_to_split[...,0].max()))
+        print("max y pos before: {}".format(pos_to_split[...,1].max()))
         pps = (self.backbone.patch_size // (2 ** (scale - 1))) // self.backbone.min_patch_size
         all_pos = torch.meshgrid(torch.arange(pps), torch.arange(pps))
         all_pos = torch.stack([all_pos[0], all_pos[0]]).view(2,-1).permute(1,0).to(pos_to_split.device)

@@ -11,8 +11,8 @@ from ..transformer_decoder.position_encoding import PositionEmbeddingSine
 from detectron2.modeling import BACKBONE_REGISTRY, Backbone, ShapeSpec
 
 def get_2dpos_of_curr_ps_in_min_ps(height, width, patch_size, min_patch_size, scale):
-    patches_coords = torch.meshgrid(torch.arange(0, height // min_patch_size, patch_size // min_patch_size),
-                                    torch.arange(0, width // min_patch_size, patch_size // min_patch_size),
+    patches_coords = torch.meshgrid(torch.arange(0, width // min_patch_size, patch_size // min_patch_size),
+                                    torch.arange(0, height // min_patch_size, patch_size // min_patch_size),
                                     indexing='ij')
     patches_coords = torch.stack([patches_coords[0], patches_coords[1]])
     patches_coords = patches_coords.permute(1, 2, 0)
@@ -371,7 +371,7 @@ class MRML(nn.Module):
         b = torch.arange(coords.shape[0]).unsqueeze(-1).expand(-1, coords.shape[1])
         x = torch.div(coords[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc')
         y = torch.div(coords[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc')
-        patched_im = patched_im[b, :, x, y]
+        patched_im = patched_im[b, :, y, x]
         tokens = tokens + patched_im
 
         return tokens
