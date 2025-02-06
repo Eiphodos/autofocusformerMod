@@ -57,4 +57,4 @@ class MetaLossSemSegEvaluator(SemSegEvaluator):
         for k, v in meta_loss_only_dict.items():
             ml_out = outp[k]
             scale = k[-1]
-            plt.imsave(os.path.join(inference_out_dir, fn + 'meta_loss_scale_{}.png'.format(scale)), np.asarray(ml_out), cmap='tab20b')
+            plt.imsave(os.path.join(inference_out_dir, fn + '_meta_loss_scale_{}.png'.format(scale)), np.asarray(ml_out), cmap='tab20b')

@@ -275,7 +275,7 @@ class MaskFormerML(nn.Module):
                     ml_pos = features['metaloss{}_pos'.format(j)][i]
 
                     prediction_map = self.create_meta_loss_prediction_map(prediction_map, ml_pred, ml_pos, upscale_ratio, j+1)
-                    processed_results[-1][name] = prediction_map
+                    processed_results[-1][name] = prediction_map.detach().clone()
 
                 i += 1
 
@@ -487,6 +487,8 @@ class MaskFormerML(nn.Module):
         pos_to_split = meta_loss_pos[tki]
         x_pos = pos_to_split[...,0].long()
         y_pos = pos_to_split[...,1].long()
+        print("max x pos: {}".format(x_pos.max()))
+        print("max y pos: {}".format(y_pos.max()))
         pred_map_low_res[y_pos, x_pos] = 1
         pred_map_new = F.interpolate(pred_map_low_res.unsqueeze(0).unsqueeze(0),
                                      size=(prediction_map.shape[0], prediction_map.shape[1])).squeeze()
