@@ -17,7 +17,7 @@ class MetaLossSemSegEvaluator(SemSegEvaluator):
                 segmentation prediction in the same format.
         """
         for input, output in zip(inputs, outputs):
-            self.save_sem_seg_metaloss_predictions(inputs, outputs)
+            self.save_sem_seg_metaloss_predictions(input, output)
 
             output = output["sem_seg"].argmax(dim=0).to(self._cpu_device)
             pred = np.array(output, dtype=int)
