@@ -268,7 +268,7 @@ class MaskFormerML(nn.Module):
 
                 print("height: {}, width: {}".format(height, width))
                 print("image_size: {}".format(image_size))
-                print("image shape: {}".format(images[0].shape))
+                print("image shape: {}".format(images[i].shape))
 
                 prediction_map = torch.zeros(height, width)
                 for j in range(self.backbone.n_scales - 1):
