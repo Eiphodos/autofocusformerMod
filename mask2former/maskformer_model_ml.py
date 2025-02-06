@@ -487,7 +487,7 @@ class MaskFormerML(nn.Module):
         print("pos_to_split shape before: {}".format(pos_to_split.shape))
         pps = (self.backbone.patch_size // (2 ** (scale - 1))) // self.backbone.min_patch_size
         all_pos = torch.meshgrid(torch.arange(pps), torch.arange(pps))
-        all_pos = torch.stack([all_pos[0], all_pos[0]]).view(2,-1).permute(1,0)
+        all_pos = torch.stack([all_pos[0], all_pos[0]]).view(2,-1).permute(1,0).to(pos_to_split.device)
         pos_to_split = pos_to_split.unsqueeze(1) + all_pos
         pos_to_split = pos_to_split.reshape(-1, 2)
         print("pos_to_split shape after: {}".format(pos_to_split.shape))
