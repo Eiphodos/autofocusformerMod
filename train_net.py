@@ -303,7 +303,10 @@ def setup(args):
 def save_sem_seg_metaloss_predictions(cfg, results):
     inference_out_dir = os.path.join(cfg.OUTPUT_DIR, 'inference_output')
     os.makedirs(inference_out_dir, exist_ok=True)
+    print("results type: {}".format(type(results)))
     for j, r in enumerate(results):
+        print("r type: {}".format(type(r)))
+        print("r sem seg type: {}".format(type(r["sem_seg"])))
         h = r["sem_seg"].shape[1]
         w = r["sem_seg"].shape[2]
         ss = r["sem_seg"]
