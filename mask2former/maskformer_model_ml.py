@@ -500,8 +500,10 @@ class MaskFormerML(nn.Module):
         #print("max y pos: {}".format(y_pos.max()))
         #print("pred_map_low_res shape: {}".format(pred_map_low_res.shape))
         pred_map_low_res[y_pos, x_pos] = 1
+        assert pred_map_low_res.sum() != pos_to_split.shape[0]
         pred_map_new = F.interpolate(pred_map_low_res.unsqueeze(0).unsqueeze(0),
                                      size=(prediction_map.shape[0], prediction_map.shape[1])).squeeze()
+        assert pred_map_new.sum() != (pos_to_split.shape[0] * 4)
         pred_map_new_indx = pred_map_new != 0
         prediction_map[pred_map_new_indx] = scale
 

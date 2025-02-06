@@ -406,7 +406,7 @@ class MRML(nn.Module):
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
             x = self.layers[l_idx](x)
-            #outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
+            outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx, im)
                 PS /= 2
@@ -424,7 +424,7 @@ class MRML(nn.Module):
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = out_scale
             outs["res{}_pos".format(out_idx)] = torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
-            outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
+            #outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
         '''
         for k, v in outs.items():
             if "spatial_shape" in k:
