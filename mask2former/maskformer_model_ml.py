@@ -252,13 +252,11 @@ class MaskFormerML(nn.Module):
                 align_corners=False,
             )
 
-            n_metalosses = self.backbone.n_scales - 1
-            upscale_ratio = self.backbone.upscale_ratio
-            i = 0
 
             del outputs
 
             processed_results = []
+            i = 0
             for mask_cls_result, mask_pred_result, input_per_image, image_size in zip(
                 mask_cls_results, mask_pred_results, batched_inputs, images.image_sizes
             ):
@@ -269,12 +267,12 @@ class MaskFormerML(nn.Module):
                 processed_results[-1]["file_name"] = input_per_image["file_name"]
 
                 prediction_map = torch.zeros(image_size[0], image_size[1])
-                for j in range(n_metalosses):
+                for j in range(self.backbone.n_scales - 1):
                     name = 'meta_loss_candidates_scale_{}'.format(j)
                     ml_pred = features['metaloss{}'.format(j)][i]
                     ml_pos = features['metaloss{}_pos'.format(j)][i]
 
-                    prediction_map = self.create_meta_loss_prediction_map(prediction_map, ml_pred, ml_pos, upscale_ratio, j+1)
+                    prediction_map = self.create_meta_loss_prediction_map(prediction_map, ml_pred, ml_pos, j+1)
                     processed_results[-1][name] = prediction_map.detach().clone()
 
                 i += 1
@@ -478,17 +476,17 @@ class MaskFormerML(nn.Module):
         #print("meta loss grad_fn: {}".format(meta_loss.grad_fn))
         return meta_loss
 
-    def create_meta_loss_prediction_map(self, prediction_map, meta_loss, meta_loss_pos, upscale_factor, scale):
+    def create_meta_loss_prediction_map(self, prediction_map, meta_loss, meta_loss_pos, scale):
         n_tokens = len(meta_loss)
-        pred_map_low_res = torch.zeros(prediction_map.shape[0], prediction_map.shape[1])
-        k_split = int(n_tokens * upscale_factor)
+        low_res_y = prediction_map.shape[0] // self.backbone.min_patch_size
+        low_res_x = prediction_map.shape[1] // self.backbone.min_patch_size
+        pred_map_low_res = torch.zeros(low_res_y, low_res_x)
+        k_split = int(n_tokens * self.backbone.upscale_ratio)
         tkv, tki = torch.topk(meta_loss, k=k_split, dim=0, sorted=False)
 
         pos_to_split = meta_loss_pos[tki]
         x_pos = pos_to_split[...,0].long()
         y_pos = pos_to_split[...,1].long()
-        print("max x pos: {}".format(x_pos.max()))
-        print("max y pos: {}".format(y_pos.max()))
         pred_map_low_res[y_pos, x_pos] = 1
         pred_map_new = F.interpolate(pred_map_low_res.unsqueeze(0).unsqueeze(0),
                                      size=(prediction_map.shape[0], prediction_map.shape[1])).squeeze()
