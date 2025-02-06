@@ -49,6 +49,7 @@ class MetaLossSemSegEvaluator(SemSegEvaluator):
         ss = outp["sem_seg"].argmax(dim=0).to(self._cpu_device)
         ss = np.array(ss, dtype=int)
         fn = inp['file_name']
+        print("Got sem_seg for {} with shape {} and saving to {}".format(fn, ss.shape, inference_out_dir))
         #ss_pred = to_pil_image(ss)
         plt.imsave(os.path.join(inference_out_dir, fn + '_sem_seg.png'), np.asarray(ss))
         meta_loss_only_dict = {k:v for k, v in outp.items() if "meta_loss_candidates_scale_" in k}
