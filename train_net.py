@@ -23,9 +23,6 @@ from typing import Any, Dict, List, Set
 
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
-from torchvision.utils import draw_segmentation_masks
-from torchvision.transforms.functional import to_pil_image
 
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
@@ -57,6 +54,7 @@ from mask2former import (
     COCOInstanceNewBaselineDatasetMapper,
     COCOPanopticNewBaselineDatasetMapper,
     InstanceSegEvaluator,
+    MetaLossSemSegEvaluator,
     MaskFormerInstanceDatasetMapper,
     MaskFormerPanopticDatasetMapper,
     MaskFormerSemanticDatasetMapper,
@@ -85,13 +83,22 @@ class Trainer(DefaultTrainer):
         evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
         # semantic segmentation
         if evaluator_type in ["sem_seg", "ade20k_panoptic_seg"]:
-            evaluator_list.append(
-                SemSegEvaluator(
-                    dataset_name,
-                    distributed=True,
-                    output_dir=output_folder,
+            if "MetaLoss" in cfg.MODEl.BACKBONE.NAME:
+                evaluator_list.append(
+                    MetaLossSemSegEvaluator(
+                        dataset_name,
+                        distributed=True,
+                        output_dir=output_folder,
+                    )
                 )
-            )
+            else:
+                evaluator_list.append(
+                    SemSegEvaluator(
+                        dataset_name,
+                        distributed=True,
+                        output_dir=output_folder,
+                    )
+                )
         # instance segmentation
         if evaluator_type == "coco":
             evaluator_list.append(COCOEvaluator(dataset_name, output_dir=output_folder))
@@ -300,25 +307,6 @@ def setup(args):
     setup_logger(output=cfg.OUTPUT_DIR, distributed_rank=comm.get_rank(), name="mask2former")
     return cfg
 
-def save_sem_seg_metaloss_predictions(cfg, results):
-    inference_out_dir = os.path.join(cfg.OUTPUT_DIR, 'inference_output')
-    os.makedirs(inference_out_dir, exist_ok=True)
-    print("results type: {}".format(type(results)))
-    for j, r in enumerate(results):
-        print("r type: {}".format(type(r)))
-        print("r sem seg type: {}".format(type(r["sem_seg"])))
-        h = r["sem_seg"].shape[1]
-        w = r["sem_seg"].shape[2]
-        ss = r["sem_seg"]
-        fn = r['file_name']
-        empty_im = torch.zeros((3, h, w), dtype=torch.uint8)
-        ss_pred = to_pil_image(draw_segmentation_masks(empty_im, ss, alpha=1))
-        plt.imsave(os.path.join(inference_out_dir, fn + '_sem_seg.png'), np.asarray(ss_pred))
-        if 'meta_loss_candidates_scale_0' in results.keys():
-            for i in range(cfg.MODEL.MRML.NUM_SCALES - 1):
-                ml_out = to_pil_image(r["meta_loss_candidates_scale_{}".format(i)])
-                plt.imsave(os.path.join(inference_out_dir, fn + 'meta_loss_scale_{}.png'.format(i)), np.asarray(ml_out))
-    return True
 
 def main(args):
     cfg = setup(args)
@@ -339,7 +327,6 @@ def main(args):
         if cfg.TEST.AUG.ENABLED:
             res.update(Trainer.test_with_TTA(cfg, model))
         if comm.is_main_process():
-            save_sem_seg_metaloss_predictions(cfg, res)
             verify_results(cfg, res)
         return res
 
