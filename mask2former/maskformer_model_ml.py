@@ -266,6 +266,10 @@ class MaskFormerML(nn.Module):
 
                 processed_results[-1]["file_name"] = input_per_image["file_name"]
 
+                print("height: {}, width: {}".format(height, width))
+                print("image_size: {}".format(image_size))
+                print("image shape: {}".format(images[0].tensor.shape))
+
                 prediction_map = torch.zeros(height, width)
                 for j in range(self.backbone.n_scales - 1):
                     name = 'meta_loss_candidates_scale_{}'.format(j)
