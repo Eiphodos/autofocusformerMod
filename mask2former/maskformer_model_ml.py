@@ -266,11 +266,7 @@ class MaskFormerML(nn.Module):
 
                 processed_results[-1]["file_name"] = input_per_image["file_name"]
 
-                print("height: {}, width: {}".format(height, width))
-                print("image_size: {}".format(image_size))
-                print("image shape: {}".format(images.tensor.shape))
-
-                prediction_map = torch.zeros(height, width)
+                prediction_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1])
                 for j in range(self.backbone.n_scales - 1):
                     name = 'meta_loss_candidates_scale_{}'.format(j)
                     ml_pred = features['metaloss{}'.format(j)][i]
@@ -488,21 +484,21 @@ class MaskFormerML(nn.Module):
         k_split = int(n_tokens * self.backbone.upscale_ratio)
         tkv, tki = torch.topk(meta_loss, k=k_split, dim=0, sorted=False)
         pos_to_split = meta_loss_pos[tki]
-        print("pos_to_split shape before: {}".format(pos_to_split.shape))
-        print("max x pos before: {}".format(pos_to_split[...,0].max()))
-        print("max y pos before: {}".format(pos_to_split[...,1].max()))
+        #print("pos_to_split shape before: {}".format(pos_to_split.shape))
+        #print("max x pos before: {}".format(pos_to_split[...,0].max()))
+        #print("max y pos before: {}".format(pos_to_split[...,1].max()))
         pps = (self.backbone.patch_size // (2 ** (scale - 1))) // self.backbone.min_patch_size
         all_pos = torch.meshgrid(torch.arange(pps), torch.arange(pps))
         all_pos = torch.stack([all_pos[0], all_pos[0]]).view(2,-1).permute(1,0).to(pos_to_split.device)
         pos_to_split = pos_to_split.unsqueeze(1) + all_pos
         pos_to_split = pos_to_split.reshape(-1, 2)
-        print("pos_to_split shape after: {}".format(pos_to_split.shape))
+        #print("pos_to_split shape after: {}".format(pos_to_split.shape))
 
         x_pos = pos_to_split[...,0].long()
         y_pos = pos_to_split[...,1].long()
-        print("max x pos: {}".format(x_pos.max()))
-        print("max y pos: {}".format(y_pos.max()))
-        print("pred_map_low_res shape: {}".format(pred_map_low_res.shape))
+        #print("max x pos: {}".format(x_pos.max()))
+        #print("max y pos: {}".format(y_pos.max()))
+        #print("pred_map_low_res shape: {}".format(pred_map_low_res.shape))
         pred_map_low_res[y_pos, x_pos] = 1
         pred_map_new = F.interpolate(pred_map_low_res.unsqueeze(0).unsqueeze(0),
                                      size=(prediction_map.shape[0], prediction_map.shape[1])).squeeze()
