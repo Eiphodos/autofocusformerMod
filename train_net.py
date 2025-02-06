@@ -336,6 +336,7 @@ def main(args):
         if cfg.TEST.AUG.ENABLED:
             res.update(Trainer.test_with_TTA(cfg, model))
         if comm.is_main_process():
+            save_sem_seg_metaloss_predictions(cfg, res)
             verify_results(cfg, res)
         return res
 
