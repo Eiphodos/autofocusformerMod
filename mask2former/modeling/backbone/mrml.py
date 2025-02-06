@@ -347,7 +347,7 @@ class MRML(nn.Module):
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
-    def split_coords(self, coords_to_split, patch_size, curr_scale):
+    def split_coords(self, coords_to_split, curr_scale):
         batch_size = coords_to_split.shape[0]
         new_scale = curr_scale + 1
         new_coord_ratio = 2 ** (self.n_scales - new_scale - 1)
@@ -369,21 +369,21 @@ class MRML(nn.Module):
     def add_high_res_feat(self, tokens, coords, curr_scale, image):
         patched_im = self.high_res_patchers[curr_scale](image)
         b = torch.arange(coords.shape[0]).unsqueeze(-1).expand(-1, coords.shape[1])
-        x = torch.div(coords[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc')
-        y = torch.div(coords[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc')
+        x = torch.div(coords[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
+        y = torch.div(coords[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
         patched_im = patched_im[b, :, y, x]
         tokens = tokens + patched_im
 
         return tokens
 
-    def split_input(self, tokens, patches_scale_coords, curr_scale, patch_size, im):
+    def split_input(self, tokens, patches_scale_coords, curr_scale, im):
         tokens_at_curr_scale, coords_at_curr_scale, tokens_at_older_scale, coords_at_older_scales = self.divide_tokens_coords_on_scale(
             tokens, patches_scale_coords, curr_scale)
         meta_loss_coords = coords_at_curr_scale[:, :, 1:]
         tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep, pred_meta_loss = self.divide_tokens_to_split_and_keep(
             tokens_at_curr_scale, coords_at_curr_scale, curr_scale)
         tokens_after_split = self.split_tokens(tokens_to_split, curr_scale)
-        coords_after_split = self.split_coords(coords_to_split, patch_size, curr_scale)
+        coords_after_split = self.split_coords(coords_to_split, curr_scale)
 
         tokens_after_split = self.add_high_res_feat(tokens_after_split, coords_after_split[:, :, 1:], curr_scale, im)
 
@@ -398,6 +398,7 @@ class MRML(nn.Module):
         x = self.patch_embed(im)
         patched_im_size = (H // PS, W // PS)
         min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
+        print("The min_patched_im_size: {} for input of shape {}".format(min_patched_im_size, im.shape))
         patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to('cuda')
         patches_scale_coords = patches_scale_coords.repeat(B, 1, 1)
         pos_embed = self.pe_layer(patches_scale_coords[:,:,1:])
@@ -406,10 +407,9 @@ class MRML(nn.Module):
         for l_idx in range(len(self.layers)):
             out_idx = self.n_scales - l_idx + 1
             x = self.layers[l_idx](x)
-            outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
+            #outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
             if l_idx < self.n_scales - 1:
-                x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx,
-                                                                                       patched_im_size[0], im)
+                x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx, im)
                 PS /= 2
                 patched_im_size = (H // PS, W // PS)
                 x = self.downsamplers[l_idx](x)
@@ -425,7 +425,7 @@ class MRML(nn.Module):
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = out_scale
             outs["res{}_pos".format(out_idx)] = torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
-            #outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
+            outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
         '''
         for k, v in outs.items():
             if "spatial_shape" in k:
