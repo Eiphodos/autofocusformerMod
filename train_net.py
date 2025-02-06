@@ -83,7 +83,7 @@ class Trainer(DefaultTrainer):
         evaluator_type = MetadataCatalog.get(dataset_name).evaluator_type
         # semantic segmentation
         if evaluator_type in ["sem_seg", "ade20k_panoptic_seg"]:
-            if "MetaLoss" in cfg.MODEl.BACKBONE.NAME:
+            if "MetaLoss" in cfg.MODEL.BACKBONE.NAME:
                 evaluator_list.append(
                     MetaLossSemSegEvaluator(
                         dataset_name,
