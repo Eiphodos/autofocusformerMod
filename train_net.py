@@ -314,10 +314,6 @@ def main(args):
     import pykeops
     dirname = os.getenv('TMPDIR')
     pykeops.set_build_folder(dirname)
-    if comm.is_main_process():
-        wandb.login()
-        wandb.init(sync_tensorboard=True, project="CandidateNet", entity="eiphodos", config=cfg,
-                   settings=wandb.Settings(start_method="thread", console="off"))
     if args.eval_only:
         model = Trainer.build_model(cfg)
         DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
@@ -329,6 +325,11 @@ def main(args):
         if comm.is_main_process():
             verify_results(cfg, res)
         return res
+
+    if comm.is_main_process():
+        wandb.login()
+        wandb.init(sync_tensorboard=True, project="CandidateNet", entity="eiphodos", config=cfg,
+                   settings=wandb.Settings(start_method="thread", console="off"))
 
     trainer = Trainer(cfg)
     #trainer.resume_or_load(resume=args.resume)
