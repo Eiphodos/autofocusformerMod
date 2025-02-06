@@ -678,6 +678,7 @@ class MRMLNB(nn.Module):
         x = self.patch_embed(im)
         patched_im_size = (H // PS, W // PS)
         min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
+        print("The min_patched_im_size: {} for input of shape {}".format(min_patched_im_size, im.shape))
         patches_scale_coords = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, 0).to('cuda')
         patches_scale_coords = patches_scale_coords.repeat(B, 1, 1)
         #pos_embed = self.pe_layer(patches_scale_coords[:,:,1:])
