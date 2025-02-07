@@ -527,6 +527,15 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
 
         multi_scale_features = []
 
+        f = self.in_features[0]
+        all_features = features[f].float()
+        all_pos = features[f+"_pos"].float()
+        full_pos = torch.stack(torch.meshgrid(torch.arange(0, spatial_shape[0]), torch.arange(0, spatial_shape[1]), indexing='ij')).view(2,-1).permute(1, 0)
+        full_pos = full_pos.to(pos.device).repeat(b, 1, 1)
+        full_features = upsample_feature_shepard(full_pos, all_pos, all_features, custom_kernel=True)
+        features[f] = full_features
+        features[f+"_pos"] = full_pos
+
         # append `out` with extra FPN levels
         # Reverse feature maps into top-down order (from low to high resolution) only res2
         #for i, o in enumerate(out):
@@ -568,10 +577,5 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             print("Poss map {} from msdeformpoint has shape: {}".format(i, o.shape))
         print("Last pos map has shape: {}".format(last_pos))
         '''
-        all_features = torch.cat(out, dim=1)
-        all_pos = torch.cat(poss + [last_pos], dim=1)
-        full_pos = torch.stack(torch.meshgrid(torch.arange(0, spatial_shape[0]), torch.arange(0, spatial_shape[1]), indexing='ij')).view(2,-1).permute(1, 0)
-        full_pos = full_pos.to(pos.device).repeat(b, 1, 1)
-        full_features = upsample_feature_shepard(full_pos, all_pos, all_features, custom_kernel=True)
 
-        return self.mask_features(full_features), full_pos, out[0], multi_scale_features, poss[:self.maskformer_num_feature_levels]
+        return self.mask_features(out[-1]), last_pos, out[0], multi_scale_features, poss[:self.maskformer_num_feature_levels]

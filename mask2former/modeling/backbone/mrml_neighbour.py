@@ -569,14 +569,14 @@ class MRMLNB(nn.Module):
              i in
              range(1, len(n_layers))])
 
-        '''
+
         # add a norm layer for each output
         for i_layer in range(len(n_layers)):
             layer = norm_layer(num_features[i_layer])
             layer_name = f"norm{i_layer}"
             self.add_module(layer_name, layer)
-        '''
-        self.norm_out = nn.LayerNorm(d_model[-1])
+
+        #self.norm_out = nn.LayerNorm(d_model[-1])
         self.apply(init_weights)
 
     @torch.jit.ignore
@@ -695,6 +695,11 @@ class MRMLNB(nn.Module):
             #print("Feature is contiguous after layer {}: {}".format(l_idx, x.is_contiguous()))
             #print("Pos is contiguous after layer {}: {}".format(l_idx, patches_scale_coords.is_contiguous()))
             #outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
+            norm_layer = getattr(self, f"norm{l_idx}")
+            x_out = norm_layer(x)
+            outs["res{}".format(out_idx)] = x_out
+            outs["res{}_pos".format(out_idx)] = patches_scale_coords[:, :, 1:]
+            outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
             if l_idx < self.n_scales - 1:
                 x, patches_scale_coords, meta_loss, meta_loss_coord = self.split_input(x, patches_scale_coords, l_idx, im)
                 #print("Feature shape after split in layer {}: {}".format(l_idx, x.shape))
@@ -706,17 +711,6 @@ class MRMLNB(nn.Module):
                 x = self.downsamplers[l_idx](x)
                 outs["metaloss{}".format(l_idx)] = meta_loss
                 outs["metaloss{}_pos".format(l_idx)] = meta_loss_coord
-
-        for s in range(self.n_scales):
-            out_idx = self.n_scales - s + 1
-            b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:,:,0] == s)
-            pos_scale = patches_scale_coords[b_scale_idx, n_scale_idx, 1:]
-            pos_scale = rearrange(pos_scale, '(b n) p -> b n p', b=B).contiguous()
-            out_scale = x[b_scale_idx, n_scale_idx, :]
-            out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
-            outs["res{}".format(out_idx)] = self.norm_out(out_scale)
-            outs["res{}_pos".format(out_idx)] = pos_scale #torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
-            outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
         '''
         for k, v in outs.items():
             if "spatial_shape" in k:
