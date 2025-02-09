@@ -142,6 +142,7 @@ class HungarianMatcher(nn.Module):
                 # Compute the dice loss betwen masks
                 # cost_dice = batch_dice_loss_jit(out_mask, tgt_mask)
                 cost_dice = batch_dice_loss(out_mask, tgt_mask)
+                cost_dice[cost_dice.isnan()] = 1e6
 
             # Final cost matrix
             C = (
