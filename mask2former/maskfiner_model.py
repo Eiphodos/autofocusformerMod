@@ -199,6 +199,8 @@ class MaskFiner(nn.Module):
         features_pos = None
         upsampling_mask = None
         outputs = {}
+        outputs['pred_masks'] = None
+        outputs['pred_logits'] = None
         outputs['aux_outputs'] = []
         for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
