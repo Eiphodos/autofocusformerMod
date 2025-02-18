@@ -82,7 +82,7 @@ class MaskPredictor(nn.Module):
         features = self.backbone(im, scale, features, features_pos, upsampling_mask)
         mask_features, mf_pos, multi_scale_features, multi_scale_poss, ms_scale, finest_input_shape = self.pixel_decoder.forward_features(features)
         predictions, upsampling_mask = self.mask_decoder(multi_scale_features, multi_scale_poss, mask_features, mf_pos, finest_input_shape)
-        all_pos = torch.stack(multi_scale_poss, dim=1).squeeze()
-        all_scale = torch.stack(ms_scale, dim=1).squeeze()
-        pos_scale = torch.cat([all_scale.unsqueeze(2), all_pos], dim=1)
-        return predictions, torch.stack(multi_scale_features, dim=1).squeeze(), pos_scale, upsampling_mask
+        all_pos = torch.cat(multi_scale_poss, dim=1).squeeze()
+        all_scale = torch.cat(ms_scale, dim=1).squeeze()
+        pos_scale = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
+        return predictions, torch.cat(multi_scale_features, dim=1).squeeze(), pos_scale, upsampling_mask
