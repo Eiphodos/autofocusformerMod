@@ -546,6 +546,9 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         for idx, f in enumerate(self.in_features[:self.num_fpn_levels][::-1]):
             x = features[f].float()
             pos = features[f+"_pos"].float()
+            scales = features[f + "_scale"].float()
+            poss.append(pos)
+            scaless.append(scales)
             spatial_shape = features[f+"_spatial_shape"]
             lateral_conv = self.lateral_convs[idx]
             output_conv = self.output_convs[idx]
