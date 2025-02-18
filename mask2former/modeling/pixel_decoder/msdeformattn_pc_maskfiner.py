@@ -423,12 +423,13 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         )
         weight_init.c2_xavier_fill(self.mask_features)
 
-        self.maskformer_num_feature_levels = 3  # always use 3 scales
+        self.maskformer_num_feature_levels = min(len(self.in_features), 3)  # always use 3 scales
         self.common_stride = common_stride
 
         # extra fpn levels
-        stride = min(self.transformer_feature_strides)
-        self.num_fpn_levels = int(np.log2(stride) - np.log2(self.common_stride))
+        min_stride_trans = min(self.transformer_feature_strides)
+        min_stride_all = max(self.feature_strides)
+        self.num_fpn_levels = int(np.log2(min_stride_trans) - np.log2(min_stride_all))
 
         lateral_convs = []
         output_convs = []
@@ -457,23 +458,29 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
 
     @classmethod
     def from_config(cls, cfg, layer_index, input_shape: Dict[str, ShapeSpec]):
+        pix_dec_in_features = cfg.MODEL.SEM_SEG_HEAD.IN_FEATURES[-(layer_index + 1):]
+        all_transformer_in_features = cfg.MODEL.SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES
+        all_dtf_len = len(all_transformer_in_features)
+        if layer_index == 0:
+            trans_dec_in_feat = all_transformer_in_features[-1]
+        else:
+            trans_dec_in_feat = all_transformer_in_features[(all_dtf_len - layer_index):]
         ret = {}
         ret["input_shape"] = {
-            k: v for k, v in input_shape.items() if k in cfg.MODEL.SEM_SEG_HEAD.IN_FEATURES
+            k: v for k, v in input_shape.items() if k in pix_dec_in_features
         }
-        ret["conv_dim"] = cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM
-        ret["mask_dim"] = cfg.MODEL.SEM_SEG_HEAD.MASK_DIM
+        m_dim = cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM[layer_index]
+        ret["conv_dim"] = m_dim
+        ret["mask_dim"] = cfg.MODEL.SEM_SEG_HEAD.MASK_DIM[layer_index]
         ret["norm"] = cfg.MODEL.SEM_SEG_HEAD.NORM
-        ret["transformer_dropout"] = cfg.MODEL.MASK_FORMER.DROPOUT
-        ret["transformer_nheads"] = cfg.MODEL.MASK_FORMER.NHEADS
-        ret["transformer_dim_feedforward"] = 1024  # use 1024 for deformable transformer encoder
-        ret[
-            "transformer_enc_layers"
-        ] = cfg.MODEL.SEM_SEG_HEAD.TRANSFORMER_ENC_LAYERS  # a separate config
-        ret["transformer_in_features"] = cfg.MODEL.SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES
+        ret["transformer_dropout"] = cfg.MODEL.MASK_FINER.DROPOUT
+        ret["transformer_nheads"] = cfg.MODEL.MASK_FINER.NHEADS
+        ret["transformer_dim_feedforward"] = m_dim * cfg.MODEL.SEM_SEG_HEAD.MLP_RATIO[layer_index]
+        ret["transformer_enc_layers"] = cfg.MODEL.SEM_SEG_HEAD.TRANSFORMER_ENC_LAYERS[layer_index]
+        ret["transformer_in_features"] = trans_dec_in_feat
         ret["common_stride"] = cfg.MODEL.SEM_SEG_HEAD.COMMON_STRIDE
-        ret['shepard_power'] = cfg.MODEL.AFF.SHEPARD_POWER / 2.0  # since the distances are already squared
-        ret['shepard_power_learnable'] = cfg.MODEL.AFF.SHEPARD_POWER_LEARNABLE
+        ret['shepard_power'] = cfg.MODEL.MASK_FINER.SHEPARD_POWER / 2.0  # since the distances are already squared
+        ret['shepard_power_learnable'] = cfg.MODEL.MASK_FINER.SHEPARD_POWER_LEARNABLE
         return ret
 
     @autocast(enabled=False)
@@ -493,6 +500,7 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         scaled_poss = []
         srcs = []
         poss = []
+        scaless = []
         pos_embed = []
         spatial_shapes = []
         nb_idx = []
@@ -507,11 +515,13 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
         for idx, f in enumerate(self.transformer_in_features[::-1]):
             x = features[f].float()  # deformable detr does not support half precision
             pos = features[f+"_pos"].float()
+            scales = features[f + "_scale"].float()
             #print("Pos min for {}: {}".format(f, pos.min()))
             #print("Pos max for {}: {}".format(f, pos.max()))
             spatial_shape = features[f+"_spatial_shape"]
             srcs.append(self.input_proj[idx](x))
             poss.append(pos)
+            scaless.append(scales)
             pos_embed.append(self.pe_layer(pos))
             spatial_shapes.append(spatial_shape)
             scaled_pos = scale_pos(pos, spatial_shape, grid_hw, no_bias=True)
@@ -561,17 +571,5 @@ class MSDeformAttnPixelDecoderUp(nn.Module):
             if num_cur_levels < self.maskformer_num_feature_levels:
                 multi_scale_features.append(o)
                 num_cur_levels += 1
-        '''
-        for i, o in enumerate(out):
-            print("Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
-        for i, o in enumerate(poss):
-            print("Poss map {} from msdeformpoint has shape: {}".format(i, o.shape))
-        print("Last pos map has shape: {}".format(last_pos))
-        '''
-        all_features = torch.cat(out, dim=1)
-        all_pos = torch.cat(poss + [last_pos], dim=1)
-        full_pos = torch.stack(torch.meshgrid(torch.arange(0, spatial_shape[0]), torch.arange(0, spatial_shape[1]), indexing='ij')).view(2,-1).permute(1, 0)
-        full_pos = full_pos.to(pos.device).repeat(b, 1, 1)
-        full_features = upsample_feature_shepard(full_pos, all_pos, all_features, custom_kernel=True)
 
-        return self.mask_features(full_features), full_pos, out[0], multi_scale_features, poss[:self.maskformer_num_feature_levels]
+        return self.mask_features(out[-1]), last_pos, multi_scale_features, poss[:self.maskformer_num_feature_levels], scaless[:self.maskformer_num_feature_levels], spatial_shape

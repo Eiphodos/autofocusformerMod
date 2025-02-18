@@ -3,6 +3,7 @@
 import logging
 from typing import Dict
 
+import torch
 from torch import nn
 
 from detectron2.config import configurable
@@ -58,15 +59,19 @@ class MaskPredictor(nn.Module):
         backbone = build_backbone_indexed(cfg, layer_index)
         bb_output_shape = backbone.get_output_shape()
         pixel_decoder = build_pixel_decoder(cfg, layer_index, input_shape=bb_output_shape)
-        mask_decoder = build_transformer_decoder(cfg, layer_index)
+        mask_decoder_input_dim = cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM[layer_index]
+        mask_decoder = build_transformer_decoder(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
         return {
             "backbone": backbone,
             "pixel_decoder": pixel_decoder,
             "mask_decoder": mask_decoder
         }
 
-    def forward(self, im, scale, features_high=None, features_low=None):
-        features = self.backbone(im, scale, features_high, features_low)
-        mask_features, mf_pos, transformer_encoder_features, multi_scale_features, multi_scale_poss = self.pixel_decoder.forward_features(features)
-        predictions, features_high, features_low = self.mask_decoder(multi_scale_features, multi_scale_poss, mask_features, mf_pos)
-        return predictions, features_high, features_low
+    def forward(self, im, scale, features, features_pos, upsampling_mask):
+        features = self.backbone(im, scale, features, features_pos, upsampling_mask)
+        mask_features, mf_pos, multi_scale_features, multi_scale_poss, ms_scale = self.pixel_decoder.forward_features(features)
+        predictions, upsampling_mask = self.mask_decoder(multi_scale_features, multi_scale_poss, mask_features, mf_pos)
+        all_pos = torch.stack(multi_scale_poss, dim=1)
+        all_scale = torch.stack(ms_scale, dim=1)
+        pos_scale = torch.cat([all_scale, all_pos], dim=1)
+        return predictions, torch.stack(multi_scale_features, dim=1), pos_scale, upsampling_mask

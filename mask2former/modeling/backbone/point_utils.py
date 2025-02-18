@@ -93,6 +93,8 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
     """
     b, n_, d = database.shape
     n = query.shape[1]
+    if (n == n_) and (query == database).all():
+        return feature
     if nn_idx is not None:
         k = nn_idx.shape[-1]
     else:

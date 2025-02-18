@@ -562,62 +562,102 @@ class MRNB(nn.Module):
     def load_pretrained(self, checkpoint_path, prefix=""):
         _load_weights(self, checkpoint_path, prefix)
 
-    def split_tokens(self, tokens_to_split):
+
+    def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, upsampling_mask):
+        k_split = int(feat_at_curr_scale.shape[1] * self.upscale_ratio)
+        k_keep = int(feat_at_curr_scale.shape[1] - k_split)
+
+
+        tkv, tki = torch.topk(upsampling_mask, k=k_split, dim=1, sorted=False)
+        bkv, bki = torch.topk(upsampling_mask, k=k_keep, dim=1, sorted=False, largest=False)
+
+        batch_indices_k = torch.arange(feat_at_curr_scale.shape[0]).unsqueeze(1).repeat(1, k_keep)
+        batch_indices_s = torch.arange(feat_at_curr_scale.shape[0]).unsqueeze(1).repeat(1, k_split)
+
+        tokens_to_keep = feat_at_curr_scale[batch_indices_k, bki]
+        tokens_to_split = feat_at_curr_scale[batch_indices_s, tki]
+        coords_to_keep = pos_at_curr_scale[batch_indices_k, bki]
+        coords_to_split = pos_at_curr_scale[batch_indices_s, tki]
+
+        return tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep
+
+
+    def divide_tokens_coords_on_scale(self, tokens, patches_scale_coords, curr_scale):
+        B, _, _ = tokens.shape
+        b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:, :, 0] == curr_scale)
+        coords_at_curr_scale = patches_scale_coords[b_scale_idx, n_scale_idx, :]
+        coords_at_curr_scale = rearrange(coords_at_curr_scale, '(b n) p -> b n p', b=B).contiguous()
+        tokens_at_curr_scale = tokens[b_scale_idx, n_scale_idx, :]
+        tokens_at_curr_scale = rearrange(tokens_at_curr_scale, '(b n) c -> b n c', b=B).contiguous()
+
+        b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:, :, 0] != curr_scale)
+        coords_at_older_scales = patches_scale_coords[b_scale_idx, n_scale_idx, :]
+        coords_at_older_scales = rearrange(coords_at_older_scales, '(b n) p -> b n p', b=B).contiguous()
+        tokens_at_older_scale = tokens[b_scale_idx, n_scale_idx, :]
+        tokens_at_older_scale = rearrange(tokens_at_older_scale, '(b n) c -> b n c', b=B).contiguous()
+
+        return tokens_at_curr_scale, coords_at_curr_scale, tokens_at_older_scale, coords_at_older_scales
+
+
+    def split_features(self, tokens_to_split):
         x_splitted = self.split(tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
         x_splitted = x_splitted + self.rel_pos_embs + self.scale_embs
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
-    def split_coords(self, coords_to_split, curr_scale):
-        batch_size = coords_to_split.shape[0]
+    def split_pos(self, pos_to_split, curr_scale):
+        batch_size = pos_to_split.shape[0]
         new_scale = curr_scale + 1
         new_coord_ratio = 2 ** (self.n_scales - new_scale - 1)
-        a = torch.stack([coords_to_split[:, :, 1], coords_to_split[:, :, 2]], dim=2)
-        b = torch.stack([coords_to_split[:, :, 1] + new_coord_ratio, coords_to_split[:, :, 2]], dim=2)
-        c = torch.stack([coords_to_split[:, :, 1], coords_to_split[:, :, 2] + new_coord_ratio], dim=2)
-        d = torch.stack([coords_to_split[:, :, 1] + new_coord_ratio, coords_to_split[:, :, 2] + new_coord_ratio], dim=2)
+        a = torch.stack([pos_to_split[:, :, 1], pos_to_split[:, :, 2]], dim=2)
+        b = torch.stack([pos_to_split[:, :, 1] + new_coord_ratio, pos_to_split[:, :, 2]], dim=2)
+        c = torch.stack([pos_to_split[:, :, 1], pos_to_split[:, :, 2] + new_coord_ratio], dim=2)
+        d = torch.stack([pos_to_split[:, :, 1] + new_coord_ratio, pos_to_split[:, :, 2] + new_coord_ratio], dim=2)
 
-        new_coords_2dim = torch.stack([a, b, c, d], dim=2)
-        new_coords_2dim = rearrange(new_coords_2dim, 'b n s c -> b (n s) c', s=self.split_ratio, c=2).contiguous()
+        new_pos_2dim = torch.stack([a, b, c, d], dim=2)
+        new_pos_2dim = rearrange(new_pos_2dim, 'b n s c -> b (n s) c', s=self.split_ratio, c=2).contiguous()
 
-        scale_lvl = torch.tensor([new_scale] * new_coords_2dim.shape[1])
+        scale_lvl = torch.tensor([new_scale] * new_pos_2dim.shape[1])
         scale_lvl = scale_lvl.repeat(batch_size, 1)
-        scale_lvl = scale_lvl.to(coords_to_split.device).int().unsqueeze(2)
-        patches_scale_coords = torch.cat([scale_lvl, new_coords_2dim], dim=2)
+        scale_lvl = scale_lvl.to(pos_to_split.device).int().unsqueeze(2)
+        patches_scale_pos = torch.cat([scale_lvl, new_pos_2dim], dim=2)
 
-        return patches_scale_coords
+        return patches_scale_pos
 
-    def add_high_res_feat(self, tokens, coords, curr_scale, image):
+    def add_high_res_feat(self, tokens, pos, curr_scale, image):
         patched_im = self.high_res_patcher(image)
-        b = torch.arange(coords.shape[0]).unsqueeze(-1).expand(-1, coords.shape[1])
-        x = torch.div(coords[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
-        y = torch.div(coords[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
+        b = torch.arange(pos.shape[0]).unsqueeze(-1).expand(-1, pos.shape[1])
+        x = torch.div(pos[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
+        y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
         patched_im = patched_im[b, :, y, x]
         tokens = tokens + patched_im
 
         return tokens
 
-    def upsample_features(self, features_high, features_high_pos, features_low, features_low_pos, curr_scale, im):
-        tokens_after_split = self.split_tokens(features_high, curr_scale)
-        coords_after_split = self.split_coords(features_high_pos, curr_scale)
+    def upsample_features(self, im, scale, features, features_pos, upsampling_mask):
+        feat_at_curr_scale, pos_at_curr_scale, feat_at_older_scale, pos_at_older_scale = self.divide_feat_pos_on_scale(
+            features, features_pos, scale)
+        feat_to_split, pos_to_split, feat_to_keep, pos_to_keep = self.divide_tokens_to_split_and_keep(
+            feat_at_curr_scale, pos_at_curr_scale, upsampling_mask)
+        feat_after_split = self.split_features(feat_to_split, scale)
+        pos_after_split = self.split_pos(pos_to_split, scale)
 
-        tokens_after_split = self.token_projection(tokens_after_split)
-        features_low = self.token_projection(features_low)
+        feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, im)
 
-        tokens_after_split = self.add_high_res_feat(tokens_after_split, coords_after_split[:, :, 1:], curr_scale, im)
+        all_feat = torch.cat([feat_at_older_scale, feat_to_keep, feat_after_split], dim=1)
+        all_pos = torch.cat([pos_at_older_scale, pos_to_keep, pos_after_split], dim=1)
 
-        all_tokens = torch.cat([features_low, tokens_after_split], dim=1)
-        all_coords = torch.cat([features_low_pos, coords_after_split], dim=1)
+        all_feat = self.token_projection(all_feat)
 
-        return all_tokens, all_coords
+        return all_feat, all_pos
 
-    def forward(self, im, scale, features_high, features_high_pos, features_low, features_low_pos):
+    def forward(self, im, scale, features, features_pos, upsampling_mask):
         B, _, H, W = im.shape
         PS = self.patch_size
         min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
 
-        x, pos = self.upsample_features(features_high, features_high_pos, features_low, features_low_pos, scale, im)
+        x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
 
         pos, x = self.layers(pos, x, h=min_patched_im_size[0], w=min_patched_im_size[1], on_grid=False)
 
@@ -630,7 +670,8 @@ class MRNB(nn.Module):
             out_scale = x[b_scale_idx, n_scale_idx, :]
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = self.norm_out(out_scale)
-            outs["res{}_pos".format(out_idx)] = pos_scale
+            outs["res{}_pos".format(out_idx)] = pos_scale[:,:,1:]
+            outs["res{}_scale".format(out_idx)] = pos_scale[:, :, 0]
             outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
         return outs
 

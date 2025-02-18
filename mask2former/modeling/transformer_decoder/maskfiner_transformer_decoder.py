@@ -21,12 +21,12 @@ Registry for transformer module in MaskFormer.
 """
 
 
-def build_transformer_decoder(cfg, in_channels, mask_classification=True):
+def build_transformer_decoder(cfg, layer_index, in_channels, mask_classification=True):
     """
     Build a instance embedding branch from `cfg.MODEL.INS_EMBED_HEAD.NAME`.
     """
     name = cfg.MODEL.MASK_FORMER.TRANSFORMER_DECODER_NAME
-    return TRANSFORMER_DECODER_REGISTRY.get(name)(cfg, in_channels, mask_classification)
+    return TRANSFORMER_DECODER_REGISTRY.get(name)(cfg, layer_index, in_channels, mask_classification)
 
 
 def point2img(x, pos, mask_size=None):
@@ -284,6 +284,8 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         pre_norm: bool,
         mask_dim: int,
         enforce_input_project: bool,
+        num_decoder_levels: int,
+        upscale_ratio: float,
     ):
         """
         NOTE: this interface is experimental.
@@ -355,7 +357,7 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         self.query_embed = nn.Embedding(num_queries, hidden_dim)
 
         # level embedding (we always use 3 scales)
-        self.num_feature_levels = 3
+        self.num_feature_levels = num_decoder_levels
         self.level_embed = nn.Embedding(self.num_feature_levels, hidden_dim)
         self.input_proj = nn.ModuleList()
         for _ in range(self.num_feature_levels):
@@ -370,36 +372,38 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
             self.class_embed = nn.Linear(hidden_dim, num_classes + 1)
         self.mask_embed = MLP(hidden_dim, hidden_dim, mask_dim, 3)
 
+        self.upscale_ratio = upscale_ratio
 
     @classmethod
-    def from_config(cls, cfg, in_channels, mask_classification):
+    def from_config(cls, cfg, layer_index, in_channels, mask_classification):
         ret = {}
         ret["in_channels"] = in_channels
         ret["mask_classification"] = mask_classification
 
         ret["num_classes"] = cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES
-        ret["hidden_dim"] = cfg.MODEL.MASK_FORMER.HIDDEN_DIM
-        ret["num_queries"] = cfg.MODEL.MASK_FORMER.NUM_OBJECT_QUERIES
+        ret["hidden_dim"] = cfg.MODEL.MASK_FINER.HIDDEN_DIM[layer_index]
+        ret["num_queries"] = cfg.MODEL.MASK_FINER.NUM_OBJECT_QUERIES[layer_index]
         # Transformer parameters:
-        ret["nheads"] = cfg.MODEL.MASK_FORMER.NHEADS
-        ret["dim_feedforward"] = cfg.MODEL.MASK_FORMER.DIM_FEEDFORWARD
+        ret["nheads"] = cfg.MODEL.MASK_FINER.NHEADS[layer_index]
+        ret["dim_feedforward"] = cfg.MODEL.MASK_FINER.DIM_FEEDFORWARD[layer_index]
 
         # NOTE: because we add learnable query features which requires supervision,
         # we add minus 1 to decoder layers to be consistent with our loss
         # implementation: that is, number of auxiliary losses is always
         # equal to number of decoder layers. With learnable query features, the number of
         # auxiliary losses equals number of decoders plus 1.
-        assert cfg.MODEL.MASK_FORMER.DEC_LAYERS >= 1
-        ret["dec_layers"] = cfg.MODEL.MASK_FORMER.DEC_LAYERS - 1
-        ret["pre_norm"] = cfg.MODEL.MASK_FORMER.PRE_NORM
-        ret["enforce_input_project"] = cfg.MODEL.MASK_FORMER.ENFORCE_INPUT_PROJ
-
-        ret["mask_dim"] = cfg.MODEL.SEM_SEG_HEAD.MASK_DIM
+        assert cfg.MODEL.MASK_FINER.DEC_LAYERS >= 1
+        ret["dec_layers"] = cfg.MODEL.MASK_FINER.DEC_LAYERS[layer_index] - 1
+        ret["pre_norm"] = cfg.MODEL.MASK_FINER.PRE_NORM
+        ret["enforce_input_project"] = cfg.MODEL.MASK_FINER.ENFORCE_INPUT_PROJ
+        ret["upscale_ratio"] = cfg.MODEL.MASK_FINER.UPSCALE_RATIO[layer_index]
+        ret["mask_dim"] = cfg.MODEL.SEM_SEG_HEAD.MASK_DIM[layer_index]
+        ret["num_decoder_levels"] = cfg.MODEL.MASK_FINER.DECODER_LEVELS[layer_index]
 
         return ret
 
 
-    def forward(self, x, pos, mask_features, mf_pos, mask=None):
+    def forward(self, x, pos, mask_features, mf_pos, finest_input_shape):
         '''
         x - [b x n x c]
         pos - [b x n x 2]
@@ -411,8 +415,10 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         src = []
         pos_emb = []
 
-        # disable mask, it does not affect performance
-        del mask
+        if len(pos) == 1 and pos[0].shape == mf_pos.shape and (pos[0] == mf_pos).all():
+            masked_attn = False
+        else:
+            masked_attn = True
 
         for i in range(self.num_feature_levels):
             pos_emb.append(self.pe_layer(pos[i]))
@@ -432,7 +438,10 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         predictions_mask = []
 
         # prediction heads on learnable query features
-        outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[0])  # b x q x nc, b x q x n, b*h x q x n
+        outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+        finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_input_shape[0]), torch.arange(0, finest_input_shape[1]), indexing='ij')).view(2, -1).permute(1, 0)
+        finest_pos = finest_pos.to(pos.device).repeat(b, 1, 1)
+        outputs_mask = upsample_feature_shepard(finest_pos, mf_pos, outputs_mask.permute(0, 2, 1)).permute(0, 2, 1)
         outputs_mask = point2img(outputs_mask, mf_pos)
         predictions_class.append(outputs_class)
         predictions_mask.append(outputs_mask)
@@ -440,7 +449,8 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
 
         for i in range(self.num_layers):
             level_index = i % self.num_feature_levels
-            attn_mask[torch.where(attn_mask.sum(-1) == attn_mask.shape[-1])] = False
+            if masked_attn:
+                attn_mask[torch.where(attn_mask.sum(-1) == attn_mask.shape[-1])] = False
 
             # attention: cross-attention first
             output = self.transformer_cross_attention_layers[i](
@@ -461,10 +471,13 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
                 output
             )
 
-            outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[(i + 1) % self.num_feature_levels])  # b x q x nc, b x q x n, b*h x q x n
+            outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+            outputs_mask = upsample_feature_shepard(finest_pos, mf_pos, outputs_mask.permute(0, 2, 1)).permute(0, 2, 1)
             outputs_mask = point2img(outputs_mask, mf_pos)
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
+
+        disagreement_mask = self.create_disagreement_mask(outputs_mask, outputs_class)
 
         assert len(predictions_class) == self.num_layers + 1
 
@@ -475,9 +488,9 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
                 predictions_class if self.mask_classification else None, predictions_mask
             )
         }
-        return out
+        return out, disagreement_mask
 
-    def forward_prediction_heads(self, output, mask_features, mf_pos, target_pos):
+    def forward_prediction_heads(self, output, mask_features, mf_pos, target_pos, masked_attn):
         '''
         output - q x b x c
         mask_features - b x n x c
@@ -493,9 +506,12 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         # attn_mask = F.interpolate(outputs_mask, size=attn_mask_target_size, mode="bilinear", align_corners=False)
         # must use bool type
         # If a BoolTensor is provided, positions with ``True`` are not allowed to attend while ``False`` values will be unchanged.
-        attn_mask = upsample_feature_shepard(target_pos, mf_pos, outputs_mask.permute(0, 2, 1)).permute(0, 2, 1)  # b x q x n
-        attn_mask = (attn_mask.sigmoid().unsqueeze(1).repeat(1, self.num_heads, 1, 1).flatten(0, 1) < 0.5).bool()  # b*h x q x n
-        attn_mask = attn_mask.detach()
+        if masked_attn:
+            attn_mask = upsample_feature_shepard(target_pos, mf_pos, outputs_mask.permute(0, 2, 1)).permute(0, 2, 1)  # b x q x n
+            attn_mask = (attn_mask.sigmoid().unsqueeze(1).repeat(1, self.num_heads, 1, 1).flatten(0, 1) < 0.5).bool()  # b*h x q x n
+            attn_mask = attn_mask.detach()
+        else:
+            attn_mask = None
         #print("Final Attn Mask output shape: {}".format(attn_mask.shape))
         return outputs_class, outputs_mask, attn_mask
 
@@ -511,3 +527,15 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
             ]
         else:
             return [{"pred_masks": b} for b in outputs_seg_masks[:-1]]
+
+
+    def create_disagreement_mask(self, outputs_mask, outputs_class):
+        b, q, n = outputs_mask.shape
+        cls_i = outputs_class.argmax(dim=-1)
+        disagreement_mask = torch.zeros(b, n)
+        for b in range(cls_i.shape[0]):
+            for c in cls_i[b].unique():
+                batch_cls_mask = F.sigmoid(outputs_mask[b, cls_i[b] == c].sum(dim=0))
+                batch_cls_mask = (batch_cls_mask > 0.5).int()
+                disagreement_mask[b] = disagreement_mask[b] + batch_cls_mask
+        return disagreement_mask

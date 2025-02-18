@@ -281,7 +281,7 @@ class MRVIT(nn.Module):
     def load_pretrained(self, checkpoint_path, prefix=""):
         _load_weights(self, checkpoint_path, prefix)
 
-    def forward(self, im, scale, features_high, features_low):
+    def forward(self, im, scale, features, features_pos, upsampling_mask):
         B, _, H, W = im.shape
         PS = self.patch_size
         x = self.patch_embed(im)
@@ -298,8 +298,9 @@ class MRVIT(nn.Module):
         outs = {}
         out_name = self._out_features[0]
         outs[out_name] = self.norm_out(x)
-        outs[out_name + "_pos"] = pos  # torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
+        outs[out_name + "_pos"] = pos[:,:,1:]  # torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
         outs[out_name + "_spatial_shape"] = min_patched_im_size
+        outs[out_name + "_scale"] = pos[:, :, 0]
         return outs
 
 

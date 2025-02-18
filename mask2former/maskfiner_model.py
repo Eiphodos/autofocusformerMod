@@ -195,14 +195,13 @@ class MaskFiner(nn.Module):
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
 
-        features_low = None
-        features_high = None
+        features = None
+        features_pos = None
+        upsampling_mask = None
         outputs = {}
         outputs['aux_outputs'] = []
         for l_idx in enumerate(self.mask_predictors):
-            outs, features_high, features_low = self.mask_predictors[l_idx](images.tensor, l_idx,
-                                                                            features_high=features_high,
-                                                                            features_low=features_low)
+            outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
 
             if l_idx < len(self.mask_predictors) - 2:
                 outputs['aux_outputs'].append(outs)
