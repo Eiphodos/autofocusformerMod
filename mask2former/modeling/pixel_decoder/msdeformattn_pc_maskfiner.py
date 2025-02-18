@@ -458,8 +458,8 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
 
     @classmethod
     def from_config(cls, cfg, layer_index, input_shape: Dict[str, ShapeSpec]):
-        pix_dec_in_features = cfg.MODEL.PIXEL_DECODER.IN_FEATURES[-(layer_index + 1):]
-        all_transformer_in_features = cfg.MODEL.PIXEL_DECODER.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES
+        pix_dec_in_features = cfg.MODEL.SEM_SEG_HEAD.IN_FEATURES[-(layer_index + 1):]
+        all_transformer_in_features = cfg.MODEL.SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES
         all_dtf_len = len(all_transformer_in_features)
         if layer_index == 0:
             trans_dec_in_feat = all_transformer_in_features[-1]
@@ -469,16 +469,16 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         ret["input_shape"] = {
             k: v for k, v in input_shape.items() if k in pix_dec_in_features
         }
-        m_dim = cfg.MODEL.PIXEL_DECODER.CONVS_DIM[layer_index]
+        m_dim = cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM[layer_index]
         ret["conv_dim"] = m_dim
         ret["mask_dim"] = cfg.MODEL.MASK_FINER.MASK_DIM[layer_index]
-        ret["norm"] = cfg.MODEL.PIXEL_DECODER.NORM
-        ret["transformer_dropout"] = cfg.MODEL.PIXEL_DECODER.DROPOUT
-        ret["transformer_nheads"] = cfg.MODEL.PIXEL_DECODER.NHEADS[layer_index]
-        ret["transformer_dim_feedforward"] = m_dim * cfg.MODEL.PIXEL_DECODER.MLP_RATIO[layer_index]
-        ret["transformer_enc_layers"] = cfg.MODEL.PIXEL_DECODER.TRANSFORMER_ENC_LAYERS[layer_index]
+        ret["norm"] = cfg.MODEL.SEM_SEG_HEAD.NORM
+        ret["transformer_dropout"] = cfg.MODEL.SEM_SEG_HEAD.DROPOUT
+        ret["transformer_nheads"] = cfg.MODEL.SEM_SEG_HEAD.NHEADS[layer_index]
+        ret["transformer_dim_feedforward"] = m_dim * cfg.MODEL.SEM_SEG_HEAD.MLP_RATIO[layer_index]
+        ret["transformer_enc_layers"] = cfg.MODEL.SEM_SEG_HEAD.TRANSFORMER_ENC_LAYERS[layer_index]
         ret["transformer_in_features"] = trans_dec_in_feat
-        ret["common_stride"] = cfg.MODEL.PIXEL_DECODER.COMMON_STRIDE
+        ret["common_stride"] = cfg.MODEL.SEM_SEG_HEAD.COMMON_STRIDE
         ret['shepard_power'] = cfg.MODEL.MASK_FINER.SHEPARD_POWER / 2.0  # since the distances are already squared
         ret['shepard_power_learnable'] = cfg.MODEL.MASK_FINER.SHEPARD_POWER_LEARNABLE
         return ret
