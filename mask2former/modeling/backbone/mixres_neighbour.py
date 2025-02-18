@@ -582,7 +582,7 @@ class MRNB(nn.Module):
         return tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep
 
 
-    def divide_tokens_coords_on_scale(self, tokens, patches_scale_coords, curr_scale):
+    def divide_feat_pos_on_scale(self, tokens, patches_scale_coords, curr_scale):
         B, _, _ = tokens.shape
         b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:, :, 0] == curr_scale)
         coords_at_curr_scale = patches_scale_coords[b_scale_idx, n_scale_idx, :]
@@ -640,7 +640,7 @@ class MRNB(nn.Module):
             features, features_pos, scale)
         feat_to_split, pos_to_split, feat_to_keep, pos_to_keep = self.divide_tokens_to_split_and_keep(
             feat_at_curr_scale, pos_at_curr_scale, upsampling_mask)
-        feat_after_split = self.split_features(feat_to_split, scale)
+        feat_after_split = self.split_features(feat_to_split)
         pos_after_split = self.split_pos(pos_to_split, scale)
 
         feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, im)
