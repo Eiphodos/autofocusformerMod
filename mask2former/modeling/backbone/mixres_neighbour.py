@@ -717,15 +717,15 @@ class MixResNeighbour(MRNB, Backbone):
             min_patch_size=min_patch_size
         )
 
-        self._out_features = [cfg.MODEL.MR.OUT_FEATURES[layer_index]]
+        self._out_features = cfg.MODEL.MR.OUT_FEATURES[-layer_index+1:]
 
         self._in_features_channels = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
 
-        self._out_feature_strides = { "res{}".format(layer_index+2): cfg.MODEL.MRNB.PATCH_SIZES[layer_index]}
-        #self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in range(num_scales)}
+        #self._out_feature_strides = { "res{}".format(layer_index+2): cfg.MODEL.MRNB.PATCH_SIZES[layer_index]}
+        self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MRML.PATCH_SIZES[i] for i in range(layer_index + 1)}
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
-        self._out_feature_channels = {"res{}".format(layer_index+2): embed_dim}
+        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in range(layer_index + 1)}
         #print("backbone channels: {}".format(self._out_feature_channels))
 
     def forward(self, x):
