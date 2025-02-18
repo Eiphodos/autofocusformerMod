@@ -11,6 +11,7 @@ MODEL:
     DROP_RATE: [0.0, 0.0, 0.0, 0.0]
     DROP_PATH_RATE: [0.3, 0.3, 0.3, 0.3]
     ATTN_DROP_RATE: [0.0, 0.0, 0.0, 0.0]
+    UPSCALE_RATIO: [0.25, 0.25, 0.25, 0.25]
     SPLIT_RATIO: [4, 4, 4, 4]
     MLP_RATIO: [4., 4., 4., 4.]
     CLUSTER_SIZE: [8, 8, 8, 8]

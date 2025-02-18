@@ -491,7 +491,8 @@ class MRNB(nn.Module):
             cluster_size=8,
             nbhd_size=[48, 48, 48, 48],
             layer_scale=0.0,
-            min_patch_size=4
+            min_patch_size=4,
+            upscale_ratio=0.25
     ):
         super().__init__()
         self.patch_embed = OverlapPatchEmbedding(
@@ -512,6 +513,7 @@ class MRNB(nn.Module):
         self.min_patch_size = min_patch_size
         self.cluster_size = cluster_size,
         self.nbhd_size = nbhd_size
+        self.upscale_ratio = upscale_ratio
 
         num_features = d_model
         self.num_features = num_features
@@ -697,6 +699,7 @@ class MixResNeighbour(MRNB, Backbone):
         mlp_ratio = cfg.MODEL.MR.MLP_RATIO[layer_index]
         cluster_size = cfg.MODEL.MR.CLUSTER_SIZE[layer_index]
         nbhd_size = cfg.MODEL.MR.NBHD_SIZE[layer_index]
+        upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
 
 
 
@@ -715,7 +718,8 @@ class MixResNeighbour(MRNB, Backbone):
             cluster_size=cluster_size,
             nbhd_size=nbhd_size,
             n_scales=n_scales,
-            min_patch_size=min_patch_size
+            min_patch_size=min_patch_size,
+            upscale_ratio=upscale_ratio
         )
 
         self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
