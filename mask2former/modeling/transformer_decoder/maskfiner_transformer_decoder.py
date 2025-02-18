@@ -392,7 +392,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         # implementation: that is, number of auxiliary losses is always
         # equal to number of decoder layers. With learnable query features, the number of
         # auxiliary losses equals number of decoders plus 1.
-        assert cfg.MODEL.MASK_FINER.DEC_LAYERS >= 1
+        assert cfg.MODEL.MASK_FINER.DEC_LAYERS[layer_index] >= 1
         ret["dec_layers"] = cfg.MODEL.MASK_FINER.DEC_LAYERS[layer_index] - 1
         ret["pre_norm"] = cfg.MODEL.MASK_FINER.PRE_NORM
         ret["enforce_input_project"] = cfg.MODEL.MASK_FINER.ENFORCE_INPUT_PROJ
