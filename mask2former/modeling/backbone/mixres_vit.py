@@ -264,7 +264,7 @@ class MRVIT(nn.Module):
 
         # Pos Embs
         self.pe_layer = PositionEmbeddingSine(d_model // 2, normalize=True)
-        dim_ff = d_model * mlp_ratio
+        dim_ff = int(d_model * mlp_ratio)
         # transformer layers
         self.layers = TransformerLayer(n_layers, d_model, n_heads, dim_ff, dropout, drop_path_rate)
 
