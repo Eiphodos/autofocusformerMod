@@ -613,8 +613,7 @@ class MRNB(nn.Module):
 
     def split_pos(self, pos_to_split, curr_scale):
         batch_size = pos_to_split.shape[0]
-        new_scale = curr_scale + 1
-        new_coord_ratio = 2 ** (self.n_scales - new_scale - 1)
+        new_coord_ratio = 2 ** (self.n_scales - curr_scale - 1)
         a = torch.stack([pos_to_split[:, :, 1], pos_to_split[:, :, 2]], dim=2)
         b = torch.stack([pos_to_split[:, :, 1] + new_coord_ratio, pos_to_split[:, :, 2]], dim=2)
         c = torch.stack([pos_to_split[:, :, 1], pos_to_split[:, :, 2] + new_coord_ratio], dim=2)
@@ -623,7 +622,7 @@ class MRNB(nn.Module):
         new_pos_2dim = torch.stack([a, b, c, d], dim=2)
         new_pos_2dim = rearrange(new_pos_2dim, 'b n s c -> b (n s) c', s=self.split_ratio, c=2).contiguous()
 
-        scale_lvl = torch.tensor([new_scale] * new_pos_2dim.shape[1])
+        scale_lvl = torch.tensor([curr_scale] * new_pos_2dim.shape[1])
         scale_lvl = scale_lvl.repeat(batch_size, 1)
         scale_lvl = scale_lvl.to(pos_to_split.device).int().unsqueeze(2)
         patches_scale_pos = torch.cat([scale_lvl, new_pos_2dim], dim=2)
@@ -633,16 +632,17 @@ class MRNB(nn.Module):
     def add_high_res_feat(self, tokens, pos, curr_scale, image):
         patched_im = self.high_res_patcher(image)
         b = torch.arange(pos.shape[0]).unsqueeze(-1).expand(-1, pos.shape[1])
-        x = torch.div(pos[..., 0], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
-        y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 2), rounding_mode='trunc').long()
+        x = torch.div(pos[..., 0], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
+        y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         patched_im = patched_im[b, :, y, x]
         tokens = tokens + patched_im
 
         return tokens
 
     def upsample_features(self, im, scale, features, features_pos, upsampling_mask):
+        old_scale = scale - 1
         feat_at_curr_scale, pos_at_curr_scale, feat_at_older_scale, pos_at_older_scale = self.divide_feat_pos_on_scale(
-            features, features_pos, scale)
+            features, features_pos, old_scale)
         feat_to_split, pos_to_split, feat_to_keep, pos_to_keep = self.divide_tokens_to_split_and_keep(
             feat_at_curr_scale, pos_at_curr_scale, upsampling_mask)
         feat_after_split = self.split_features(feat_to_split)
