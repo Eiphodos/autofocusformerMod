@@ -545,7 +545,7 @@ class MRNB(nn.Module):
         # Split layers
         self.split = nn.Linear(channels, channels * self.split_ratio)
 
-        self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=patch_size, stride=patch_size)
+        self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
 
         self.token_projection = nn.Linear(channels, d_model)
 
