@@ -348,7 +348,8 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         transformer_in_features: List[str],
         common_stride: int,
         shepard_power: float,
-        shepard_power_learnable: bool
+        shepard_power_learnable: bool,
+        maskformer_num_feature_levels: int
     ):
         """
         NOTE: this interface is experimental.
@@ -423,7 +424,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         )
         weight_init.c2_xavier_fill(self.mask_features)
 
-        self.maskformer_num_feature_levels = min(len(self.in_features), 3)  # always use 3 scales
+        self.maskformer_num_feature_levels = maskformer_num_feature_levels  # always use 3 scales
         self.common_stride = common_stride
 
         # extra fpn levels
@@ -482,6 +483,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         ret["common_stride"] = cfg.MODEL.SEM_SEG_HEAD.COMMON_STRIDE
         ret['shepard_power'] = cfg.MODEL.MASK_FINER.SHEPARD_POWER / 2.0  # since the distances are already squared
         ret['shepard_power_learnable'] = cfg.MODEL.MASK_FINER.SHEPARD_POWER_LEARNABLE
+        ret['maskformer_num_feature_levels'] = cfg.MODEL.MASK_FINER.DECODER_LEVELS[layer_index]
         return ret
 
     @autocast(enabled=False)

@@ -85,4 +85,5 @@ class MaskPredictor(nn.Module):
         all_pos = torch.cat(multi_scale_poss, dim=1).squeeze()
         all_scale = torch.cat(ms_scale, dim=1).squeeze()
         pos_scale = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
-        return predictions, torch.cat(multi_scale_features, dim=1).squeeze(), pos_scale, upsampling_mask
+        all_feat = torch.cat(multi_scale_features, dim=1).squeeze()
+        return predictions, all_feat, pos_scale, upsampling_mask
