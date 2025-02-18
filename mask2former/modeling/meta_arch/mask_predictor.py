@@ -63,7 +63,7 @@ class MaskPredictor(nn.Module):
     @classmethod
     def from_config(cls, cfg, layer_index):
         backbone = build_backbone_indexed(cfg, layer_index)
-        bb_output_shape = backbone.get_output_shape()
+        bb_output_shape = backbone.output_shape()
         pixel_decoder = build_pixel_decoder(cfg, layer_index, input_shape=bb_output_shape)
         mask_decoder_input_dim = cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM[layer_index]
         mask_decoder = build_transformer_decoder(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
