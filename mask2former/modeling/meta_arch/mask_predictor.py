@@ -8,7 +8,7 @@ from torch import nn
 
 from detectron2.config import configurable
 from detectron2.layers import ShapeSpec
-from detectron2.modeling import META_ARCH_REGISTRY, build_backbone
+from detectron2.modeling import SEM_SEG_HEADS_REGISTRY, build_backbone
 from detectron2.modeling.backbone import Backbone
 
 from ..transformer_decoder.maskfiner_transformer_decoder import build_transformer_decoder
@@ -16,7 +16,7 @@ from ..pixel_decoder.msdeformattn_pc_maskfiner import build_pixel_decoder
 from ..backbone.build import build_backbone_indexed
 
 
-@META_ARCH_REGISTRY.register()
+@SEM_SEG_HEADS_REGISTRY.register()
 class MaskPredictor(nn.Module):
 
     _version = 2
@@ -48,23 +48,32 @@ class MaskPredictor(nn.Module):
         self,
         backbone: Backbone,
         pixel_decoder: nn.Module,
-        mask_decoder: nn.Module):
+        mask_decoder: nn.Module,
+        num_classes: int,
+        loss_weight: float = 1.0,
+        ignore_value: int = -1):
         super().__init__()
         self.backbone = backbone
         self.pixel_decoder = pixel_decoder
         self.mask_decoder = mask_decoder
+        self.ignore_value = ignore_value
+        self.loss_weight = loss_weight
+        self.num_classes = num_classes
 
     @classmethod
     def from_config(cls, cfg, layer_index):
         backbone = build_backbone_indexed(cfg, layer_index)
         bb_output_shape = backbone.get_output_shape()
         pixel_decoder = build_pixel_decoder(cfg, layer_index, input_shape=bb_output_shape)
-        mask_decoder_input_dim = cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM[layer_index]
+        mask_decoder_input_dim = cfg.MODEL.PIXEL_DECODER.CONVS_DIM[layer_index]
         mask_decoder = build_transformer_decoder(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
         return {
             "backbone": backbone,
             "pixel_decoder": pixel_decoder,
-            "mask_decoder": mask_decoder
+            "mask_decoder": mask_decoder,
+            "loss_weight": cfg.MODEL.SEM_SEG_HEAD.LOSS_WEIGHT,
+            "ignore_value": cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
+            "num_classes": cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
         }
 
     def forward(self, im, scale, features, features_pos, upsampling_mask):

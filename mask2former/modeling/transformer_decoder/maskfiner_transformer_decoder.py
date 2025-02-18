@@ -242,7 +242,7 @@ class MLP(nn.Module):
 
 
 @TRANSFORMER_DECODER_REGISTRY.register()
-class MultiScaleMaskedTransformerDecoder(nn.Module):
+class MultiScaleMaskFinerTransformerDecoder(nn.Module):
 
     _version = 2
 
@@ -397,7 +397,7 @@ class MultiScaleMaskedTransformerDecoder(nn.Module):
         ret["pre_norm"] = cfg.MODEL.MASK_FINER.PRE_NORM
         ret["enforce_input_project"] = cfg.MODEL.MASK_FINER.ENFORCE_INPUT_PROJ
         ret["upscale_ratio"] = cfg.MODEL.MASK_FINER.UPSCALE_RATIO[layer_index]
-        ret["mask_dim"] = cfg.MODEL.SEM_SEG_HEAD.MASK_DIM[layer_index]
+        ret["mask_dim"] = cfg.MODEL.MASK_FINER.MASK_DIM[layer_index]
         ret["num_decoder_levels"] = cfg.MODEL.MASK_FINER.DECODER_LEVELS[layer_index]
 
         return ret

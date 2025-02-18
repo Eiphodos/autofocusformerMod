@@ -25,7 +25,9 @@ def build_backbone_indexed(cfg, layer_index=None):
         an instance of :class:`Backbone`
     """
 
-    backbone_name = cfg.MODEL.BACKBONE.NAME[layer_index]
+    backbone_name = cfg.MODEL.BACKBONE.NAME
+    if backbone_name == "MixRes":
+        backbone_name = cfg.MODEL.BACKBONE.MR.NAME[layer_index]
     backbone = BACKBONE_REGISTRY.get(backbone_name)(cfg, layer_index)
     assert isinstance(backbone, Backbone)
     return backbone

@@ -136,3 +136,96 @@ def add_maskformer2_config(cfg):
     # Importance sampling parameter for PointRend point sampling during training. Parametr `beta` in
     # the original paper.
     cfg.MODEL.MASK_FORMER.IMPORTANCE_SAMPLE_RATIO = 0.75
+
+
+
+    # Maskfiner config
+
+    cfg.MODEL.MASK_FINER = CN()
+
+    # loss
+    cfg.MODEL.MASK_FINER.DEEP_SUPERVISION = True
+    cfg.MODEL.MASK_FINER.NO_OBJECT_WEIGHT = 0.1
+    cfg.MODEL.MASK_FINER.CLASS_WEIGHT = 1.0
+    cfg.MODEL.MASK_FINER.DICE_WEIGHT = 1.0
+    cfg.MODEL.MASK_FINER.MASK_WEIGHT = 20.0
+
+    # transformer config
+    cfg.MODEL.MASK_FINER.NHEADS = [8, 8, 8, 8]
+    cfg.MODEL.MASK_FINER.DROPOUT = 0.1
+    cfg.MODEL.MASK_FINER.DIM_FEEDFORWARD = [2048, 2048, 2048, 2048]
+    cfg.MODEL.MASK_FINER.ENC_LAYERS = [0, 0, 0, 0]
+    cfg.MODEL.MASK_FINER.DEC_LAYERS = [4, 7, 10, 10]
+    cfg.MODEL.MASK_FINER.DECODER_LEVELS = [1, 2, 3, 3]
+    cfg.MODEL.MASK_FINER.PRE_NORM = False
+
+    cfg.MODEL.MASK_FINER.MASK_DIM = [256, 256, 256, 256]
+    cfg.MODEL.MASK_FINER.HIDDEN_DIM = [256, 256, 256, 256]
+    cfg.MODEL.MASK_FINER.NUM_OBJECT_QUERIES = [100, 100, 100, 100]
+    cfg.MODEL.MASK_FINER.UPSCALE_RATIO = [0.25, 0.25, 0.25, 0.25]
+
+    cfg.MODEL.MASK_FINER.TRANSFORMER_IN_FEATURE = "multi_scale_pixel_decoder"
+    cfg.MODEL.MASK_FINER.ENFORCE_INPUT_PROJ = False
+
+    # MASK_FINER inference config
+    cfg.MODEL.MASK_FINER.TEST = CN()
+    cfg.MODEL.MASK_FINER.TEST.SEMANTIC_ON = True
+    cfg.MODEL.MASK_FINER.TEST.INSTANCE_ON = False
+    cfg.MODEL.MASK_FINER.TEST.PANOPTIC_ON = False
+    cfg.MODEL.MASK_FINER.TEST.OBJECT_MASK_THRESHOLD = 0.0
+    cfg.MODEL.MASK_FINER.TEST.OVERLAP_THRESHOLD = 0.0
+    cfg.MODEL.MASK_FINER.TEST.SEM_SEG_POSTPROCESSING_BEFORE_INFERENCE = False
+
+    # Sometimes `backbone.size_divisibility` is set to 0 for some backbone (e.g. ResNet)
+    # you can use this config to override
+    cfg.MODEL.MASK_FINER.SIZE_DIVISIBILITY = 32
+
+    # point loss configs
+    # Number of points sampled during training for a mask point head.
+    cfg.MODEL.MASK_FINER.TRAIN_NUM_POINTS = 112 * 112
+    # Oversampling parameter for PointRend point sampling during training. Parameter `k` in the
+    # original paper.
+    cfg.MODEL.MASK_FINER.OVERSAMPLE_RATIO = 3.0
+    # Importance sampling parameter for PointRend point sampling during training. Parametr `beta` in
+    # the original paper.
+    cfg.MODEL.MASK_FINER.IMPORTANCE_SAMPLE_RATIO = 0.75
+
+    # NOTE: maskformer2 extra configs
+    # transformer module
+    cfg.MODEL.MASK_FINER.TRANSFORMER_DECODER_NAME = "MultiScaleMaskFinerTransformerDecoder"
+
+    # MaskPredictor config
+    cfg.MODEL.SEM_SEG_HEAD.NAME = "MaskPredictor"
+    cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE = 255
+    cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES = 150
+    cfg.MODEL.SEM_SEG_HEAD.LOSS_WEIGHT = 0
+
+    # pixel decoder
+    cfg.MODEL.PIXEL_DECODER = CN()
+    cfg.MODEL.PIXEL_DECODER.NORM = "GN"
+    cfg.MODEL.PIXEL_DECODER.PIXEL_DECODER_NAME = "MSDeformAttnPixelDecoder"
+    cfg.MODEL.PIXEL_DECODER.IN_FEATURES = ["res2", "res3", "res4", "res5"]
+    cfg.MODEL.PIXEL_DECODER.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES = ["res3", "res4", "res5"]
+    cfg.MODEL.PIXEL_DECODER.COMMON_STRIDE = 4
+    cfg.MODEL.PIXEL_DECODER.TRANSFORMER_ENC_LAYERS = [6, 6, 6, 6]
+    cfg.MODEL.PIXEL_DECODER.MLP_RATIO = [ 4.0, 4.0, 4.0, 4.0 ]
+    cfg.MODEL.PIXEL_DECODER.NHEADS = [ 8, 8, 8, 8 ]
+    cfg.MODEL.PIXEL_DECODER.DROPOUT = 0.0
+
+    # MixRes backbone
+
+    cfg.MODEL.MR = CN()
+    cfg.MODEL.MR.NAME = ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour"]
+    cfg.MODEL.MR.EMBED_DIM = [512,256,128,64]
+    cfg.MODEL.MR.DEPTHS = [4, 4, 4, 4]
+    cfg.MODEL.MR.NUM_HEADS = [ 32, 16, 8, 4 ]
+    cfg.MODEL.MR.PATCH_SIZES = [32, 16, 8, 4]
+    cfg.MODEL.MR.SPLIT_RATIO = [4, 4, 4, 4]
+    cfg.MODEL.MR.MLP_RATIO = [4., 4., 4., 4.]
+    cfg.MODEL.MR.DROP_RATE = [0.0, 0.0, 0.0, 0.0]
+    cfg.MODEL.MR.DROP_PATH_RATE = [0.3, 0.3, 0.3, 0.3]
+    cfg.MODEL.MR.ATTN_DROP_RATE = [0.0, 0.0, 0.0, 0.0]
+    cfg.MODEL.MR.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
+    cfg.MODEL.MR.CLUSTER_SIZE = [8, 8, 8, 8]
+    cfg.MODEL.MR.NBHD_SIZE = [48, 48, 48, 48]
+
