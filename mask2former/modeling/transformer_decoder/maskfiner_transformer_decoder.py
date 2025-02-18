@@ -284,7 +284,8 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         pre_norm: bool,
         mask_dim: int,
         enforce_input_project: bool,
-        num_decoder_levels: int
+        num_decoder_levels: int,
+        final_layer: bool
     ):
         """
         NOTE: this interface is experimental.
@@ -318,6 +319,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         self.transformer_self_attention_layers = nn.ModuleList()
         self.transformer_cross_attention_layers = nn.ModuleList()
         self.transformer_ffn_layers = nn.ModuleList()
+        self.final_layer = final_layer
 
         for _ in range(self.num_layers):
             self.transformer_self_attention_layers.append(
@@ -395,7 +397,8 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         ret["enforce_input_project"] = cfg.MODEL.MASK_FINER.ENFORCE_INPUT_PROJ
         ret["mask_dim"] = cfg.MODEL.MASK_FINER.MASK_DIM[layer_index]
         ret["num_decoder_levels"] = cfg.MODEL.MASK_FINER.DECODER_LEVELS[layer_index]
-
+        final_layer = (layer_index + 1) == cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
+        ret["final_layer"] = final_layer
         return ret
 
 
@@ -482,14 +485,20 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         disagreement_mask = self.create_disagreement_mask(pred_mask, outputs_class)
 
         assert len(predictions_class) == self.num_layers + 1
-
-        out = {
-            'pred_logits': predictions_class[-1],
-            'pred_masks': predictions_mask[-1],
-            'aux_outputs': self._set_aux_loss(
-                predictions_class if self.mask_classification else None, predictions_mask
-            )
-        }
+        if self.final_layer:
+            out = {
+                'pred_logits': predictions_class[-1],
+                'pred_masks': predictions_mask[-1],
+                'aux_outputs': self._set_aux_loss(
+                    predictions_class[:-1] if self.mask_classification else None, predictions_mask[:-1]
+                )
+            }
+        else:
+            out = {
+                'aux_outputs': self._set_aux_loss(
+                    predictions_class if self.mask_classification else None, predictions_mask
+                )
+            }
         return out, disagreement_mask
 
     def forward_prediction_heads(self, output, mask_features, mf_pos, target_pos, masked_attn):
@@ -525,10 +534,10 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         if self.mask_classification:
             return [
                 {"pred_logits": a, "pred_masks": b}
-                for a, b in zip(outputs_class[:-1], outputs_seg_masks[:-1])
+                for a, b in zip(outputs_class, outputs_seg_masks)
             ]
         else:
-            return [{"pred_masks": b} for b in outputs_seg_masks[:-1]]
+            return [{"pred_masks": b} for b in outputs_seg_masks]
 
 
     def create_disagreement_mask(self, outputs_mask, outputs_class):

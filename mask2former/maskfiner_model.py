@@ -202,11 +202,11 @@ class MaskFiner(nn.Module):
         outputs['aux_outputs'] = []
         for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
+            outputs['aux_outputs'] = outs['aux_outputs']
+        outputs['pred_logits'] = outs['pred_logits']
+        outputs['pred_masks'] = outs['pred_masks']
 
-            if l_idx < len(self.mask_predictors) - 2:
-                outputs['aux_outputs'].append(outs)
-            else:
-                outputs.update(outs)
+        print(outputs.keys)
 
         if self.training:
             # mask classification target
