@@ -31,7 +31,7 @@ def build_pixel_decoder(cfg, layer_index, input_shape):
     Build a pixel decoder from `cfg.MODEL.MASK_FORMER.PIXEL_DECODER_NAME`.
     """
     name = cfg.MODEL.SEM_SEG_HEAD.PIXEL_DECODER_NAME
-    model = SEM_SEG_HEADS_REGISTRY.get(name)(cfg, layer_index, input_shape)
+    model = SEM_SEG_HEADS_REGISTRY.get(name)(cfg, layer_index=layer_index, input_shape=input_shape)
     forward_features = getattr(model, "forward_features", None)
     if not callable(forward_features):
         raise ValueError(
@@ -457,7 +457,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         self.output_convs = output_convs[::-1]
 
     @classmethod
-    def from_config(cls, cfg, layer_index, input_shape):
+    def from_config(cls, cfg, layer_index=0, input_shape=None):
         pix_dec_in_features = cfg.MODEL.SEM_SEG_HEAD.IN_FEATURES[-(layer_index + 1):]
         all_transformer_in_features = cfg.MODEL.SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES
         all_dtf_len = len(all_transformer_in_features)
