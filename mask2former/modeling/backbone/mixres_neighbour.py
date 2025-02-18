@@ -542,9 +542,11 @@ class MRNB(nn.Module):
                                )
 
         # Split layers
-        self.split = nn.Linear(d_model, d_model * self.split_ratio)
+        self.split = nn.Linear(channels, channels * self.split_ratio)
 
-        self.high_res_patcher = nn.Conv2d(channels, d_model, kernel_size=patch_size, stride=patch_size)
+        self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=patch_size, stride=patch_size)
+
+        self.token_projection = nn.Linear(channels, d_model)
 
         '''
         # add a norm layer for each output
@@ -683,7 +685,10 @@ class MRNB(nn.Module):
 class MixResNeighbour(MRNB, Backbone):
     def __init__(self, cfg, layer_index):
 
-        in_chans = 3
+        if layer_index == 0:
+            in_chans = 3
+        else:
+            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
         image_size = cfg.INPUT.CROP.SIZE
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
