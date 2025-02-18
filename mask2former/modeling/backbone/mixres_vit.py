@@ -246,7 +246,7 @@ class MRVIT(nn.Module):
         self.patch_embed = OverlapPatchEmbedding(
             image_size,
             patch_size,
-            d_model[0],
+            d_model,
             channels,
         )
         self.image_size = image_size
@@ -263,7 +263,7 @@ class MRVIT(nn.Module):
         self.num_features = num_features
 
         # Pos Embs
-        self.pe_layer = PositionEmbeddingSine(d_model[0] // 2, normalize=True)
+        self.pe_layer = PositionEmbeddingSine(d_model // 2, normalize=True)
 
         # transformer layers
         self.layers = TransformerLayer(n_layers, d_model, n_heads, mlp_ratio, dropout, drop_path_rate)

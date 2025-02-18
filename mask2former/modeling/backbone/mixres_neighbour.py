@@ -497,7 +497,7 @@ class MRNB(nn.Module):
         self.patch_embed = OverlapPatchEmbedding(
             image_size,
             patch_size,
-            d_model[0],
+            d_model,
             channels,
         )
         self.image_size = image_size
