@@ -200,7 +200,7 @@ class MaskFiner(nn.Module):
         upsampling_mask = None
         outputs = {}
         outputs['aux_outputs'] = []
-        for l_idx in enumerate(self.mask_predictors):
+        for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
 
             if l_idx < len(self.mask_predictors) - 2:
