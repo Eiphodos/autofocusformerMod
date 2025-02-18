@@ -198,7 +198,7 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.SEM_SEG_HEAD.NAME = "MaskPredictor"
     cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE = 255
     cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES = 150
-    cfg.MODEL.SEM_SEG_HEAD.LOSS_WEIGHT = 0
+    cfg.MODEL.SEM_SEG_HEAD.LOSS_WEIGHT = 0.0
 
     # pixel decoder
     cfg.MODEL.PIXEL_DECODER = CN()
