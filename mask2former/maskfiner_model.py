@@ -120,7 +120,7 @@ class MaskFiner(nn.Module):
         weight_dict = {"loss_ce": class_weight, "loss_mask": mask_weight, "loss_dice": dice_weight}
 
         if deep_supervision:
-            dec_layers = sum(cfg.MODEL.MASK_FINER.DEC_LAYERS) + cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
+            dec_layers = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES # + sum(cfg.MODEL.MASK_FINER.DEC_LAYERS)
             aux_weight_dict = {}
             for i in range(dec_layers - 1):
                 aux_weight_dict.update({k + f"_{i}": v for k, v in weight_dict.items()})
