@@ -520,7 +520,7 @@ class MRNB(nn.Module):
 
         # Pos Embs
         self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, d_model))
-        self.scale_embs = nn.Parameter(torch.randn(1, 1, d_model))
+        self.scale_emb = nn.Parameter(torch.randn(1, 1, d_model))
 
         # stochastic depth
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, n_layers)]
@@ -606,7 +606,7 @@ class MRNB(nn.Module):
     def split_features(self, tokens_to_split):
         x_splitted = self.split(tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = x_splitted + self.rel_pos_embs + self.scale_embs
+        x_splitted = x_splitted + self.rel_pos_emb + self.scale_emb
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
