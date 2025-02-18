@@ -674,6 +674,7 @@ class MRNB(nn.Module):
             outs["res{}_pos".format(out_idx)] = pos_scale[:,:,1:]
             outs["res{}_scale".format(out_idx)] = pos_scale[:, :, 0]
             outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
+        outs["min_spatial_shape"] = min_patched_im_size
         return outs
 
 

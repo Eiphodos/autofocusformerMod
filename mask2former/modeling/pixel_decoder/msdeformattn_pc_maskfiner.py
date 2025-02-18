@@ -498,16 +498,17 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
                 print("Feature {} has shape {}".format(k, v.shape))
             else:
                 print("Feature {} is {}".format(k, v))
-
+        min_spatial_shape = features['min_spatial_shape']
         scaled_poss = []
         srcs = []
         poss = []
         scaless = []
         pos_embed = []
         spatial_shapes = []
+        min_spatial_shapes = []
         nb_idx = []
         finest_feat = self.in_features[0]
-        grid_hw = features[finest_feat+"_spatial_shape"]
+        grid_hw = min_spatial_shape
         hs = torch.arange(0, grid_hw[0], device=features[finest_feat].device)
         ws = torch.arange(0, grid_hw[1], device=features[finest_feat].device)
         ys, xs = torch.meshgrid(hs, ws)
@@ -526,13 +527,14 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             scaless.append(scales)
             pos_embed.append(self.pe_layer(pos))
             spatial_shapes.append(spatial_shape)
-            scaled_pos = scale_pos(pos, spatial_shape, grid_hw, no_bias=True)
+            min_spatial_shapes.append(min_spatial_shape)
+            scaled_pos = scale_pos(pos, min_spatial_shape, grid_hw, no_bias=True)
             #print("Scaled Pos min for {}: {}".format(f, scaled_pos.min()))
             #print("Scaled Pos max for {}: {}".format(f, scaled_pos.max()))
             scaled_poss.append(scaled_pos)
             nb_idx.append(knn_keops(grid_pos, scaled_pos, 4))
         last_pos = poss[-1]
-        last_ss = spatial_shapes[-1]
+        last_ss = min_spatial_shapes[-1]
         spatial_shapes.append(grid_hw)
 
         out = self.transformer(srcs, poss, spatial_shapes, pos_embed, nb_idx)
@@ -550,13 +552,14 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             poss.append(pos)
             scaless.append(scales)
             spatial_shape = features[f+"_spatial_shape"]
+            spatial_shapes.append(spatial_shape)
             lateral_conv = self.lateral_convs[idx]
             output_conv = self.output_convs[idx]
             cur_fpn = lateral_conv(x)
             #print("Upsample curr_fpn shape: {} for {}".format(cur_fpn.shape, f))
             #print("Upsample last pos shape: {} for {}".format(last_pos.shape, f))
             # Following FPN implementation, we use nearest upsampling here
-            last_pos = scale_pos(last_pos, last_ss, spatial_shape, no_bias=True)
+            last_pos = scale_pos(last_pos, last_ss, min_spatial_shape, no_bias=True)
             #print("Upsample last pos max: {} for {}".format(last_pos.max(), f))
             #print("Upsample last_ss: {} for {}".format(last_ss, f))
             #print("Upsample pos shape: {} for {}".format(pos.shape, f))
@@ -567,7 +570,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             last_pos = pos
             #print("Pos min for {}: {}".format(f, last_pos.min()))
             #print("Pos max for {}: {}".format(f, last_pos.max()))
-            last_ss = spatial_shape
+            last_ss = min_spatial_shape
             out.append(y)
         #for i, o in enumerate(out):
         #    print("After Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
@@ -577,4 +580,4 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
                 multi_scale_features.append(o)
                 num_cur_levels += 1
 
-        return self.mask_features(out[-1]), last_pos, multi_scale_features, poss[:self.maskformer_num_feature_levels], scaless[:self.maskformer_num_feature_levels], spatial_shape
+        return self.mask_features(out[-1]), last_pos, multi_scale_features, poss[:self.maskformer_num_feature_levels], scaless[:self.maskformer_num_feature_levels], spatial_shapes[-1]
