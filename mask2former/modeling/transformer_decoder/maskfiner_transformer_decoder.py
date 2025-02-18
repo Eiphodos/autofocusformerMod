@@ -532,7 +532,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
     def create_disagreement_mask(self, outputs_mask, outputs_class):
         b, q, n = outputs_mask.shape
         cls_i = outputs_class.argmax(dim=-1)
-        disagreement_mask = torch.zeros(b, n)
+        disagreement_mask = torch.zeros(b, n, requires_grad=True).to(outputs_mask.device)
         for b in range(cls_i.shape[0]):
             for c in cls_i[b].unique():
                 batch_cls_mask = F.sigmoid(outputs_mask[b, cls_i[b] == c].sum(dim=0))
