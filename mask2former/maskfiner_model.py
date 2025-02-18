@@ -129,7 +129,7 @@ class MaskFiner(nn.Module):
         losses = ["labels", "masks"]
 
         criterion = SetCriterion(
-            cfg.MODEL.MASK_FINER.SEM_SEG.NUM_CLASSES,
+            cfg.MODEL.MASK_FINER.SEM_SEG_HEAD.NUM_CLASSES,
             matcher=matcher,
             weight_dict=weight_dict,
             eos_coef=no_object_weight,
