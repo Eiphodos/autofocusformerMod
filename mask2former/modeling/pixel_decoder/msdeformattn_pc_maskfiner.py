@@ -489,14 +489,13 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         Args
             features - a dictionary of a list of point clouds with their features, positions and canvas sizes
         """
-        '''
-        for f in self.in_features:
-            print("Feature shape for {}: {}".format(f, features[f].shape))
-            print("Pos shape for {}: {}".format(f, features[f+ "_pos"].shape))
-            print("Pos min for {}: {}".format(f, features[f + "_pos"].min()))
-            print("Pos max for {}: {}".format(f, features[f + "_pos"].max()))
-            print("Spatial shape for {}: {}".format(f, features[f + '_spatial_shape']))
-        '''
+
+        for k, v in features.items():
+            if type(v) == torch.Tensor:
+                print("Feature {} has shape {}".format(k, v.shape))
+            else:
+                print("Feature {} is {}".format(k, v))
+
         scaled_poss = []
         srcs = []
         poss = []
