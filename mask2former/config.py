@@ -167,6 +167,9 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MASK_FINER.TRANSFORMER_IN_FEATURE = "multi_scale_pixel_decoder"
     cfg.MODEL.MASK_FINER.ENFORCE_INPUT_PROJ = False
 
+    cfg.MODEL.MASK_FINER.SHEPARD_POWER = 6.0
+    cfg.MODEL.MASK_FINER.SHEPARD_POWER_LEARNABLE = True
+
     # MASK_FINER inference config
     cfg.MODEL.MASK_FINER.TEST = CN()
     cfg.MODEL.MASK_FINER.TEST.SEMANTIC_ON = True
