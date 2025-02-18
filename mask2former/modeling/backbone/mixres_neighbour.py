@@ -521,7 +521,7 @@ class MRNB(nn.Module):
         self.scale_embs = nn.Parameter(torch.randn(1, 1, d_model))
 
         # stochastic depth
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(n_layers))]
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, n_layers)]
         norm_layer = nn.LayerNorm
 
 
