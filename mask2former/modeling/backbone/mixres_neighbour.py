@@ -656,6 +656,7 @@ class MRNB(nn.Module):
         B, _, H, W = im.shape
         PS = self.patch_size
         min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
+        patched_im_size = (H // PS, W // PS)
 
         x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
 
@@ -672,7 +673,7 @@ class MRNB(nn.Module):
             outs["res{}".format(out_idx)] = self.norm_out(out_scale)
             outs["res{}_pos".format(out_idx)] = pos_scale[:,:,1:]
             outs["res{}_scale".format(out_idx)] = pos_scale[:, :, 0]
-            outs["res{}_spatial_shape".format(out_idx)] = min_patched_im_size
+            outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
         return outs
 
 

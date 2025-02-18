@@ -299,7 +299,7 @@ class MRVIT(nn.Module):
         out_name = self._out_features[0]
         outs[out_name] = self.norm_out(x)
         outs[out_name + "_pos"] = pos[:,:,1:]  # torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
-        outs[out_name + "_spatial_shape"] = min_patched_im_size
+        outs[out_name + "_spatial_shape"] = patched_im_size
         outs[out_name + "_scale"] = pos[:, :, 0]
         return outs
 

@@ -438,11 +438,11 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         predictions_mask = []
 
         # prediction heads on learnable query features
-        outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+        outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_input_shape[0]), torch.arange(0, finest_input_shape[1]), indexing='ij')).view(2, -1).permute(1, 0)
         finest_pos = finest_pos.to(mf_pos.device).repeat(b, 1, 1)
-        outputs_mask = upsample_feature_shepard(finest_pos, mf_pos, outputs_mask.permute(0, 2, 1)).permute(0, 2, 1)
-        outputs_mask = point2img(outputs_mask, mf_pos)
+        outputs_mask = upsample_feature_shepard(finest_pos, mf_pos, pred_mask.permute(0, 2, 1)).permute(0, 2, 1)
+        outputs_mask = point2img(outputs_mask, finest_pos)
         predictions_class.append(outputs_class)
         predictions_mask.append(outputs_mask)
 
@@ -471,13 +471,13 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
                 output
             )
 
-            outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
-            outputs_mask = upsample_feature_shepard(finest_pos, mf_pos, outputs_mask.permute(0, 2, 1)).permute(0, 2, 1)
-            outputs_mask = point2img(outputs_mask, mf_pos)
+            outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+            outputs_mask = upsample_feature_shepard(finest_pos, mf_pos, pred_mask.permute(0, 2, 1)).permute(0, 2, 1)
+            outputs_mask = point2img(outputs_mask, finest_pos)
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
 
-        disagreement_mask = self.create_disagreement_mask(outputs_mask, outputs_class)
+        disagreement_mask = self.create_disagreement_mask(pred_mask, outputs_class)
 
         assert len(predictions_class) == self.num_layers + 1
 
