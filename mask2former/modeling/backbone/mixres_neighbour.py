@@ -717,7 +717,7 @@ class MixResNeighbour(MRNB, Backbone):
             min_patch_size=min_patch_size
         )
 
-        self._out_features = cfg.MODEL.MR.OUT_FEATURES[-layer_index+1:]
+        self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
 
         self._in_features_channels = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
 

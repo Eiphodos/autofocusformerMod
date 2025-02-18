@@ -336,7 +336,7 @@ class MixResViT(MRVIT, Backbone):
             min_patch_size=min_patch_size
         )
 
-        self._out_features = cfg.MODEL.MR.OUT_FEATURES[-layer_index+1:]
+        self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
         out_index = (n_scales - 1) + 2
         self._out_feature_strides = {"res{}".format(out_index): cfg.MODEL.MR.PATCH_SIZES[layer_index]}
         # self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in range(num_scales)}
