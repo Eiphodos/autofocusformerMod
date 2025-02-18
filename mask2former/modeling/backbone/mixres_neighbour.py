@@ -728,7 +728,7 @@ class MixResNeighbour(MRNB, Backbone):
         self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in range(layer_index + 1)}
         #print("backbone channels: {}".format(self._out_feature_channels))
 
-    def forward(self, x):
+    def forward(self, x, scale, features, features_pos, upsampling_mask):
         """
         Args:
             x: Tensor of shape (B,C,H,W)
@@ -738,7 +738,7 @@ class MixResNeighbour(MRNB, Backbone):
         assert (
             x.dim() == 4
         ), f"MRML takes an input of shape (N, C, H, W). Got {x.shape} instead!"
-        y = super().forward(x)
+        y = super().forward(x, scale, features, features_pos, upsampling_mask)
         return y
 
     def output_shape(self):

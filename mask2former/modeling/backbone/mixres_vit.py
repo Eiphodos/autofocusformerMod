@@ -345,7 +345,7 @@ class MixResViT(MRVIT, Backbone):
         self._out_feature_channels = {"res{}".format(out_index): embed_dim}
         # print("backbone channels: {}".format(self._out_feature_channels))
 
-    def forward(self, x):
+    def forward(self, x, scale, features, features_pos, upsampling_mask):
         """
         Args:
             x: Tensor of shape (B,C,H,W)
@@ -355,7 +355,7 @@ class MixResViT(MRVIT, Backbone):
         assert (
             x.dim() == 4
         ), f"MRML takes an input of shape (N, C, H, W). Got {x.shape} instead!"
-        y = super().forward(x)
+        y = super().forward(x, scale, features, features_pos, upsampling_mask)
         return y
 
     def output_shape(self):
