@@ -475,7 +475,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         ret["norm"] = cfg.MODEL.SEM_SEG_HEAD.NORM
         ret["transformer_dropout"] = cfg.MODEL.SEM_SEG_HEAD.DROPOUT
         ret["transformer_nheads"] = cfg.MODEL.SEM_SEG_HEAD.NHEADS[layer_index]
-        ret["transformer_dim_feedforward"] = m_dim * cfg.MODEL.SEM_SEG_HEAD.MLP_RATIO[layer_index]
+        ret["transformer_dim_feedforward"] = int(m_dim * cfg.MODEL.SEM_SEG_HEAD.MLP_RATIO[layer_index])
         ret["transformer_enc_layers"] = cfg.MODEL.SEM_SEG_HEAD.TRANSFORMER_ENC_LAYERS[layer_index]
         ret["transformer_in_features"] = trans_dec_in_feat
         ret["common_stride"] = cfg.MODEL.SEM_SEG_HEAD.COMMON_STRIDE
