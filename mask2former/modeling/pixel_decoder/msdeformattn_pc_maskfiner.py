@@ -429,7 +429,8 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         # extra fpn levels
         min_stride_trans = min(self.transformer_feature_strides)
         min_stride_all = max(self.feature_strides)
-        self.num_fpn_levels = int(np.log2(min_stride_trans) - np.log2(min_stride_all))
+        fpnl = 0 if len(self.in_features) == 1 else 1
+        self.num_fpn_levels = fpnl #int(np.log2(min_stride_trans) - np.log2(min_stride_all))
 
         lateral_convs = []
         output_convs = []
