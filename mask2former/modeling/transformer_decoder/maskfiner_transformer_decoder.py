@@ -284,8 +284,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         pre_norm: bool,
         mask_dim: int,
         enforce_input_project: bool,
-        num_decoder_levels: int,
-        upscale_ratio: float,
+        num_decoder_levels: int
     ):
         """
         NOTE: this interface is experimental.
@@ -372,8 +371,6 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             self.class_embed = nn.Linear(hidden_dim, num_classes + 1)
         self.mask_embed = MLP(hidden_dim, hidden_dim, mask_dim, 3)
 
-        self.upscale_ratio = upscale_ratio
-
     @classmethod
     def from_config(cls, cfg, layer_index, in_channels, mask_classification):
         ret = {}
@@ -396,7 +393,6 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         ret["dec_layers"] = cfg.MODEL.MASK_FINER.DEC_LAYERS[layer_index] - 1
         ret["pre_norm"] = cfg.MODEL.MASK_FINER.PRE_NORM
         ret["enforce_input_project"] = cfg.MODEL.MASK_FINER.ENFORCE_INPUT_PROJ
-        ret["upscale_ratio"] = cfg.MODEL.MASK_FINER.UPSCALE_RATIO[layer_index]
         ret["mask_dim"] = cfg.MODEL.MASK_FINER.MASK_DIM[layer_index]
         ret["num_decoder_levels"] = cfg.MODEL.MASK_FINER.DECODER_LEVELS[layer_index]
 
