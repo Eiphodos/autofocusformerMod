@@ -477,7 +477,7 @@ class MRNB(nn.Module):
     def __init__(
             self,
             image_size,
-            patch_size,
+            patch_sizes,
             n_layers,
             d_model,
             n_heads,
@@ -495,14 +495,15 @@ class MRNB(nn.Module):
             upscale_ratio=0.25
     ):
         super().__init__()
+        self.patch_size = patch_sizes[-1]
         self.patch_embed = OverlapPatchEmbedding(
             image_size,
-            patch_size,
+            self.patch_size,
             d_model,
             channels,
         )
         self.image_size = image_size
-        self.patch_size = patch_size
+        self.patch_sizes = patch_sizes
         self.n_layers = n_layers
         self.d_model = d_model
         self.n_heads = n_heads
@@ -660,7 +661,7 @@ class MRNB(nn.Module):
         B, _, H, W = im.shape
         PS = self.patch_size
         min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
-        patched_im_size = (H // PS, W // PS)
+
 
         x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
 
@@ -669,6 +670,7 @@ class MRNB(nn.Module):
         outs = {}
         for s in range(scale + 1):
             out_idx = self.n_scales - s + 1
+            patched_im_size = (H // self.patch_sizes[s], W // self.patch_sizes[s])
             b_scale_idx, n_scale_idx = torch.where(pos[:,:,0] == s)
             pos_scale = pos[b_scale_idx, n_scale_idx, :]
             pos_scale = rearrange(pos_scale, '(b n) p -> b n p', b=B).contiguous()
@@ -693,7 +695,7 @@ class MixResNeighbour(MRNB, Backbone):
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
 
-        patch_size = cfg.MODEL.MR.PATCH_SIZES[layer_index]
+        patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
         embed_dim = cfg.MODEL.MR.EMBED_DIM[layer_index]
         depths = cfg.MODEL.MR.DEPTHS[layer_index]
         num_heads = cfg.MODEL.MR.NUM_HEADS[layer_index]
@@ -710,7 +712,7 @@ class MixResNeighbour(MRNB, Backbone):
 
         super().__init__(
             image_size=image_size,
-            patch_size=patch_size,
+            patch_sizes=patch_sizes,
             n_layers=depths,
             d_model=embed_dim,
             n_heads=num_heads,
