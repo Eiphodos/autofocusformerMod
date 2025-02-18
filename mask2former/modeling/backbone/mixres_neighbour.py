@@ -519,8 +519,8 @@ class MRNB(nn.Module):
         self.num_features = num_features
 
         # Pos Embs
-        self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, d_model))
-        self.scale_emb = nn.Parameter(torch.randn(1, 1, d_model))
+        self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
+        self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
 
         # stochastic depth
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, n_layers)]
