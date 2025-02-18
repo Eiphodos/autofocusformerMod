@@ -162,7 +162,6 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MASK_FINER.MASK_DIM = [256, 256, 256, 256]
     cfg.MODEL.MASK_FINER.HIDDEN_DIM = [256, 256, 256, 256]
     cfg.MODEL.MASK_FINER.NUM_OBJECT_QUERIES = [100, 100, 100, 100]
-    cfg.MODEL.MASK_FINER.UPSCALE_RATIO = [0.25, 0.25, 0.25, 0.25]
     cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES = 4
 
     cfg.MODEL.MASK_FINER.TRANSFORMER_IN_FEATURE = "multi_scale_pixel_decoder"
@@ -226,6 +225,7 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MR.PATCH_SIZES = [32, 16, 8, 4]
     cfg.MODEL.MR.SPLIT_RATIO = [4, 4, 4, 4]
     cfg.MODEL.MR.MLP_RATIO = [4., 4., 4., 4.]
+    cfg.MODEL.MR.UPSCALE_RATIO = [0.25, 0.25, 0.25, 0.25]
     cfg.MODEL.MR.DROP_RATE = [0.0, 0.0, 0.0, 0.0]
     cfg.MODEL.MR.DROP_PATH_RATE = [0.3, 0.3, 0.3, 0.3]
     cfg.MODEL.MR.ATTN_DROP_RATE = [0.0, 0.0, 0.0, 0.0]
