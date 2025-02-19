@@ -259,7 +259,7 @@ class MaskFiner(nn.Module):
                 width = input_per_image.get("width", image_size[1])
                 processed_results.append({})
 
-                for k, v in disagreement_masks:
+                for k, v in disagreement_masks.items():
                     h = math.sqrt(v[i].shape[1])
                     processed_results[-1][k] = v[i].reshape(h, h)
                 i += 1
