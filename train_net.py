@@ -55,6 +55,7 @@ from mask2former import (
     COCOPanopticNewBaselineDatasetMapper,
     InstanceSegEvaluator,
     MetaLossSemSegEvaluator,
+    MaskFinerSemSegEvaluator,
     MaskFormerInstanceDatasetMapper,
     MaskFormerPanopticDatasetMapper,
     MaskFormerSemanticDatasetMapper,
@@ -86,6 +87,14 @@ class Trainer(DefaultTrainer):
             if "MetaLoss" in cfg.MODEL.BACKBONE.NAME:
                 evaluator_list.append(
                     MetaLossSemSegEvaluator(
+                        dataset_name,
+                        distributed=True,
+                        output_dir=output_folder,
+                    )
+                )
+            elif "MaskFiner" in cfg.MODEL.META_ARCHITECTURE:
+                evaluator_list.append(
+                    MaskFinerSemSegEvaluator(
                         dataset_name,
                         distributed=True,
                         output_dir=output_folder,

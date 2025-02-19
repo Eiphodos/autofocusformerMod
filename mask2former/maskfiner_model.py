@@ -6,6 +6,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+import math
+
 from detectron2.config import configurable
 from detectron2.data import MetadataCatalog
 from detectron2.modeling import META_ARCH_REGISTRY, build_backbone, build_sem_seg_head
@@ -198,12 +200,14 @@ class MaskFiner(nn.Module):
         features = None
         features_pos = None
         upsampling_mask = None
+        disagreement_masks = {}
         outputs = {}
         outputs['pred_masks'] = None
         outputs['pred_logits'] = None
         outputs['aux_outputs'] = []
         for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
+            disagreement_masks["disagreement_mask_".format(l_idx)] = upsampling_mask
             outputs['aux_outputs'] = outputs['aux_outputs'] + outs['aux_outputs']
         outputs['pred_logits'] = outs['pred_logits']
         outputs['pred_masks'] = outs['pred_masks']
@@ -247,12 +251,18 @@ class MaskFiner(nn.Module):
             del outputs
 
             processed_results = []
+            i = 0
             for mask_cls_result, mask_pred_result, input_per_image, image_size in zip(
                 mask_cls_results, mask_pred_results, batched_inputs, images.image_sizes
             ):
                 height = input_per_image.get("height", image_size[0])
                 width = input_per_image.get("width", image_size[1])
                 processed_results.append({})
+
+                for k, v in disagreement_masks:
+                    h = math.sqrt(v[i].shape[1])
+                    processed_results[-1][k] = v[i].reshape(h, h)
+                i += 1
 
                 if self.sem_seg_postprocess_before_inference:
                     mask_pred_result = retry_if_cuda_oom(sem_seg_postprocess)(
