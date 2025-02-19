@@ -260,8 +260,8 @@ class MaskFiner(nn.Module):
                 processed_results.append({})
 
                 for k, v in disagreement_masks.items():
-                    h = math.sqrt(v[i].shape[1])
-                    processed_results[-1][k] = v[i].reshape(h, h)
+                    hw = int(math.sqrt(v[i].shape[0]))
+                    processed_results[-1][k] = v[i].reshape(hw, hw)
                 i += 1
 
                 if self.sem_seg_postprocess_before_inference:
