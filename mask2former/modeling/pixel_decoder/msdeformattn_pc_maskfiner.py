@@ -492,12 +492,13 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         Args
             features - a dictionary of a list of point clouds with their features, positions and canvas sizes
         """
-
+        '''
         for k, v in features.items():
             if type(v) == torch.Tensor:
                 print("Feature {} has shape {}".format(k, v.shape))
             else:
                 print("Feature {} is {}".format(k, v))
+        '''
         min_spatial_shape = features['min_spatial_shape']
         scaled_poss = []
         srcs = []

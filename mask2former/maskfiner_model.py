@@ -208,10 +208,12 @@ class MaskFiner(nn.Module):
         outputs['pred_logits'] = outs['pred_logits']
         outputs['pred_masks'] = outs['pred_masks']
 
+        '''
         print(outputs.keys())
         print(outputs['pred_masks'].shape)
         print(outputs['pred_logits'].shape)
         print(len(outputs['aux_outputs']))
+        '''
 
         if self.training:
             # mask classification target
