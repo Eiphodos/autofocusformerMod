@@ -638,7 +638,7 @@ class MRNB(nn.Module):
     def upsample_features(self, im, scale, features, features_pos, upsampling_mask):
         old_scale = scale - 1
         feat_curr, pos_curr, feat_old, pos_old, upsampling_mask_curr = self.divide_feat_pos_on_scale(
-            features, features_pos, old_scale)
+            features, features_pos, old_scale, upsampling_mask)
         feat_to_split, pos_to_split, feat_to_keep, pos_to_keep = self.divide_tokens_to_split_and_keep(
             feat_curr, pos_curr, upsampling_mask_curr)
         feat_after_split = self.split_features(feat_to_split)
