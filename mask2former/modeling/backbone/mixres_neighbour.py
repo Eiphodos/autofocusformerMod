@@ -579,8 +579,8 @@ class MRNB(nn.Module):
         tokens_to_split = feat_at_curr_scale.gather(dim=1, index=bot_top_indices.unsqueeze(-1).expand(-1, -1, C))
         tokens_to_keep = feat_at_curr_scale.gather(dim=1, index=mid_indices.unsqueeze(-1).expand(-1, -1, C))
 
-        coords_to_split = feat_at_curr_scale.gather(dim=1, index=bot_top_indices.unsqueeze(-1).expand(-1, -1, 3))
-        coords_to_keep = feat_at_curr_scale.gather(dim=1, index=mid_indices.unsqueeze(-1).expand(-1, -1, 3))
+        coords_to_split = pos_at_curr_scale.gather(dim=1, index=bot_top_indices.unsqueeze(-1).expand(-1, -1, 3))
+        coords_to_keep = pos_at_curr_scale.gather(dim=1, index=mid_indices.unsqueeze(-1).expand(-1, -1, 3))
 
         return tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep
 
