@@ -581,13 +581,15 @@ class MRNB(nn.Module):
         return tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep
 
 
-    def divide_feat_pos_on_scale(self, tokens, patches_scale_coords, curr_scale):
+    def divide_feat_pos_on_scale(self, tokens, patches_scale_coords, curr_scale, upsampling_mask):
         B, _, _ = tokens.shape
         b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:, :, 0] == curr_scale)
         coords_at_curr_scale = patches_scale_coords[b_scale_idx, n_scale_idx, :]
         coords_at_curr_scale = rearrange(coords_at_curr_scale, '(b n) p -> b n p', b=B).contiguous()
         tokens_at_curr_scale = tokens[b_scale_idx, n_scale_idx, :]
         tokens_at_curr_scale = rearrange(tokens_at_curr_scale, '(b n) c -> b n c', b=B).contiguous()
+        upsampling_mask_curr = upsampling_mask[b_scale_idx, n_scale_idx]
+        upsampling_mask_curr = rearrange(upsampling_mask_curr, '(b n) -> b n', b=B).contiguous()
 
         b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:, :, 0] != curr_scale)
         coords_at_older_scales = patches_scale_coords[b_scale_idx, n_scale_idx, :]
@@ -595,7 +597,7 @@ class MRNB(nn.Module):
         tokens_at_older_scale = tokens[b_scale_idx, n_scale_idx, :]
         tokens_at_older_scale = rearrange(tokens_at_older_scale, '(b n) c -> b n c', b=B).contiguous()
 
-        return tokens_at_curr_scale, coords_at_curr_scale, tokens_at_older_scale, coords_at_older_scales
+        return tokens_at_curr_scale, coords_at_curr_scale, tokens_at_older_scale, coords_at_older_scales, upsampling_mask_curr
 
 
     def split_features(self, tokens_to_split):
@@ -635,17 +637,17 @@ class MRNB(nn.Module):
 
     def upsample_features(self, im, scale, features, features_pos, upsampling_mask):
         old_scale = scale - 1
-        feat_at_curr_scale, pos_at_curr_scale, feat_at_older_scale, pos_at_older_scale = self.divide_feat_pos_on_scale(
+        feat_curr, pos_curr, feat_old, pos_old, upsampling_mask_curr = self.divide_feat_pos_on_scale(
             features, features_pos, old_scale)
         feat_to_split, pos_to_split, feat_to_keep, pos_to_keep = self.divide_tokens_to_split_and_keep(
-            feat_at_curr_scale, pos_at_curr_scale, upsampling_mask)
+            feat_curr, pos_curr, upsampling_mask_curr)
         feat_after_split = self.split_features(feat_to_split)
         pos_after_split = self.split_pos(pos_to_split, scale)
 
         feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, im)
 
-        all_feat = torch.cat([feat_at_older_scale, feat_to_keep, feat_after_split], dim=1)
-        all_pos = torch.cat([pos_at_older_scale, pos_to_keep, pos_after_split], dim=1)
+        all_feat = torch.cat([feat_old, feat_to_keep, feat_after_split], dim=1)
+        all_pos = torch.cat([pos_old, pos_to_keep, pos_after_split], dim=1)
 
         all_feat = self.token_projection(all_feat)
 
