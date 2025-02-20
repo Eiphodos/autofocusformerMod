@@ -563,20 +563,24 @@ class MRNB(nn.Module):
 
 
     def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, upsampling_mask):
+        B, N, C = feat_at_curr_scale.shape
         k_split = int(feat_at_curr_scale.shape[1] * self.upscale_ratio)
+        k_bottom = k_split // 2
+        k_top = k_split - k_bottom
         k_keep = int(feat_at_curr_scale.shape[1] - k_split)
 
+        sorted_scores, sorted_indices = torch.sort(upsampling_mask, dim=1, descending=False)
 
-        tkv, tki = torch.topk(upsampling_mask, k=k_split, dim=1, sorted=False)
-        bkv, bki = torch.topk(upsampling_mask, k=k_keep, dim=1, sorted=False, largest=False)
+        bottom_indices = sorted_indices[:, :k_bottom]
+        mid_indices = sorted_indices[:, k_bottom:-k_top]
+        top_indices = sorted_indices[:, -k_top:]
+        bot_top_indices = torch.cat((bottom_indices, top_indices), dim=1)
 
-        batch_indices_k = torch.arange(feat_at_curr_scale.shape[0]).unsqueeze(1).repeat(1, k_keep)
-        batch_indices_s = torch.arange(feat_at_curr_scale.shape[0]).unsqueeze(1).repeat(1, k_split)
+        tokens_to_split = feat_at_curr_scale.gather(dim=1, index=bot_top_indices.unsqueeze(-1).expand(-1, -1, C))
+        tokens_to_keep = feat_at_curr_scale.gather(dim=1, index=mid_indices.unsqueeze(-1).expand(-1, -1, C))
 
-        tokens_to_keep = feat_at_curr_scale[batch_indices_k, bki]
-        tokens_to_split = feat_at_curr_scale[batch_indices_s, tki]
-        coords_to_keep = pos_at_curr_scale[batch_indices_k, bki]
-        coords_to_split = pos_at_curr_scale[batch_indices_s, tki]
+        coords_to_split = feat_at_curr_scale.gather(dim=1, index=bot_top_indices.unsqueeze(-1).expand(-1, -1, 3))
+        coords_to_keep = feat_at_curr_scale.gather(dim=1, index=mid_indices.unsqueeze(-1).expand(-1, -1, 3))
 
         return tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep
 
