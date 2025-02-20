@@ -565,21 +565,21 @@ class MRNB(nn.Module):
     def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, upsampling_mask):
         B, N, C = feat_at_curr_scale.shape
         k_split = int(feat_at_curr_scale.shape[1] * self.upscale_ratio)
-        k_bottom = k_split // 2
-        k_top = k_split - k_bottom
+        k_bottom = 0 #k_split // 2
+        k_top = k_split #- k_bottom
         k_keep = int(feat_at_curr_scale.shape[1] - k_split)
 
         sorted_scores, sorted_indices = torch.sort(upsampling_mask, dim=1, descending=False)
 
-        bottom_indices = sorted_indices[:, :k_bottom]
+        #bottom_indices = sorted_indices[:, :k_bottom]
         mid_indices = sorted_indices[:, k_bottom:-k_top]
         top_indices = sorted_indices[:, -k_top:]
-        bot_top_indices = torch.cat((bottom_indices, top_indices), dim=1)
+        #bot_top_indices = torch.cat((bottom_indices, top_indices), dim=1)
 
-        tokens_to_split = feat_at_curr_scale.gather(dim=1, index=bot_top_indices.unsqueeze(-1).expand(-1, -1, C))
+        tokens_to_split = feat_at_curr_scale.gather(dim=1, index=top_indices.unsqueeze(-1).expand(-1, -1, C))
         tokens_to_keep = feat_at_curr_scale.gather(dim=1, index=mid_indices.unsqueeze(-1).expand(-1, -1, C))
 
-        coords_to_split = pos_at_curr_scale.gather(dim=1, index=bot_top_indices.unsqueeze(-1).expand(-1, -1, 3))
+        coords_to_split = pos_at_curr_scale.gather(dim=1, index=top_indices.unsqueeze(-1).expand(-1, -1, 3))
         coords_to_keep = pos_at_curr_scale.gather(dim=1, index=mid_indices.unsqueeze(-1).expand(-1, -1, 3))
 
         return tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep
