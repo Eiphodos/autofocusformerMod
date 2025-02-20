@@ -7,6 +7,7 @@ from torch import nn
 from torch.nn import functional as F
 
 import math
+from einops import rearrange
 
 from detectron2.config import configurable
 from detectron2.data import MetadataCatalog
@@ -200,14 +201,23 @@ class MaskFiner(nn.Module):
         features = None
         features_pos = None
         upsampling_mask = None
-        disagreement_masks = {}
+        disagreement_masks = []
         outputs = {}
         outputs['pred_masks'] = None
         outputs['pred_logits'] = None
         outputs['aux_outputs'] = []
         for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
-            disagreement_masks["disagreement_mask_".format(l_idx)] = upsampling_mask
+
+            dm = {}
+            dm["disagreement_mask_".format(l_idx)] = upsampling_mask
+            B, _, _ = features_pos.shape
+            b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
+            dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
+            dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
+            dm["disagreement_mask_pos_".format(l_idx)] = dm_pos
+            disagreement_masks.append(dm)
+
             outputs['aux_outputs'] = outputs['aux_outputs'] + outs['aux_outputs']
         outputs['pred_logits'] = outs['pred_logits']
         outputs['pred_masks'] = outs['pred_masks']
@@ -258,12 +268,15 @@ class MaskFiner(nn.Module):
                 height = input_per_image.get("height", image_size[0])
                 width = input_per_image.get("width", image_size[1])
                 processed_results.append({})
-
-                for k, v in disagreement_masks.items():
-                    hw = int(math.sqrt(v[i].shape[0]))
-                    processed_results[-1][k] = v[i].reshape(hw, hw)
+                '''
+                for k, dmp in enumerate(disagreement_masks):
+                    dis_mask = dmp["disagreement_mask_".format(k)]
+                    dis_mask_pos = dmp["disagreement_mask_pos_{}".format(k)]
+                    disagreement_map = self.create_disagreement_map(images.tensor.shape[-2], images.tensor.shape[-1],
+                                                                    dis_mask, dis_mask_pos, k)
+                    processed_results[-1]["disagreement_mask_".format(k)] = disagreement_map
                 i += 1
-
+                '''
                 if self.sem_seg_postprocess_before_inference:
                     mask_pred_result = retry_if_cuda_oom(sem_seg_postprocess)(
                         mask_pred_result, image_size, height, width
@@ -406,3 +419,24 @@ class MaskFiner(nn.Module):
         result.scores = scores_per_image * mask_scores_per_image
         result.pred_classes = labels_per_image
         return result
+
+
+    def create_disagreement_map(self, h, w, dis_mask, dis_mask_pos, k):
+        prediction_map = torch.zeros(h, w)
+        pos_at_org_scale = dis_mask_pos * self.mask_predictors[0].backbone.min_patch_size
+        patch_size = self.mask_predictors[k].backbone.patch_size
+        new_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
+        new_coords = new_coords.view(2,-1).permute(1,0).to(pos_to_split.device)
+        pos_at_org_scale = pos_at_org_scale.unsqueeze(1) + new_coords
+        pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
+        #print("pos_to_split shape before: {}".format(pos_to_split.shape))
+        #print("max x pos before: {}".format(pos_to_split[...,0].max()))
+        #print("max y pos before: {}".format(pos_to_split[...,1].max()))
+
+        x_pos = pos_at_org_scale[...,0].long()
+        y_pos = pos_at_org_scale[...,1].long()
+        #print("max x pos: {}".format(x_pos.max()))
+        #print("max y pos: {}".format(y_pos.max()))
+        #print("pred_map_low_res shape: {}".format(pred_map_low_res.shape))
+        prediction_map[y_pos, x_pos] = scale
+        return prediction_map
