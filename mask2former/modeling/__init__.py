@@ -8,6 +8,7 @@ from .backbone.mrmean import MixResMeanAct
 from .backbone.mixres_neighbour import MixResNeighbour
 from .backbone.mixres_vit import MixResViT
 
+from .pixel_decoder.msdeformattn_pc_maskfiner_proj import MSDeformAttnPixelDecoderMaskFinerProj
 from .pixel_decoder.msdeformattn_pc_maskfiner import MSDeformAttnPixelDecoderMaskFiner
 from .pixel_decoder.msdeformattn_pc import MSDeformAttnPixelDecoder
 from .pixel_decoder.msdeformattn_up_pc import MSDeformAttnPixelDecoderUp
