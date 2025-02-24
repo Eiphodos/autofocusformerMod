@@ -210,12 +210,12 @@ class MaskFiner(nn.Module):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
 
             dm = {}
-            dm["disagreement_mask_".format(l_idx)] = upsampling_mask
+            dm["disagreement_mask_{}".format(l_idx)] = upsampling_mask
             B, _, _ = features_pos.shape
             b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
             dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
             dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
-            dm["disagreement_mask_pos_".format(l_idx)] = dm_pos
+            dm["disagreement_mask_pos_{}".format(l_idx)] = dm_pos
             disagreement_masks.append(dm)
 
             outputs['aux_outputs'] = outputs['aux_outputs'] + outs['aux_outputs']
@@ -271,13 +271,13 @@ class MaskFiner(nn.Module):
 
 
                 for level, dmp in enumerate(disagreement_masks):
-                    dis_mask = dmp["disagreement_mask_".format(level)][i]
+                    dis_mask = dmp["disagreement_mask_{}".format(level)][i]
                     dis_mask_pos = dmp["disagreement_mask_pos_{}".format(level)][i]
                     n_scales = int(dis_mask_pos[:,0].max() + 1)
                     disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1])
                     for scale in range(n_scales):
                         disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, scale)
-                    processed_results[-1]["disagreement_mask_".format(level)] = disagreement_map
+                    processed_results[-1]["disagreement_mask_{}".format(level)] = disagreement_map
 
                 i += 1
 
