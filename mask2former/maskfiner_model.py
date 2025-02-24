@@ -259,24 +259,28 @@ class MaskFiner(nn.Module):
             )
 
             del outputs
-
-            processed_results = []
             i = 0
+            processed_results = []
             for mask_cls_result, mask_pred_result, input_per_image, image_size in zip(
                 mask_cls_results, mask_pred_results, batched_inputs, images.image_sizes
             ):
                 height = input_per_image.get("height", image_size[0])
                 width = input_per_image.get("width", image_size[1])
                 processed_results.append({})
-                '''
-                for k, dmp in enumerate(disagreement_masks):
-                    dis_mask = dmp["disagreement_mask_".format(k)]
-                    dis_mask_pos = dmp["disagreement_mask_pos_{}".format(k)]
-                    disagreement_map = self.create_disagreement_map(images.tensor.shape[-2], images.tensor.shape[-1],
-                                                                    dis_mask, dis_mask_pos, k)
-                    processed_results[-1]["disagreement_mask_".format(k)] = disagreement_map
+
+
+
+                for level, dmp in enumerate(disagreement_masks):
+                    dis_mask = dmp["disagreement_mask_".format(level)][i]
+                    dis_mask_pos = dmp["disagreement_mask_pos_{}".format(level)][i]
+                    n_scales = int(dis_mask_pos[:,0].max() + 1)
+                    disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1])
+                    for scale in range(n_scales):
+                        disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, scale)
+                    processed_results[-1]["disagreement_mask_".format(level)] = disagreement_map
+
                 i += 1
-                '''
+
                 if self.sem_seg_postprocess_before_inference:
                     mask_pred_result = retry_if_cuda_oom(sem_seg_postprocess)(
                         mask_pred_result, image_size, height, width
@@ -420,13 +424,15 @@ class MaskFiner(nn.Module):
         result.pred_classes = labels_per_image
         return result
 
+    def create_disagreement_map(self, disagreement_map, dis_mask, dis_mask_pos, level, scale):
+        dis_mask_at_scale, dis_pos_at_scale = self.get_disagreement_mask_and_pos_at_scale(dis_mask, dis_mask_pos, scale)
+        pos_at_org_scale = dis_pos_at_scale * self.mask_predictors[0].backbone.min_patch_size
+        patch_size = self.mask_predictors[level].backbone.patch_sizes[scale]
 
-    def create_disagreement_map(self, h, w, dis_mask, dis_mask_pos, k):
-        prediction_map = torch.zeros(h, w)
-        pos_at_org_scale = dis_mask_pos * self.mask_predictors[0].backbone.min_patch_size
-        patch_size = self.mask_predictors[k].backbone.patch_size
+        dis_mask_at_scale = dis_mask_at_scale.unsqueeze(1).expand(-1, patch_size ** 2).reshape(-1)
+
         new_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
-        new_coords = new_coords.view(2,-1).permute(1,0).to(pos_to_split.device)
+        new_coords = new_coords.view(2,-1).permute(1,0).to(dis_pos_at_scale.device)
         pos_at_org_scale = pos_at_org_scale.unsqueeze(1) + new_coords
         pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
         #print("pos_to_split shape before: {}".format(pos_to_split.shape))
@@ -438,5 +444,13 @@ class MaskFiner(nn.Module):
         #print("max x pos: {}".format(x_pos.max()))
         #print("max y pos: {}".format(y_pos.max()))
         #print("pred_map_low_res shape: {}".format(pred_map_low_res.shape))
-        prediction_map[y_pos, x_pos] = scale
-        return prediction_map
+        disagreement_map[y_pos, x_pos] = dis_mask_at_scale
+        return disagreement_map
+
+
+    def get_disagreement_mask_and_pos_at_scale(self, dis_mask, dis_mask_pos, scale):
+        n_scale_idx = torch.where(dis_mask_pos[:, :, 0] == scale)
+        dis_pos_at_scale = dis_mask_pos[n_scale_idx][:,1:]
+        dis_mask_at_scale = dis_mask[n_scale_idx]
+
+        return dis_mask_at_scale, dis_pos_at_scale
