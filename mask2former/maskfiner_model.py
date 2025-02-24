@@ -274,10 +274,10 @@ class MaskFiner(nn.Module):
                     dis_mask = dmp["disagreement_mask_{}".format(level)][i]
                     dis_mask_pos = dmp["disagreement_mask_pos_{}".format(level)][i]
                     n_scales = int(dis_mask_pos[:,0].max() + 1)
-                    disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1])
+                    disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1], device=dis_mask.device)
                     for scale in range(n_scales):
                         disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, scale)
-                    processed_results[-1]["disagreement_mask_{}".format(level)] = disagreement_map
+                    processed_results[-1]["disagreement_mask_{}".format(level)] = disagreement_map.cpu()
 
                 i += 1
 
