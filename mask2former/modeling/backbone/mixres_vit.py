@@ -230,7 +230,7 @@ class MRVIT(nn.Module):
     def __init__(
             self,
             image_size,
-            patch_size,
+            patch_sizes,
             n_layers,
             d_model,
             n_heads,
@@ -243,14 +243,16 @@ class MRVIT(nn.Module):
             min_patch_size=4
     ):
         super().__init__()
+        self.patch_size = patch_sizes[-1]
+        self.patch_sizes = patch_sizes
         self.patch_embed = OverlapPatchEmbedding(
             image_size,
-            patch_size,
+            self.patch_size,
             d_model,
             channels,
         )
         self.image_size = image_size
-        self.patch_size = patch_size
+        self.patch_size = self.patch_size
         self.n_layers = n_layers
         self.d_model = d_model
         self.n_heads = n_heads
@@ -313,7 +315,8 @@ class MixResViT(MRVIT, Backbone):
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
 
-        patch_size = cfg.MODEL.MR.PATCH_SIZES[layer_index]
+        #patch_size = cfg.MODEL.MR.PATCH_SIZES[layer_index]
+        patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
         embed_dim = cfg.MODEL.MR.EMBED_DIM[layer_index]
         depths = cfg.MODEL.MR.DEPTHS[layer_index]
         mlp_ratio = cfg.MODEL.MR.MLP_RATIO[layer_index]
@@ -324,7 +327,7 @@ class MixResViT(MRVIT, Backbone):
 
         super().__init__(
             image_size=image_size,
-            patch_size=patch_size,
+            patch_sizes=patch_sizes,
             n_layers=depths,
             d_model=embed_dim,
             n_heads=num_heads,
