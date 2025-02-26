@@ -482,7 +482,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
 
-        disagreement_mask = self.create_disagreement_mask2(pred_mask, outputs_class)
+        disagreement_mask = self.create_disagreement_mask(pred_mask, outputs_class)
 
         assert len(predictions_class) == self.num_layers + 1
         if self.final_layer:
@@ -547,6 +547,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
                 batch_cls_mask = torch.sigmoid(outputs_mask[b, cls_i[b] == c].sum(dim=0))
                 batch_cls_mask = (batch_cls_mask > 0.5).int()
                 disagreement_mask[b] = disagreement_mask[b] + batch_cls_mask
+        print("Number of unique classes in sample 0: {}".format(len(cls_i[0].unique())))
         return disagreement_mask
 
 

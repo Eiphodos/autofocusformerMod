@@ -514,8 +514,8 @@ class MRNB(nn.Module):
         self.num_features = num_features
 
         # Pos Embs
-        #self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
-        #self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
+        self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
+        self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
 
         # stochastic depth
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, n_layers)]
@@ -608,7 +608,7 @@ class MRNB(nn.Module):
     def split_features(self, tokens_to_split):
         x_splitted = self.split(tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        #x_splitted = x_splitted + self.rel_pos_emb + self.scale_emb
+        x_splitted = x_splitted + self.rel_pos_emb + self.scale_emb
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
@@ -627,6 +627,11 @@ class MRNB(nn.Module):
         scale_lvl = scale_lvl.repeat(batch_size, 1)
         scale_lvl = scale_lvl.to(pos_to_split.device).int().unsqueeze(2)
         patches_scale_pos = torch.cat([scale_lvl, new_pos_2dim], dim=2)
+
+        print("Old pos for token 0 in scale {}: {}".format(curr_scale, pos_to_split[0][0]))
+        print("New pos for token 0 in scale {}: {}".format(curr_scale, patches_scale_pos[0][0:4]))
+        print("Old pos for token 1 in scale {}: {}".format(curr_scale, pos_to_split[0][1]))
+        print("New pos for token 1 in scale {}: {}".format(curr_scale, patches_scale_pos[0][4:8]))
 
         return patches_scale_pos
 
