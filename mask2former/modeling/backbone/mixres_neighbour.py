@@ -637,12 +637,13 @@ class MRNB(nn.Module):
 
     def add_high_res_feat(self, tokens, pos, curr_scale, image):
         patched_im = self.high_res_patcher(image)
+        pi_shape = patched_im.shape
         b = torch.arange(pos.shape[0]).unsqueeze(-1).expand(-1, pos.shape[1])
         x = torch.div(pos[..., 0], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         patched_im = patched_im[b, :, y, x]
-        print("For pos {} for token 0 in scale {} and features of shape {}, take pos {},{}".format(pos[0,0], curr_scale, patched_im.shape, x[0,0], y[0,0]))
-        #tokens = tokens + patched_im
+        print("For pos {} for token 0 in scale {} and features of shape {}, take pos {},{}".format(pos[0,0], curr_scale, pi_shape, x[0,0], y[0,0]))
+        tokens = tokens + patched_im
 
         return patched_im
 
