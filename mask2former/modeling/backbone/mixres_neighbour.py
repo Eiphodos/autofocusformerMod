@@ -643,6 +643,10 @@ class MRNB(nn.Module):
         y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         patched_im = patched_im[b, :, y, x]
         print("For pos {} for token 0 in scale {} and features of shape {}, take pos {},{}".format(pos[0,0], curr_scale, pi_shape, x[0,0], y[0,0]))
+        print(
+            "For pos {} for token 1 in scale {} and features of shape {}, take pos {},{}".format(pos[0, 1], curr_scale,
+                                                                                                 pi_shape, x[0, 1],
+                                                                                                 y[0, 1]))
         tokens = tokens + patched_im
 
         return patched_im
