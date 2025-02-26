@@ -540,7 +540,7 @@ class MRNB(nn.Module):
         self.split = nn.Linear(channels, channels * self.split_ratio)
 
         self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
-        self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
+        #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
         self.token_projection = nn.Linear(channels, d_model)
 
@@ -636,8 +636,7 @@ class MRNB(nn.Module):
         x = torch.div(pos[..., 0], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         patched_im = patched_im[b, :, y, x]
-        print("Old token weight: {}".format(self.old_token_weighting))
-        tokens = self.old_token_weighting * tokens + patched_im
+        tokens = tokens + patched_im
 
         return tokens
 

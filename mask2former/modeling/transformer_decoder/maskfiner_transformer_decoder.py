@@ -482,7 +482,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
 
-        disagreement_mask = self.create_disagreement_mask(pred_mask, outputs_class)
+        disagreement_mask = self.create_disagreement_mask2(pred_mask, outputs_class)
 
         assert len(predictions_class) == self.num_layers + 1
         if self.final_layer:
@@ -547,4 +547,14 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
                 batch_cls_mask = torch.sigmoid(outputs_mask[b, cls_i[b] == c].sum(dim=0))
                 batch_cls_mask = (batch_cls_mask > 0.5).int()
                 disagreement_mask[b] = disagreement_mask[b] + batch_cls_mask
+        return disagreement_mask
+
+
+    def create_disagreement_mask2(self, outputs_mask, outputs_class):
+        b, q, n = outputs_mask.shape
+        b, q, c = outputs_class.shape
+        pred = outputs_mask.permute(0, 2, 1) @ outputs_class
+        pred  = F.softmax(pred, dim=-1)
+        pred_max = pred.max(dim=-1)[0]
+        disagreement_mask = 1 - pred_max
         return disagreement_mask
