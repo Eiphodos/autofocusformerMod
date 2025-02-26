@@ -649,7 +649,7 @@ class MRNB(nn.Module):
                                                                                                  y[0, 1]))
         tokens = tokens + patched_im
 
-        return patched_im
+        return tokens
 
     def upsample_features(self, im, scale, features, features_pos, upsampling_mask):
         old_scale = scale - 1
