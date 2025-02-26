@@ -551,8 +551,6 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
 
 
     def create_disagreement_mask2(self, outputs_mask, outputs_class):
-        b, q, n = outputs_mask.shape
-        b, q, c = outputs_class.shape
         pred = outputs_mask.permute(0, 2, 1) @ outputs_class
         pred  = F.softmax(pred, dim=-1)
         pred_max = pred.max(dim=-1)[0]
