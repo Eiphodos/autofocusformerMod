@@ -628,10 +628,10 @@ class MRNB(nn.Module):
         scale_lvl = scale_lvl.to(pos_to_split.device).int().unsqueeze(2)
         patches_scale_pos = torch.cat([scale_lvl, new_pos_2dim], dim=2)
 
-        print("Old pos for token 0 in scale {}: {}".format(curr_scale, pos_to_split[0][0]))
-        print("New pos for token 0 in scale {}: {}".format(curr_scale, patches_scale_pos[0][0:4]))
-        print("Old pos for token 1 in scale {}: {}".format(curr_scale, pos_to_split[0][1]))
-        print("New pos for token 1 in scale {}: {}".format(curr_scale, patches_scale_pos[0][4:8]))
+        #print("Old pos for token 0 in scale {}: {}".format(curr_scale, pos_to_split[0][0]))
+        #print("New pos for token 0 in scale {}: {}".format(curr_scale, patches_scale_pos[0][0:4]))
+        #print("Old pos for token 1 in scale {}: {}".format(curr_scale, pos_to_split[0][1]))
+        #print("New pos for token 1 in scale {}: {}".format(curr_scale, patches_scale_pos[0][4:8]))
 
         return patches_scale_pos
 
@@ -642,11 +642,8 @@ class MRNB(nn.Module):
         x = torch.div(pos[..., 0], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         patched_im = patched_im[b, :, y, x]
-        print("For pos {} for token 0 in scale {} and features of shape {}, take pos {},{}".format(pos[0,0], curr_scale, pi_shape, x[0,0], y[0,0]))
-        print(
-            "For pos {} for token 1 in scale {} and features of shape {}, take pos {},{}".format(pos[0, 1], curr_scale,
-                                                                                                 pi_shape, x[0, 1],
-                                                                                                 y[0, 1]))
+        #print("For pos {} for token 0 in scale {} and features of shape {}, take pos {},{}".format(pos[0,0], curr_scale, pi_shape, x[0,0], y[0,0]))
+        #print("For pos {} for token 1 in scale {} and features of shape {}, take pos {},{}".format(pos[0, 1], curr_scale, pi_shape, x[0, 1], y[0, 1]))
         tokens = tokens + patched_im
 
         return tokens
