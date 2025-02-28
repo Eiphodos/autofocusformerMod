@@ -489,12 +489,14 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             out = {
                 'pred_logits': predictions_class[-1],
                 'pred_masks': predictions_mask[-1],
-                'aux_outputs': []
+                'aux_outputs': self._set_aux_loss(
+                    predictions_class[:-1] if self.mask_classification else None, predictions_mask[:-1]
+                )
             }
         else:
             out = {
                 'aux_outputs': self._set_aux_loss(
-                    [predictions_class[-1]] if self.mask_classification else None, [predictions_mask[-1]]
+                    predictions_class if self.mask_classification else None, predictions_mask
                 )
             }
         return out, disagreement_mask
@@ -547,7 +549,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
                 batch_cls_mask = torch.sigmoid(outputs_mask[b, cls_i[b] == c].sum(dim=0))
                 batch_cls_mask = (batch_cls_mask > 0.5).int()
                 disagreement_mask[b] = disagreement_mask[b] + batch_cls_mask
-        print("Number of unique classes in sample 0: {}".format(len(cls_i[0].unique())))
+        #print("Number of unique classes in sample 0: {}".format(len(cls_i[0].unique())))
         return disagreement_mask
 
 
