@@ -415,13 +415,13 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         assert len(x) == self.num_feature_levels
         src = []
         pos_emb = []
-
+        '''
         print("x is length {}".format(len(x)))
         print("x_pos is length {}".format(len(pos)))
         print("mask_feature has shape {}".format(mask_features.shape))
         print("mask_feature_pos has shape {}".format(mf_pos.shape))
         print("finest input shape is {}".format(finest_input_shape))
-
+        '''
         if len(pos) == 1 and pos[0].shape == mf_pos.shape and (pos[0] == mf_pos).all():
             masked_attn = False
         else:
