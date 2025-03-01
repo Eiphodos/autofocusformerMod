@@ -514,7 +514,8 @@ class MRNB(nn.Module):
         self.num_features = num_features
 
         # Pos Embs
-        self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
+        self.pe_layer = PositionEmbeddingSine(d_model // 2, normalize=True)
+        #self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
         self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
 
         # stochastic depth
@@ -608,7 +609,7 @@ class MRNB(nn.Module):
     def split_features(self, tokens_to_split):
         x_splitted = self.split(tokens_to_split)
         x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = x_splitted + self.rel_pos_emb + self.scale_emb
+        x_splitted = x_splitted + self.scale_emb
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
 
@@ -658,6 +659,9 @@ class MRNB(nn.Module):
         pos_after_split = self.split_pos(pos_to_split, scale)
 
         feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, im)
+
+        pos_embed = self.pe_layer(pos_after_split[:,:,1:])
+        feat_after_split = feat_after_split + pos_embed
 
         all_feat = torch.cat([feat_old, feat_to_keep, feat_after_split], dim=1)
         all_pos = torch.cat([pos_old, pos_to_keep, pos_after_split], dim=1)
