@@ -443,10 +443,11 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         predictions_mask = []
 
         # prediction heads on learnable query features
-        outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_input_shape[0]), torch.arange(0, finest_input_shape[1]), indexing='ij')).view(2, -1).permute(1, 0)
         finest_pos = finest_pos.to(mf_pos.device).repeat(b, 1, 1)
-        outputs_mask = upsample_feature_shepard(finest_pos, mf_pos, pred_mask.permute(0, 2, 1)).permute(0, 2, 1)
+        mask_features = upsample_feature_shepard(finest_pos, mf_pos, mask_features)
+        outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, pos[0], masked_attn)
+        #outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         outputs_mask = point2img(outputs_mask, finest_pos)
         predictions_class.append(outputs_class)
         predictions_mask.append(outputs_mask)
@@ -476,13 +477,16 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
                 output
             )
 
-            outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
-            outputs_mask = upsample_feature_shepard(finest_pos, mf_pos, pred_mask.permute(0, 2, 1)).permute(0, 2, 1)
+            outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos,
+                                                                                pos[(i + 1) % self.num_feature_levels],
+                                                                                masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+            #outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos, pos[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+            #outputs_mask = upsample_feature_shepard(finest_pos, mf_pos, pred_mask.permute(0, 2, 1)).permute(0, 2, 1)
             outputs_mask = point2img(outputs_mask, finest_pos)
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
 
-        disagreement_mask = self.create_disagreement_mask(pred_mask, outputs_class)
+        disagreement_mask = self.create_disagreement_mask3(outputs_mask, outputs_class, pos[-1])
 
         assert len(predictions_class) == self.num_layers + 1
         if self.final_layer:
@@ -558,4 +562,22 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         pred  = F.softmax(pred, dim=-1)
         pred_max = pred.max(dim=-1)[0]
         disagreement_mask = 1 - pred_max
+        return disagreement_mask
+
+
+    def create_disagreement_mask3(self, outputs_mask, outputs_class, pos):
+        b = torch.arange(pos.shape[0]).unsqueeze(-1).expand(-1, pos.shape[1])
+        pos_x = pos[..., 0].long()
+        pos_y = pos[..., 1].long()
+        mask_tokens = outputs_mask[b, :, pos_y, pos_x].permute(0, 2, 1)
+
+        b, q, n = mask_tokens.shape
+        cls_i = outputs_class.argmax(dim=-1)
+        disagreement_mask = torch.zeros(b, n, requires_grad=True).to(mask_tokens.device)
+        for b in range(cls_i.shape[0]):
+            for c in cls_i[b].unique():
+                batch_cls_mask = torch.sigmoid(mask_tokens[b, cls_i[b] == c].sum(dim=0))
+                batch_cls_mask = (batch_cls_mask > 0.5).int()
+                disagreement_mask[b] = disagreement_mask[b] + batch_cls_mask
+        #print("Number of unique classes in sample 0: {}".format(len(cls_i[0].unique())))
         return disagreement_mask
