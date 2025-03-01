@@ -514,7 +514,7 @@ class MRNB(nn.Module):
         self.num_features = num_features
 
         # Pos Embs
-        self.pe_layer = PositionEmbeddingSine(d_model // 2, normalize=True)
+        self.pe_layer = PositionEmbeddingSine(channels // 2, normalize=True)
         #self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
         self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
 
