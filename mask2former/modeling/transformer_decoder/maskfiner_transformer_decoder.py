@@ -410,6 +410,8 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         mf_pos - b x n x 2
         '''
         # x is a list of multi-scale feature
+        x = x[:self.num_feature_levels]
+        pos = pos[:self.num_feature_levels]
         assert len(x) == self.num_feature_levels
         src = []
         pos_emb = []

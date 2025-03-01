@@ -158,6 +158,7 @@ class MSDeformAttnPixelDecoderMaskFinerProj(nn.Module):
             spatial_shapes.append(spatial_shape)
             min_spatial_shapes.append(min_spatial_shape)
 
+        '''
         multi_scale_features = []
 
         num_cur_levels = 0
@@ -165,8 +166,8 @@ class MSDeformAttnPixelDecoderMaskFinerProj(nn.Module):
             if num_cur_levels < self.maskformer_num_feature_levels:
                 multi_scale_features.append(o)
                 num_cur_levels += 1
-
+        '''
         mf = torch.cat(out, dim=1)
         mf_pos = torch.cat(poss, dim=1)
 
-        return self.mask_features(mf), mf_pos, multi_scale_features, poss[:self.maskformer_num_feature_levels], scaless[:self.maskformer_num_feature_levels], spatial_shapes[-1]
+        return self.mask_features(mf), mf_pos, out, poss, scaless, spatial_shapes[-1]
