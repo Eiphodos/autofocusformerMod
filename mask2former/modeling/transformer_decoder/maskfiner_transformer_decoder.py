@@ -486,7 +486,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
 
-        disagreement_mask = self.create_disagreement_mask3(outputs_mask, outputs_class, pos[-1])
+        disagreement_mask = self.create_disagreement_mask3(outputs_mask, outputs_class, pos[-1], len(pos))
 
         assert len(predictions_class) == self.num_layers + 1
         if self.final_layer:
@@ -565,15 +565,11 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         return disagreement_mask
 
 
-    def create_disagreement_mask3(self, outputs_mask, outputs_class, pos):
-        print("Pos shape: {}".format(pos.shape))
-        print("Pos max: {}".format(pos.max()))
-        print("Outputs_mask shape: {}".format(outputs_mask.shape))
+    def create_disagreement_mask3(self, outputs_mask, outputs_class, pos, scale):
         b = torch.arange(pos.shape[0]).unsqueeze(-1).expand(-1, pos.shape[1])
-        pos_x = pos[..., 0].long()
-        pos_y = pos[..., 1].long()
+        pos_x = torch.div(pos[..., 0], 2 ** (4 - scale), rounding_mode='trunc').long()
+        pos_y = torch.div(pos[..., 1], 2 ** (4 - scale), rounding_mode='trunc').long()
         mask_tokens = outputs_mask[b, :, pos_y, pos_x].permute(0, 2, 1)
-        print("mask_tokens shape: {}".format(mask_tokens.shape))
 
         b, q, n = mask_tokens.shape
         cls_i = outputs_class.argmax(dim=-1)
