@@ -566,10 +566,14 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
 
 
     def create_disagreement_mask3(self, outputs_mask, outputs_class, pos):
+        print("Pos shape: {}".format(pos.shape))
+        print("Pos max: {}".format(pos.max()))
+        print("Outputs_mask shape: {}".format(outputs_mask.shape))
         b = torch.arange(pos.shape[0]).unsqueeze(-1).expand(-1, pos.shape[1])
         pos_x = pos[..., 0].long()
         pos_y = pos[..., 1].long()
         mask_tokens = outputs_mask[b, :, pos_y, pos_x].permute(0, 2, 1)
+        print("mask_tokens shape: {}".format(mask_tokens.shape))
 
         b, q, n = mask_tokens.shape
         cls_i = outputs_class.argmax(dim=-1)
