@@ -480,9 +480,9 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         print("Mask feature max pos after scaling: {}".format(mf_pos.max()))
         i = 0
         for p, inp_shape in zip(pos, input_shapes):
-            print("Feature {} max pos before scaling: {}".format(i, p.max()[0]))
+            print("Feature {} max pos before scaling: {}".format(i, p.max()))
             pos_scaled = scale_pos(p, finest_input_shape, finest_inp_feat_shape)
-            print("Feature {} max pos after scaling: {}".format(i, pos_scaled.max()[0]))
+            print("Feature {} max pos after scaling: {}".format(i, pos_scaled.max()))
             poss_scaled.append(pos_scaled)
             i += 1
         finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[0]), torch.arange(0, finest_inp_feat_shape[1]), indexing='ij')).view(2, -1).permute(1, 0)
