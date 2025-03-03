@@ -443,12 +443,12 @@ class BasicLayer(nn.Module):
                 else:
                     pos_old = pos.clone().detach()
                     pos, cluster_mean_pos, member_idx, cluster_mask, reorder = space_filling_cluster(pos, self.cluster_size, h, w, no_reorder=False)
-                    print("Reorder for sample 0: {}".format(reorder[0, 0]))
-                    print("Pos for old sample 0: {}".format(pos_old[0, 0]))
-                    print("Mean feat for old sample 0: {}".format(feat[0, 0].mean()))
+                    #print("Reorder for sample 0: {}".format(reorder[0, 0]))
+                    #print("Pos for old sample 0: {}".format(pos_old[0, 0]))
+                    #print("Mean feat for old sample 0: {}".format(feat[0, 0].mean()))
                     feat = feat[torch.arange(b).to(feat.device).repeat_interleave(n), reorder.view(-1)].reshape(b, n, c)
-                    print("Pos for new sample 0: {}".format(pos[0, reorder[0, 0]]))
-                    print("Mean feat for new sample 0: {}".format(feat[0, reorder[0, 0]].mean()))
+                    #print("Pos for new sample 0: {}".format(pos[0, reorder[0, 0]]))
+                    #print("Mean feat for new sample 0: {}".format(feat[0, reorder[0, 0]].mean()))
                     pos_scale = pos_scale[torch.arange(b).to(pos_scale.device).repeat_interleave(n), reorder.view(-1)].reshape(b, n, 1)
 
             assert member_idx.shape[1] == k and member_idx.shape[2] == self.cluster_size, "member_idx shape incorrect!"

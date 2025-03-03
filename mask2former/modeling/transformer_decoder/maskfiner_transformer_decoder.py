@@ -475,14 +475,14 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         # prediction heads on learnable query features
         poss_scaled = []
         finest_inp_feat_shape = input_shapes[-1]
-        print("Mask feature max pos before scaling: {}".format(mf_pos.max()))
+        print("Mask feature max pos before scaling: {}".format(mf_pos.max()[0]))
         mf_pos_scaled = scale_pos(mf_pos, finest_input_shape, finest_inp_feat_shape)
-        print("Mask feature max pos after scaling: {}".format(mf_pos.max()))
+        print("Mask feature max pos after scaling: {}".format(mf_pos.max()[0]))
         i = 0
         for p, inp_shape in zip(pos, input_shapes):
-            print("Feature {} max pos before scaling: {}".format(p.max()))
+            print("Feature {} max pos before scaling: {}".format(p.max()[0]))
             pos_scaled = scale_pos(p, finest_input_shape, finest_inp_feat_shape)
-            print("Feature {} max pos after scaling: {}".format(pos_scaled.max()))
+            print("Feature {} max pos after scaling: {}".format(pos_scaled.max()[0]))
             poss_scaled.append(pos_scaled)
             i += 1
         finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[0]), torch.arange(0, finest_inp_feat_shape[1]), indexing='ij')).view(2, -1).permute(1, 0)
