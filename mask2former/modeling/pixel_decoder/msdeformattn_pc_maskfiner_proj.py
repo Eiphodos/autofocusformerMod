@@ -170,4 +170,4 @@ class MSDeformAttnPixelDecoderMaskFinerProj(nn.Module):
         mf = torch.cat(out, dim=1)
         mf_pos = torch.cat(poss, dim=1)
 
-        return self.mask_features(mf), mf_pos, out, poss, scaless, spatial_shapes[-1]
+        return self.mask_features(mf), mf_pos, out, poss, scaless, min_spatial_shape, spatial_shapes
