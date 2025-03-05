@@ -190,7 +190,7 @@ class OverlapPatchEmbedding(nn.Module):
 
         n_layers = int(torch.log2(torch.tensor([patch_size])).item())
         conv_layers = []
-        emb_dims = [embed_dim // 2**(n_layers - 1 - i) for i in range(n_layers - 1) ]
+        emb_dims = [int(embed_dim // 2**(n_layers -1 - i)) for i in range(n_layers) ]
         emb_dim_list = [channels] + emb_dims
         for i in range(n_layers):
             conv = DownSampleConvBlock(emb_dim_list[i], emb_dim_list[i + 1])
