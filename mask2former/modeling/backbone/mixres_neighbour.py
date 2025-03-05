@@ -337,7 +337,7 @@ class OverlapPatchEmbedding(nn.Module):
         self.out_norm = nn.LayerNorm(embed_dim)
 
     def forward(self, im):
-        x = self.conv_layers(im).flatten(2).transpose(1, 2)
+        x = self.conv_layers(im)
         x = self.out_norm(x)
         return x
 
