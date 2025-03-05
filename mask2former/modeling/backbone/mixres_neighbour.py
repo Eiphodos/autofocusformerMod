@@ -437,8 +437,14 @@ class BasicLayer(nn.Module):
                     if cluster_mask is not None:
                         cluster_mask = cluster_mask[:b]
                 else:
+                    pos_old = pos.clone().detach()
                     pos, cluster_mean_pos, member_idx, cluster_mask, reorder = space_filling_cluster(pos, self.cluster_size, h, w, no_reorder=False)
+                    #print("Reorder for sample 0: {}".format(reorder[0, 0]))
+                    #print("Pos for old sample 0: {}".format(pos_old[0, 0]))
+                    #print("Mean feat for old sample 0: {}".format(feat[0, 0].mean()))
                     feat = feat[torch.arange(b).to(feat.device).repeat_interleave(n), reorder.view(-1)].reshape(b, n, c)
+                    #print("Pos for new sample 0: {}".format(pos[0, reorder[0, 0]]))
+                    #print("Mean feat for new sample 0: {}".format(feat[0, reorder[0, 0]].mean()))
                     pos_scale = pos_scale[torch.arange(b).to(pos_scale.device).repeat_interleave(n), reorder.view(-1)].reshape(b, n, 1)
 
             assert member_idx.shape[1] == k and member_idx.shape[2] == self.cluster_size, "member_idx shape incorrect!"
@@ -510,6 +516,7 @@ class MRNB(nn.Module):
         self.num_features = num_features
 
         # Pos Embs
+        #self.pe_layer = PositionEmbeddingSine(channels // 2, normalize=True)
         self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
         self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
 
@@ -536,7 +543,7 @@ class MRNB(nn.Module):
         self.split = nn.Linear(channels, channels * self.split_ratio)
 
         self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
-        self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
+        #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
         self.token_projection = nn.Linear(channels, d_model)
 
@@ -628,12 +635,14 @@ class MRNB(nn.Module):
 
     def add_high_res_feat(self, tokens, pos, curr_scale, image):
         patched_im = self.high_res_patcher(image)
+        pi_shape = patched_im.shape
         b = torch.arange(pos.shape[0]).unsqueeze(-1).expand(-1, pos.shape[1])
         x = torch.div(pos[..., 0], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         patched_im = patched_im[b, :, y, x]
-        print("Old token weight: {}".format(self.old_token_weighting))
-        tokens = self.old_token_weighting * tokens + patched_im
+        #print("For pos {} for token 0 in scale {} and features of shape {}, take pos {},{}".format(pos[0,0], curr_scale, pi_shape, x[0,0], y[0,0]))
+        #print("For pos {} for token 1 in scale {} and features of shape {}, take pos {},{}".format(pos[0, 1], curr_scale, pi_shape, x[0, 1], y[0, 1]))
+        tokens = tokens + patched_im
 
         return tokens
 
