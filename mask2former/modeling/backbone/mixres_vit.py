@@ -247,7 +247,7 @@ class MRVIT(nn.Module):
         super().__init__()
         self.patch_size = patch_sizes[-1]
         self.patch_sizes = patch_sizes
-        self.patch_embed = PatchEmbedding(
+        self.patch_embed = OverlapPatchEmbedding(
             image_size,
             self.patch_size,
             d_model,
