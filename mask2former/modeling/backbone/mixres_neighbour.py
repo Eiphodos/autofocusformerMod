@@ -279,13 +279,13 @@ class DownSampleConvBlock(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.conv = nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1)
-        #self.instance_norm = nn.InstanceNorm2d(out_dim, affine=True)
+        self.b_norm = nn.BatchNorm2d(out_dim)
         self.relu = nn.LeakyReLU()
 
     def forward(self, x):
         x = self.conv(x)
         x = self.relu(x)
-        #x = self.instance_norm(x)
+        x = self.b_norm(x)
 
         return x
 
@@ -322,27 +322,23 @@ class PatchEmbedding(nn.Module):
 
 
 class OverlapPatchEmbedding(nn.Module):
-    def __init__(self, image_size, patch_size, embed_dim, channels):
+    def __init__(self, patch_size, embed_dim, channels):
         super().__init__()
-
-        self.image_size = image_size
-        if image_size[0] % patch_size != 0 or image_size[1] % patch_size != 0:
-            raise ValueError("image dimensions must be divisible by the patch size")
-        self.grid_size = image_size[0] // patch_size, image_size[1] // patch_size
-        self.num_patches = self.grid_size[0] * self.grid_size[1]
         self.patch_size = patch_size
 
         n_layers = int(torch.log2(torch.tensor([patch_size])).item())
         conv_layers = []
-        emb_dim_list = [channels] + [embed_dim] * (n_layers - 1)
+        emb_dims = [embed_dim // 2**(n_layers - 1 - i) for i in range(n_layers - 1) ]
+        emb_dim_list = [channels] + emb_dims
         for i in range(n_layers):
             conv = DownSampleConvBlock(emb_dim_list[i], embed_dim)
             conv_layers.append(conv)
         self.conv_layers = nn.Sequential(*conv_layers)
+        self.out_norm = nn.LayerNorm(embed_dim)
 
     def forward(self, im):
-        B, C, H, W = im.shape
         x = self.conv_layers(im).flatten(2).transpose(1, 2)
+        x = self.out_norm(x)
         return x
 
 
@@ -539,7 +535,7 @@ class MRNB(nn.Module):
         # Split layers
         self.split = nn.Linear(channels, channels * self.split_ratio)
 
-        self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
+        self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
         self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
         self.token_projection = nn.Linear(channels, d_model)

@@ -135,13 +135,13 @@ class DownSampleConvBlock(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.conv = nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1)
-        #self.instance_norm = nn.InstanceNorm2d(out_dim, affine=True)
+        self.b_norm = nn.BatchNorm2d(out_dim)
         self.relu = nn.LeakyReLU()
 
     def forward(self, x):
         x = self.conv(x)
         x = self.relu(x)
-        #x = self.instance_norm(x)
+        x = self.b_norm(x)
 
         return x
 
@@ -190,15 +190,17 @@ class OverlapPatchEmbedding(nn.Module):
 
         n_layers = int(torch.log2(torch.tensor([patch_size])).item())
         conv_layers = []
-        emb_dim_list = [channels] + [embed_dim] * (n_layers - 1)
+        emb_dims = [embed_dim // 2**(n_layers - 1 - i) for i in range(n_layers - 1) ]
+        emb_dim_list = [channels] + emb_dims
         for i in range(n_layers):
             conv = DownSampleConvBlock(emb_dim_list[i], embed_dim)
             conv_layers.append(conv)
         self.conv_layers = nn.Sequential(*conv_layers)
+        self.out_norm = nn.LayerNorm(embed_dim)
 
     def forward(self, im):
-        B, C, H, W = im.shape
         x = self.conv_layers(im).flatten(2).transpose(1, 2)
+        x = self.out_norm(x)
         return x
 
 
