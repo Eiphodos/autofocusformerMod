@@ -331,7 +331,7 @@ class OverlapPatchEmbedding(nn.Module):
         emb_dims = [embed_dim // 2**(n_layers - 1 - i) for i in range(n_layers - 1) ]
         emb_dim_list = [channels] + emb_dims
         for i in range(n_layers):
-            conv = DownSampleConvBlock(emb_dim_list[i], embed_dim)
+            conv = DownSampleConvBlock(emb_dim_list[i], emb_dim_list[i + 1])
             conv_layers.append(conv)
         self.conv_layers = nn.Sequential(*conv_layers)
         self.out_norm = nn.LayerNorm(embed_dim)
