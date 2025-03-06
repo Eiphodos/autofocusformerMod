@@ -774,7 +774,7 @@ class MixResNeighbour(MRNB, Backbone):
         all_pos = []
 
         for s in range(scale_max):
-            n_scale_idx = torch.where(pos[:, 0] == s)
+            n_scale_idx = torch.where(pos[:, 0] == s).long()
             pos_at_scale = pos[n_scale_idx, 1:]
             pos_at_org_scale = pos_at_scale*self.min_patch_size
             patch_size = self.patch_sizes[s]
