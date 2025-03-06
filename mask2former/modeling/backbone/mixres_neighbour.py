@@ -789,11 +789,9 @@ class MixResNeighbour(MRNB, Backbone):
         cover = all([all(torch.any(i == all_pos, dim=0)) for i in pos_true])
         if not cover:
             print("Total pos map is not covered in level {}".format(scale_max))
-        d = torch.abs(all_pos.view(1, -1, 2) - all_pos.view(-1, 1, 2)).sum(dim=-1)
-        i, j = torch.where((d + torch.triu(torch.ones_like(d))) == 0)
-        if len(i) > 0:
-            for k in range(len(i)):
-                print("Found duplicate pos: {} in level {}".format(all_pos[k], scale_max))
+        dupli_unq, dupli_idx, dupli_counts = torch.unique(all_pos, dim=0, return_counts=True, return_inverse=True)
+        if len(dupli_counts) > 0:
+            print("Found {} duplicate posses: {} in level {}".format(sum(dupli_counts > 1), scale_max))
 
 
 
