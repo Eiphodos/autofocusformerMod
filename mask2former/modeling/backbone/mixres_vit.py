@@ -294,7 +294,7 @@ class MRVIT(nn.Module):
 
         pos = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, scale).to('cuda')
         pos = pos.repeat(B, 1, 1)
-        self.test_pos_cover_and_overlap(pos[0], H, W, scale)
+        success = self.test_pos_cover_and_overlap(pos[0], H, W, scale)
         pos_embed = self.pe_layer(pos[:,:,1:])
         x = x + pos_embed
 
