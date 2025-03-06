@@ -784,7 +784,7 @@ class MixResNeighbour(MRNB, Backbone):
             pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
             all_pos.append(pos_at_org_scale)
 
-        all_pos = torch.stack(all_pos, dim=0)
+        all_pos = torch.stack(all_pos, dim=0).squeeze()
 
         cover = all([all(torch.any(i == all_pos, dim=0)) for i in pos_true])
         if not cover:
