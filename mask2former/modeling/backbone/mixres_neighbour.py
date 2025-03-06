@@ -791,7 +791,7 @@ class MixResNeighbour(MRNB, Backbone):
             print("Total pos map is not covered in level {}".format(scale_max))
         dupli_unq, dupli_idx, dupli_counts = torch.unique(all_pos, dim=0, return_counts=True, return_inverse=True)
         if len(dupli_counts) > 0:
-            print("Found {} duplicate posses: {} in level {}".format(sum(dupli_counts > 1), scale_max))
+            print("Found {} duplicate posses in level {}".format(sum(dupli_counts > 1), scale_max))
 
 
 
