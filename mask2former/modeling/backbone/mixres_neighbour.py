@@ -670,9 +670,8 @@ class MRNB(nn.Module):
 
 
         x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
-
         pos, x = self.layers(pos, x, h=min_patched_im_size[0], w=min_patched_im_size[1], on_grid=False)
-
+        self.test_pos_cover_and_overlap(self, pos, H, W, scale)
         outs = {}
         for s in range(scale + 1):
             out_idx = self.n_scales - s + 1
@@ -767,3 +766,36 @@ class MixResNeighbour(MRNB, Backbone):
             )
             for name in self._out_features
         }
+
+    def test_pos_cover_and_overlap(self, pos, im_h, im_w, scale_max):
+        pos_true = torch.meshgrid(torch.arange(0, im_w), torch.arange(0, im_h), indexing='ij')
+        pos_true = torch.stack([pos_true[0], pos_true[1]]).permute(1, 2, 0).view(-1, 2).to(pos.device)
+
+        all_pos = []
+
+        for s in range(scale_max):
+            n_scale_idx = torch.where(pos[:, 0] == s)
+            pos_at_scale = pos[n_scale_idx, 1:]
+            pos_at_org_scale = pos_at_scale*self.min_patch_size
+            patch_size = self.patch_sizes[s]
+            new_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
+            new_coords = new_coords.view(2, -1).permute(1, 0).to(pos.device)
+            pos_at_org_scale = pos_at_org_scale.unsqueeze(1) + new_coords
+            pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
+            all_pos.append(pos_at_org_scale)
+
+        all_pos = torch.stack(all_pos, dim=0)
+
+        cover = all([all(torch.any(i == all_pos, dim=0)) for i in pos_true])
+        if not cover:
+            print("Total pos map is not covered in level {}".format(scale_max))
+        d = torch.abs(all_pos.view(1, -1, 2) - all_pos.view(-1, 1, 2)).sum(dim=-1)
+        i, j = torch.where((d + torch.triu(torch.ones_like(d))) == 0)
+        if len(i) > 0:
+            for k in range(len(i)):
+                print("Found duplicate pos: {} in level {}".format(all_pos[k], scale_max))
+
+
+
+
+
