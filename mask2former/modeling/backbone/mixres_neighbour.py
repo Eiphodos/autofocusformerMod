@@ -769,7 +769,7 @@ class MixResNeighbour(MRNB, Backbone):
 
     def test_pos_cover_and_overlap(self, pos, im_h, im_w, scale_max):
         pos_true = torch.meshgrid(torch.arange(0, im_w), torch.arange(0, im_h), indexing='ij')
-        pos_true = torch.stack([pos_true[0], pos_true[1]]).permute(1, 2, 0).view(-1, 2).to(pos.device)
+        pos_true = torch.stack([pos_true[0], pos_true[1]]).permute(1, 2, 0).view(-1, 2).to(pos.device).half()
 
         all_pos = []
 
@@ -784,7 +784,7 @@ class MixResNeighbour(MRNB, Backbone):
             pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
             all_pos.append(pos_at_org_scale)
 
-        all_pos = torch.stack(all_pos, dim=0).squeeze()
+        all_pos = torch.stack(all_pos, dim=0).squeeze().half()
 
         cover = all([all(torch.any(i == all_pos, dim=0)) for i in pos_true])
         if not cover:
