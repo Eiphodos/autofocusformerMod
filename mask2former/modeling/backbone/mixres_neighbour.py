@@ -671,7 +671,7 @@ class MRNB(nn.Module):
 
         x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
         pos, x = self.layers(pos, x, h=min_patched_im_size[0], w=min_patched_im_size[1], on_grid=False)
-        success = self.test_pos_cover_and_overlap(pos[0], H, W, scale)
+        #success = self.test_pos_cover_and_overlap(pos[0], H, W, scale)
         outs = {}
         for s in range(scale + 1):
             out_idx = self.n_scales - s + 1
