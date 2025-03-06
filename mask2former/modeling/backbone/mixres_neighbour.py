@@ -774,8 +774,8 @@ class MixResNeighbour(MRNB, Backbone):
         all_pos = []
 
         for s in range(scale_max):
-            n_scale_idx = torch.where(pos[:, 0] == s).long()
-            pos_at_scale = pos[n_scale_idx, 1:]
+            n_scale_idx = torch.where(pos[:, 0] == s)
+            pos_at_scale = pos[n_scale_idx[0].long(), 1:]
             pos_at_org_scale = pos_at_scale*self.min_patch_size
             patch_size = self.patch_sizes[s]
             new_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
