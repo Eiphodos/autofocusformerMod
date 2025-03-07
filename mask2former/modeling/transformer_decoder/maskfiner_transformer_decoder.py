@@ -489,8 +489,8 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         predictions_class = []
         predictions_mask = []
         outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
-        print("Mask feature max x: {}, max y: {}, and all pos: {}".format(mf_pos_scaled[:,:,0].max(), mf_pos_scaled[:,:,1].max(), mf_pos_scaled))
-        print("Finest pos max x: {}, max y: {}, and all pos: {}".format(finest_pos[:,:,0].max(), finest_pos[:,:,1].max(), finest_pos))
+        print("Mask feature max x: {}, max y: {}".format(mf_pos_scaled[:,:,0].max(), mf_pos_scaled[:,:,1].max()))
+        print("Finest pos max x: {}, max y: {} from finest inp shape {}".format(finest_pos[:,:,0].max(), finest_pos[:,:,1].max()), finest_inp_feat_shape)
         #outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, pred_mask.permute(0, 2, 1)).permute(0, 2, 1)
         outputs_mask = point2img(pred_mask, finest_pos)
         predictions_class.append(outputs_class)
