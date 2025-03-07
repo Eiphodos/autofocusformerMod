@@ -52,17 +52,10 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
 
         ss = outp["sem_seg"].argmax(dim=0).to(self._cpu_device)
         ss = np.array(ss, dtype=int)
-        print("Got sem_seg for {} with shape {} and saving to {}".format(fn, ss.shape, inference_out_dir))
-
-        ss_npp = outp["sem_seg_no_pp"].argmax(dim=0).to(self._cpu_device)
-        ss_npp = np.array(ss_npp, dtype=int)
-        print("Got sem_seg for {} with shape {} and saving to {}".format(fn, ss_npp.shape, inference_out_dir))
+        #print("Got sem_seg for {} with shape {} and saving to {}".format(fn, ss.shape, inference_out_dir))
 
         plt.imsave(os.path.join(inference_out_dir, fn + '_sem_seg.png'), np.asarray(ss), cmap='tab20b')
         np.save(os.path.join(inference_out_dir, fn + '_sem_seg_raw.npy'), ss)
-
-        plt.imsave(os.path.join(inference_out_dir, fn + '_sem_seg_no_pp.png'), np.asarray(ss_npp), cmap='tab20b')
-        np.save(os.path.join(inference_out_dir, fn + '_sem_seg_raw_no_pp.npy'), ss_npp)
 
         disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
         for k, v in disagreement_masks_only_dict.items():
