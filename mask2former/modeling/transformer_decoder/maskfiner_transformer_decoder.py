@@ -460,14 +460,14 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         b, _, _ = x[0].shape
         poss_scaled = []
         finest_inp_feat_shape = input_shapes[-1]
-        print("Mask feature max pos before scaling: {}".format(mf_pos.max()))
+        #print("Mask feature max pos before scaling: {}".format(mf_pos.max()))
         mf_pos_scaled = scale_pos(mf_pos, finest_input_shape, finest_inp_feat_shape)
-        print("Mask feature max pos after scaling: {}".format(mf_pos_scaled.max()))
+        #print("Mask feature max pos after scaling: {}".format(mf_pos_scaled.max()))
         i = 0
         for p, inp_shape in zip(pos, input_shapes):
-            print("Feature {} max pos before scaling: {}".format(i, p.max()))
+            #print("Feature {} max pos before scaling: {}".format(i, p.max()))
             pos_scaled = scale_pos(p, finest_input_shape, finest_inp_feat_shape)
-            print("Feature {} max pos after scaling: {}".format(i, pos_scaled.max()))
+            #print("Feature {} max pos after scaling: {}".format(i, pos_scaled.max()))
             poss_scaled.append(pos_scaled)
             i += 1
         finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[0]), torch.arange(0, finest_inp_feat_shape[1]), indexing='ij')).transpose(1,2).reshape(2, -1).permute(1, 0)
@@ -489,6 +489,8 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         predictions_class = []
         predictions_mask = []
         outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+        print("Mask feature max x: , max y: and all pos: {}".format(mf_pos_scaled[:,:,0].max(), mf_pos_scaled[:,:,1].max(), mf_pos_scaled))
+        print("Finest pos max x: , max y: and all pos: {}".format(finest_pos[:,:,0].max(), finest_pos[:,:,1].max(), finest_pos))
         #outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, pred_mask.permute(0, 2, 1)).permute(0, 2, 1)
         outputs_mask = point2img(pred_mask, finest_pos)
         predictions_class.append(outputs_class)
