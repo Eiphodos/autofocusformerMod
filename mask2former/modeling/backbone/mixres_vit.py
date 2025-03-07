@@ -11,12 +11,11 @@ from ..transformer_decoder.position_encoding import PositionEmbeddingSine
 from detectron2.modeling import BACKBONE_REGISTRY, Backbone, ShapeSpec
 
 def get_2dpos_of_curr_ps_in_min_ps(height, width, patch_size, min_patch_size, scale):
-    patches_coords = torch.meshgrid(torch.arange(0, width // min_patch_size, patch_size // min_patch_size),
-                                    torch.arange(0, height // min_patch_size, patch_size // min_patch_size),
-                                    indexing='ij')
+    patches_coords = torch.meshgrid(torch.arange(0, width // min_patch_size, patch_size // min_patch_size), torch.arange(0, height // min_patch_size, patch_size // min_patch_size), indexing='ij')
     patches_coords = torch.stack([patches_coords[0], patches_coords[1]])
     patches_coords = patches_coords.permute(1, 2, 0)
-    patches_coords = patches_coords.view(-1, 2)
+    patches_coords = patches_coords.transpose(0, 1)
+    patches_coords = patches_coords.reshape(-1, 2)
     n_patches = patches_coords.shape[0]
 
     scale_lvl = torch.tensor([[scale]] * n_patches)
@@ -157,14 +156,9 @@ def init_weights(m):
         nn.init.trunc_normal_(m, std=0.02)
 
 class PatchEmbedding(nn.Module):
-    def __init__(self, image_size, patch_size, embed_dim, channels):
+    def __init__(self, patch_size, embed_dim, channels):
         super().__init__()
 
-        self.image_size = image_size
-        if image_size[0] % patch_size != 0 or image_size[1] % patch_size != 0:
-            raise ValueError("image dimensions must be divisible by the patch size")
-        self.grid_size = image_size[0] // patch_size, image_size[1] // patch_size
-        self.num_patches = self.grid_size[0] * self.grid_size[1]
         self.patch_size = patch_size
 
         self.proj = nn.Conv2d(
@@ -178,14 +172,9 @@ class PatchEmbedding(nn.Module):
 
 
 class OverlapPatchEmbedding(nn.Module):
-    def __init__(self, image_size, patch_size, embed_dim, channels):
+    def __init__(self, patch_size, embed_dim, channels):
         super().__init__()
 
-        self.image_size = image_size
-        if image_size[0] % patch_size != 0 or image_size[1] % patch_size != 0:
-            raise ValueError("image dimensions must be divisible by the patch size")
-        self.grid_size = image_size[0] // patch_size, image_size[1] // patch_size
-        self.num_patches = self.grid_size[0] * self.grid_size[1]
         self.patch_size = patch_size
 
         n_layers = int(torch.log2(torch.tensor([patch_size])).item())
@@ -231,7 +220,6 @@ class TransformerLayer(nn.Module):
 class MRVIT(nn.Module):
     def __init__(
             self,
-            image_size,
             patch_sizes,
             n_layers,
             d_model,
@@ -248,12 +236,10 @@ class MRVIT(nn.Module):
         self.patch_size = patch_sizes[-1]
         self.patch_sizes = patch_sizes
         self.patch_embed = OverlapPatchEmbedding(
-            image_size,
             self.patch_size,
             d_model,
             channels,
         )
-        self.image_size = image_size
         self.patch_size = self.patch_size
         self.n_layers = n_layers
         self.d_model = d_model
@@ -314,7 +300,6 @@ class MRVIT(nn.Module):
 class MixResViT(MRVIT, Backbone):
     def __init__(self, cfg, layer_index):
         in_chans = 3
-        image_size = cfg.INPUT.CROP.SIZE
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
 
@@ -329,7 +314,6 @@ class MixResViT(MRVIT, Backbone):
         split_ratio = cfg.MODEL.MR.SPLIT_RATIO[layer_index]
 
         super().__init__(
-            image_size=image_size,
             patch_sizes=patch_sizes,
             n_layers=depths,
             d_model=embed_dim,
