@@ -289,10 +289,11 @@ class MaskFiner(nn.Module):
 
                 # semantic segmentation inference
                 if self.semantic_on:
-                    r = retry_if_cuda_oom(self.semantic_inference)(mask_cls_result, mask_pred_result)
+                    r_no_pp = retry_if_cuda_oom(self.semantic_inference)(mask_cls_result, mask_pred_result)
                     if not self.sem_seg_postprocess_before_inference:
-                        r = retry_if_cuda_oom(sem_seg_postprocess)(r, image_size, height, width)
+                        r = retry_if_cuda_oom(sem_seg_postprocess)(r_no_pp, image_size, height, width)
                     processed_results[-1]["sem_seg"] = r
+                    processed_results[-1]["sem_seg_no_pp"] = r_no_pp
 
                 # panoptic segmentation inference
                 if self.panoptic_on:

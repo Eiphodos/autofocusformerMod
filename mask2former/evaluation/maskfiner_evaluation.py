@@ -46,15 +46,25 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
     def save_disagreement_masks(self, inp, outp):
         inference_out_dir = os.path.join(self._output_dir, 'inference_output')
         os.makedirs(inference_out_dir, exist_ok=True)
-        ss = outp["sem_seg"].argmax(dim=0).to(self._cpu_device)
-        ss = np.array(ss, dtype=int)
         fp = inp['file_name']
         fn = os.path.splitext(os.path.basename(fp))[0]
-        #print("Got sem_seg for {} with shape {} and saving to {}".format(fn, ss.shape, inference_out_dir))
-        #ss_pred = to_pil_image(ss)
+
+        ss = outp["sem_seg"].argmax(dim=0).to(self._cpu_device)
+        ss = np.array(ss, dtype=int)
+        print("Got sem_seg for {} with shape {} and saving to {}".format(fn, ss.shape, inference_out_dir))
+
+        ss_npp = outp["sem_seg_no_pp"].argmax(dim=0).to(self._cpu_device)
+        ss_npp = np.array(ss_npp, dtype=int)
+        print("Got sem_seg for {} with shape {} and saving to {}".format(fn, ss_npp.shape, inference_out_dir))
+
         plt.imsave(os.path.join(inference_out_dir, fn + '_sem_seg.png'), np.asarray(ss), cmap='tab20b')
+        np.save(os.path.join(inference_out_dir, fn + '_sem_seg_raw.npy'), ss)
+
+        plt.imsave(os.path.join(inference_out_dir, fn + '_sem_seg_no_pp.png'), np.asarray(ss_npp), cmap='tab20b')
+        np.save(os.path.join(inference_out_dir, fn + '_sem_seg_raw_no_pp.npy'), ss_npp)
+
         disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
         for k, v in disagreement_masks_only_dict.items():
             ml_out = outp[k]
             scale = k[-1]
-            plt.imsave(os.path.join(inference_out_dir, fn + 'disagreement_mask_{}.png'.format(scale)), np.asarray(ml_out), cmap='afmhot')
+            plt.imsave(os.path.join(inference_out_dir, fn + '_disagreement_mask_{}.png'.format(scale)), np.asarray(ml_out), cmap='afmhot')
