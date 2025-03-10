@@ -463,7 +463,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         pix_dec_in_features = cfg.MODEL.MR_SEM_SEG_HEAD.IN_FEATURES[-(layer_index + 1):]
         all_transformer_in_features = cfg.MODEL.MR_SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES
         all_dtf_len = len(all_transformer_in_features)
-        if layer_index == len(cfg.MODEL.MR_SEM_SEG_HEAD.IN_FEATURES):
+        if layer_index == len(cfg.MODEL.MR_SEM_SEG_HEAD.IN_FEATURES) - 1:
             trans_dec_in_feat = all_transformer_in_features
         else:
             trans_dec_in_feat = all_transformer_in_features[(all_dtf_len - layer_index - 1):]
