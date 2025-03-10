@@ -24,7 +24,7 @@ def build_pixel_decoder(cfg, layer_index, input_shape):
     """
     Build a pixel decoder from `cfg.MODEL.MASK_FORMER.PIXEL_DECODER_NAME`.
     """
-    name = cfg.MODEL.SEM_SEG_HEAD.PIXEL_DECODER_NAME
+    name = cfg.MODEL.MR_SEM_SEG_HEAD.PIXEL_DECODER_NAME
     model = SEM_SEG_HEADS_REGISTRY.get(name)(cfg, layer_index, input_shape)
     forward_features = getattr(model, "forward_features", None)
     if not callable(forward_features):
