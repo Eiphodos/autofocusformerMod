@@ -197,6 +197,8 @@ def add_maskformer2_config(cfg):
     # transformer module
     cfg.MODEL.MASK_FINER.TRANSFORMER_DECODER_NAME = "MultiScaleMaskFinerTransformerDecoder"
 
+    cfg.MODEL.MR_SEM_SEG_HEAD = CN()
+
     # MaskPredictor config
     cfg.MODEL.MR_SEM_SEG_HEAD.NAME = "MaskPredictor"
     cfg.MODEL.MR_SEM_SEG_HEAD.IGNORE_VALUE = 255
