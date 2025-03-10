@@ -18,7 +18,7 @@ MODEL:
     NHEADS: [ 8, 8, 8, 8 ]
     DROPOUT: 0.0
   MASK_FINER:
-    TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoder"
+    TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoderProj"
     TRANSFORMER_IN_FEATURE: "multi_scale_pixel_decoder"
     DEEP_SUPERVISION: True
     NO_OBJECT_WEIGHT: 0.1
