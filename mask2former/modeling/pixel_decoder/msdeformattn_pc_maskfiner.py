@@ -430,7 +430,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         # extra fpn levels
         min_stride_trans = min(self.transformer_feature_strides)
         min_stride_all = max(self.feature_strides)
-        fpnl = 0 if len(self.in_features) == 1 else 1
+        fpnl = 1 if len(self.in_features) == 4 else 0
         self.num_fpn_levels = fpnl #int(np.log2(min_stride_trans) - np.log2(min_stride_all))
 
         lateral_convs = []
@@ -463,10 +463,10 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         pix_dec_in_features = cfg.MODEL.MR_SEM_SEG_HEAD.IN_FEATURES[-(layer_index + 1):]
         all_transformer_in_features = cfg.MODEL.MR_SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES
         all_dtf_len = len(all_transformer_in_features)
-        if layer_index == 0:
-            trans_dec_in_feat = all_transformer_in_features[-1]
+        if layer_index == len(cfg.MODEL.MR_SEM_SEG_HEAD.IN_FEATURES):
+            trans_dec_in_feat = all_transformer_in_features
         else:
-            trans_dec_in_feat = all_transformer_in_features[(all_dtf_len - layer_index):]
+            trans_dec_in_feat = all_transformer_in_features[(all_dtf_len - layer_index - 1):]
         ret = {}
         ret["input_shape"] = {
             k: v for k, v in input_shape.items() if k in pix_dec_in_features
