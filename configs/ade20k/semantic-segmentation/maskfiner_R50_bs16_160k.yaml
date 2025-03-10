@@ -9,7 +9,7 @@ MODEL:
     # pixel decoder
     NORM: "GN"
     CONVS_DIM: [128, 128, 128, 128]
-    PIXEL_DECODER_NAME: "MSDeformAttnPixelDecoderMaskFiner"
+    PIXEL_DECODER_NAME: "MSDeformAttnPixelDecoderMaskFinerProj"
     IN_FEATURES: ["res2", "res3", "res4", "res5"]
     DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES: ["res3", "res4", "res5"]
     COMMON_STRIDE: 4
@@ -18,7 +18,7 @@ MODEL:
     NHEADS: [ 8, 8, 8, 8 ]
     DROPOUT: 0.0
   MASK_FINER:
-    TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoderProj"
+    TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoder"
     TRANSFORMER_IN_FEATURE: "multi_scale_pixel_decoder"
     DEEP_SUPERVISION: True
     NO_OBJECT_WEIGHT: 0.1
