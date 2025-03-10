@@ -5,7 +5,7 @@ MODEL:
   MR:
     NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour"]
     EMBED_DIM: [512,256,128,64]
-    DEPTHS: [4, 4, 4, 4]
+    DEPTHS: [4, 2, 4, 12]
     NUM_HEADS: [ 32, 16, 8, 4 ]
     PATCH_SIZES: [32, 16, 8, 4]
     DROP_RATE: [0.0, 0.0, 0.0, 0.0]
@@ -23,7 +23,7 @@ MODEL:
   MR_SEM_SEG_HEAD:
     CONVS_DIM: [512,256,128,64]
   MASK_FINER:
-    DEC_LAYERS: [10,10,10,10]
+    DEC_LAYERS: [4,5,4,10]
     DIM_FEEDFORWARD: [1024,1024,1024,1024]
     HIDDEN_DIM: [256,256,256,256]
     MASK_DIM: [256,256,256,256]
