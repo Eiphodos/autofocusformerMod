@@ -388,27 +388,21 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             input_proj_list = []
             # from low resolution to high resolution (res5 -> res2)
             for in_channels in transformer_in_channels[::-1]:
-                if in_channels == conv_dim:
-                    input_proj_list.append(nn.Sequential())
-                else:
-                    input_proj_list.append(nn.Sequential(
-                        nn.Linear(in_channels, conv_dim, bias=True),
-                        nn.LayerNorm(conv_dim)
-                    ))
-                    nn.init.xavier_uniform_(input_proj_list[-1][0].weight, gain=1)
-                    nn.init.constant_(input_proj_list[-1][0].bias, 0)
+                input_proj_list.append(nn.Sequential(
+                    nn.Linear(in_channels, conv_dim, bias=True),
+                    nn.LayerNorm(conv_dim)
+                ))
             self.input_proj = nn.ModuleList(input_proj_list)
         else:
-            if transformer_in_channels[-1] == conv_dim:
-                self.input_proj = nn.ModuleList(nn.Sequential())
-            else:
-                self.input_proj = nn.ModuleList([
-                    nn.Sequential(
-                        nn.Linear(transformer_in_channels[-1], conv_dim, bias=True),
-                        nn.LayerNorm(conv_dim)
-                    )])
-                nn.init.xavier_uniform_(self.input_proj[-1][0].weight, gain=1)
-                nn.init.constant_(self.input_proj[-1][0].bias, 0)
+            self.input_proj = nn.ModuleList([
+                nn.Sequential(
+                    nn.Linear(transformer_in_channels[-1], conv_dim, bias=True),
+                    nn.LayerNorm(conv_dim)
+                )])
+
+        for proj in self.input_proj:
+            nn.init.xavier_uniform_(proj[0].weight, gain=1)
+            nn.init.constant_(proj[0].bias, 0)
 
         self.transformer = MSDeformAttnTransformerEncoderOnlyPc(
             d_model=conv_dim,
@@ -568,7 +562,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             #print("Upsample curr_fpn shape: {} for {}".format(cur_fpn.shape, f))
             #print("Upsample last pos shape: {} for {}".format(last_pos.shape, f))
             # Following FPN implementation, we use nearest upsampling here
-            last_pos = scale_pos(last_pos, last_ss, min_spatial_shape, no_bias=True)
+            #last_pos = scale_pos(last_pos, last_ss, min_spatial_shape, no_bias=True)
             #print("Upsample last pos max: {} for {}".format(last_pos.max(), f))
             #print("Upsample last_ss: {} for {}".format(last_ss, f))
             #print("Upsample pos shape: {} for {}".format(pos.shape, f))
@@ -583,13 +577,15 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             out.append(y)
         #for i, o in enumerate(out):
         #    print("After Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
+        '''
         num_cur_levels = 0
         for o in out:
             if num_cur_levels < self.maskformer_num_feature_levels:
                 multi_scale_features.append(o)
                 num_cur_levels += 1
+        '''
 
         mf = torch.cat(out, dim=1)
         mf_pos = torch.cat(poss, dim=1)
 
-        return self.mask_features(mf), mf_pos, multi_scale_features, poss[:self.maskformer_num_feature_levels], scaless[:self.maskformer_num_feature_levels], spatial_shapes[-1]
+        return self.mask_features(mf), mf_pos, out, poss, scaless, min_spatial_shape, spatial_shapes
