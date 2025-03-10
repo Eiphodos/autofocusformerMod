@@ -406,7 +406,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         ret["in_channels"] = in_channels
         ret["mask_classification"] = mask_classification
 
-        ret["num_classes"] = cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES
+        ret["num_classes"] = cfg.MODEL.MR_SEM_SEG_HEAD.NUM_CLASSES
         ret["hidden_dim"] = cfg.MODEL.MASK_FINER.HIDDEN_DIM[layer_index]
         ret["num_queries"] = cfg.MODEL.MASK_FINER.NUM_OBJECT_QUERIES[layer_index]
         # Transformer parameters:
@@ -591,8 +591,8 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         disagreement_mask = torch.zeros(b, n, requires_grad=True).to(outputs_mask.device)
         for b in range(cls_i.shape[0]):
             for c in cls_i[b].unique():
-                batch_cls_mask = torch.sigmoid(outputs_mask[b, cls_i[b] == c].sum(dim=0))
-                batch_cls_mask = (batch_cls_mask > 0.5).int()
+                batch_cls_mask = outputs_mask[b, cls_i[b] == c].sum(dim=0)
+                #batch_cls_mask = (batch_cls_mask > 0.5).int()
                 disagreement_mask[b] = disagreement_mask[b] + batch_cls_mask
         #print("Number of unique classes in sample 0: {}".format(len(cls_i[0].unique())))
         return disagreement_mask

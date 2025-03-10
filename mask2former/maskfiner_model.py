@@ -454,3 +454,10 @@ class MaskFiner(nn.Module):
         dis_mask_at_scale = dis_mask[n_scale_idx]
 
         return dis_mask_at_scale, dis_pos_at_scale
+
+    def get_upsampled_mask_and_pos(self, dis_mask, dis_mask_pos, scale):
+        n_scale_idx = torch.where(dis_mask_pos[:, 0] == scale)
+        dis_pos_at_scale = dis_mask_pos[n_scale_idx][:,1:]
+        dis_mask_at_scale = dis_mask[n_scale_idx]
+
+        return dis_mask_at_scale, dis_pos_at_scale

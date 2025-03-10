@@ -65,15 +65,15 @@ class MaskPredictor(nn.Module):
         backbone = build_backbone_indexed(cfg, layer_index)
         bb_output_shape = backbone.output_shape()
         pixel_decoder = build_pixel_decoder(cfg, layer_index, bb_output_shape)
-        mask_decoder_input_dim = cfg.MODEL.SEM_SEG_HEAD.CONVS_DIM[layer_index]
+        mask_decoder_input_dim = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index]
         mask_decoder = build_transformer_decoder(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
         return {
             "backbone": backbone,
             "pixel_decoder": pixel_decoder,
             "mask_decoder": mask_decoder,
-            "loss_weight": cfg.MODEL.SEM_SEG_HEAD.LOSS_WEIGHT,
-            "ignore_value": cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
-            "num_classes": cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
+            "loss_weight": cfg.MODEL.MR_SEM_SEG_HEAD.LOSS_WEIGHT,
+            "ignore_value": cfg.MODEL.MR_SEM_SEG_HEAD.IGNORE_VALUE,
+            "num_classes": cfg.MODEL.MR_SEM_SEG_HEAD.NUM_CLASSES,
         }
 
     def forward(self, im, scale, features, features_pos, upsampling_mask):
