@@ -11,7 +11,7 @@ from detectron2.layers import ShapeSpec
 from detectron2.modeling import SEM_SEG_HEADS_REGISTRY, build_backbone
 from detectron2.modeling.backbone import Backbone
 
-from ..transformer_decoder.maskfiner_transformer_decoder import build_transformer_decoder
+from ..transformer_decoder.build_maskfiner_decoder import build_transformer_decoder
 from ..pixel_decoder.msdeformattn_pc_maskfiner import build_pixel_decoder
 from ..backbone.build import build_backbone_indexed
 

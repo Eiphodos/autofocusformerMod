@@ -10,15 +10,11 @@ from torch import nn, Tensor
 from torch.nn import functional as F
 
 from detectron2.config import configurable
-from detectron2.utils.registry import Registry
 
 from .position_encoding import PositionEmbeddingSine
 from ..backbone.point_utils import upsample_feature_shepard
 
-TRANSFORMER_DECODER_REGISTRY = Registry("TRANSFORMER_MODULE")
-TRANSFORMER_DECODER_REGISTRY.__doc__ = """
-Registry for transformer module in MaskFormer.
-"""
+from .build_maskfiner_decoder import TRANSFORMER_DECODER_REGISTRY
 
 
 def scale_pos(last_pos, last_ss, cur_ss, no_bias=False):
@@ -48,13 +44,14 @@ def scale_pos(last_pos, last_ss, cur_ss, no_bias=False):
     return ret
 
 
+'''
 def build_transformer_decoder(cfg, layer_index, in_channels, mask_classification=True):
     """
     Build a instance embedding branch from `cfg.MODEL.INS_EMBED_HEAD.NAME`.
     """
     name = cfg.MODEL.MASK_FINER.TRANSFORMER_DECODER_NAME
     return TRANSFORMER_DECODER_REGISTRY.get(name)(cfg, layer_index, in_channels, mask_classification)
-
+'''
 
 def point2img(x, pos, mask_size=None):
     '''
