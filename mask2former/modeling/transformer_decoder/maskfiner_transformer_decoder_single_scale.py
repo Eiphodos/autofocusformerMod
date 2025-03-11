@@ -505,7 +505,7 @@ class SingleScaleMaskFinerTransformerDecoder(nn.Module):
 
             # attention: cross-attention first
             output = self.transformer_cross_attention_layers[i](
-                output, all_pos_scaled,
+                output, all_src,
                 memory_mask=attn_mask,
                 memory_key_padding_mask=None,  # here we do not apply masking on padded region
                 pos=all_pos_emb, query_pos=query_embed
