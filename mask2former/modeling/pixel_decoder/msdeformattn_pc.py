@@ -482,6 +482,7 @@ class MSDeformAttnPixelDecoder(nn.Module):
         Args
             features - a dictionary of a list of point clouds with their features, positions and canvas sizes
         """
+        '''
         for k, v in features.items():
             if type(v) == torch.Tensor:
                 print("Feature {} has shape {}".format(k, v.shape))
@@ -489,7 +490,7 @@ class MSDeformAttnPixelDecoder(nn.Module):
                 print("Feature {} has max {}".format(k, v.max()))
             else:
                 print("Feature {} is {}".format(k, v))
-
+        '''
         srcs = []
         poss = []
         pos_embed = []
@@ -521,9 +522,10 @@ class MSDeformAttnPixelDecoder(nn.Module):
 
         multi_scale_features = []
 
+        '''
         for idx, f in enumerate(self.transformer_in_features[::-1]):
             print("Out feature {} after deformable ATTN shape: {}".format(f, out[idx].shape))
-
+        '''
         # append `out` with extra FPN levels
         # Reverse feature maps into top-down order (from low to high resolution) only res2
         for idx, f in enumerate(self.in_features[:self.num_fpn_levels][::-1]):
@@ -540,7 +542,7 @@ class MSDeformAttnPixelDecoder(nn.Module):
             last_pos = pos
             last_ss = spatial_shape
             out.append(y)
-            print("Out feature {} with extra FPN levels shape: {}".format(f, y.shape))
+            #print("Out feature {} with extra FPN levels shape: {}".format(f, y.shape))
 
         num_cur_levels = 0
         for o in out:
