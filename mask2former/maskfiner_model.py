@@ -424,7 +424,7 @@ class MaskFiner(nn.Module):
         return result
 
     def create_disagreement_map(self, disagreement_map, dis_mask, dis_mask_pos, level, scale):
-        min_pos, max_pos = self.get_min_max_position(dis_mask_pos, disagreement_map.shape[1], disagreement_map.shape[0])
+        min_pos, max_pos = self.get_min_max_position(dis_mask_pos[:,1:], disagreement_map.shape[1], disagreement_map.shape[0])
         print("Min pos at level {} for all: {}".format(level, min_pos))
         print("Max pos at level {} for all: {}".format(level, max_pos))
         dis_mask_at_scale, dis_pos_at_scale = self.get_disagreement_mask_and_pos_at_scale(dis_mask, dis_mask_pos, scale)
