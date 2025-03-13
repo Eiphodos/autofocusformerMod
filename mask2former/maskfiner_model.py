@@ -461,7 +461,7 @@ class MaskFiner(nn.Module):
         sorted_scores, sorted_indices = torch.sort(dis_mask, dim=0, descending=False)
         top_indices = sorted_indices[-k_top:]
         top_dis_mask = dis_mask.gather(dim=0, index=top_indices)
-        top_dis_mask_pos = dis_mask_pos.gather(dim=0, index=top_indices.unsqueeze(-1).expand(-1, 3))
+        top_dis_mask_pos = dis_mask_pos.gather(dim=0, index=top_indices.unsqueeze(-1).expand(-1, 2))
 
         return top_dis_mask, top_dis_mask_pos
 
