@@ -273,10 +273,9 @@ class MaskFiner(nn.Module):
                 for level, dmp in enumerate(disagreement_masks):
                     dis_mask = dmp["disagreement_mask_{}".format(level)][i]
                     dis_mask_pos = dmp["disagreement_mask_pos_{}".format(level)][i]
-                    n_scales = int(dis_mask_pos[:,0].max() + 1)
+                    max_scale = int(dis_mask_pos[:,0].max())
                     disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1], device=dis_mask.device)
-                    for scale in range(n_scales):
-                        disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, scale)
+                    disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, max_scale)
                     processed_results[-1]["disagreement_mask_{}".format(level)] = disagreement_map.cpu()
 
                 i += 1
@@ -426,13 +425,14 @@ class MaskFiner(nn.Module):
 
     def create_disagreement_map(self, disagreement_map, dis_mask, dis_mask_pos, level, scale):
         dis_mask_at_scale, dis_pos_at_scale = self.get_disagreement_mask_and_pos_at_scale(dis_mask, dis_mask_pos, scale)
-        pos_at_org_scale = dis_pos_at_scale * self.mask_predictors[0].backbone.min_patch_size
-        patch_size = self.mask_predictors[level].backbone.patch_sizes[scale]
+        top_dis_mask, top_dis_pos = self.get_top_disagreement_mask_and_pos(dis_mask_at_scale, dis_pos_at_scale, level)
 
-        dis_mask_at_scale = dis_mask_at_scale.unsqueeze(1).expand(-1, patch_size ** 2).reshape(-1)
+        pos_at_org_scale = top_dis_pos * self.mask_predictors[0].backbone.min_patch_size
+        patch_size = self.mask_predictors[level].backbone.patch_sizes[scale]
+        top_dis_mask = top_dis_mask.unsqueeze(1).expand(-1, patch_size ** 2).reshape(-1)
 
         new_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
-        new_coords = new_coords.view(2,-1).permute(1,0).to(dis_pos_at_scale.device)
+        new_coords = new_coords.view(2,-1).permute(1,0).to(top_dis_pos.device)
         pos_at_org_scale = pos_at_org_scale.unsqueeze(1) + new_coords
         pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
         #print("pos_to_split shape before: {}".format(pos_to_split.shape))
@@ -444,7 +444,7 @@ class MaskFiner(nn.Module):
         #print("max x pos: {}".format(x_pos.max()))
         #print("max y pos: {}".format(y_pos.max()))
         #print("pred_map_low_res shape: {}".format(pred_map_low_res.shape))
-        disagreement_map[y_pos, x_pos] = dis_mask_at_scale
+        disagreement_map[y_pos, x_pos] = 255 #top_dis_mask
         return disagreement_map
 
 
@@ -454,6 +454,17 @@ class MaskFiner(nn.Module):
         dis_mask_at_scale = dis_mask[n_scale_idx]
 
         return dis_mask_at_scale, dis_pos_at_scale
+
+    def get_top_disagreement_mask_and_pos(self, dis_mask, dis_mask_pos, level):
+        k_top = int(dis_mask.shape[0] * self.mask_predictors[level].backbone.upscale_ratio)
+        sorted_scores, sorted_indices = torch.sort(dis_mask, dim=1, descending=False)
+
+        top_indices = sorted_indices[:, -k_top:]
+
+        top_dis_mask = dis_mask.gather(dim=1, index=top_indices)
+        top_dis_mask_pos = dis_mask_pos.gather(dim=1, index=top_indices.unsqueeze(-1).expand(-1, 2))
+
+        return top_dis_mask, top_dis_mask_pos
 
     def get_upsampled_mask_and_pos(self, dis_mask, dis_mask_pos, scale):
         n_scale_idx = torch.where(dis_mask_pos[:, 0] == scale)
