@@ -433,7 +433,7 @@ class MaskFiner(nn.Module):
         dis_mask_top = dis_mask_top.unsqueeze(1).expand(-1, patch_size ** 2).reshape(-1)
 
         new_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
-        new_coords = new_coords.view(2,-1).permute(1,0).to(dis_pos_top.device)
+        new_coords = new_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(dis_pos_top.device)
         pos_at_org_scale = pos_at_org_scale.unsqueeze(1) + new_coords
         pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
         #print("pos_to_split shape before: {}".format(pos_to_split.shape))
