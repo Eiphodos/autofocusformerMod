@@ -230,7 +230,8 @@ class MRVIT(nn.Module):
             channels=3,
             split_ratio=4,
             n_scales=2,
-            min_patch_size=4
+            min_patch_size=4,
+            upscale_ratio=0.5
     ):
         super().__init__()
         self.patch_size = patch_sizes[-1]
@@ -248,6 +249,7 @@ class MRVIT(nn.Module):
         self.split_ratio = split_ratio
         self.n_scales = n_scales
         self.min_patch_size = min_patch_size
+        self.upscale_ratio = upscale_ratio
 
         num_features = d_model
         self.num_features = num_features
@@ -313,6 +315,7 @@ class MixResViT(MRVIT, Backbone):
         drop_rate = cfg.MODEL.MR.DROP_RATE[layer_index]
         drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE[layer_index]
         split_ratio = cfg.MODEL.MR.SPLIT_RATIO[layer_index]
+        upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
 
         super().__init__(
             patch_sizes=patch_sizes,
@@ -325,7 +328,8 @@ class MixResViT(MRVIT, Backbone):
             split_ratio=split_ratio,
             channels=in_chans,
             n_scales=n_scales,
-            min_patch_size=min_patch_size
+            min_patch_size=min_patch_size,
+            upscale_ratio=upscale_ratio
         )
 
         self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
