@@ -211,11 +211,11 @@ class MaskFiner(nn.Module):
 
             dm = {}
             dm["disagreement_mask_{}".format(l_idx)] = upsampling_mask
-            B, _, _ = features_pos.shape
-            b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
-            dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
-            dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
-            dm["disagreement_mask_pos_{}".format(l_idx)] = dm_pos
+            #B, _, _ = features_pos.shape
+            #b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
+            #dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
+            #dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
+            dm["disagreement_mask_pos_{}".format(l_idx)] = features_pos
             disagreement_masks.append(dm)
 
             outputs['aux_outputs'] = outputs['aux_outputs'] + outs['aux_outputs']
