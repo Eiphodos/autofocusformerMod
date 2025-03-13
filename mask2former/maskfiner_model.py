@@ -460,6 +460,10 @@ class MaskFiner(nn.Module):
     def get_min_max_position(self, pos, width, height):
         max_y = height // self.mask_predictors[0].backbone.min_patch_size
         max_x = width // self.mask_predictors[0].backbone.min_patch_size
+        print("Max x: {}".format(max_x))
+        print("Max y: {}".format(max_y))
+        print("Pos max x: {}".format(pos[:,0].max().item()))
+        print("Pos max y: {}".format(pos[:, 1].max().item()))
         assert max_x >= pos[:,0].max()
         assert max_y >= pos[:, 1].max()
         pos_flat = pos[:,0] + max_x * pos[:,1]
