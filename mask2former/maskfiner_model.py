@@ -18,7 +18,9 @@ from detectron2.structures import Boxes, ImageList, Instances
 from detectron2.utils.memory import retry_if_cuda_oom
 
 from .modeling.criterion import SetCriterion
+from .modeling.criterion_downsampled import SetCriterionDownSample
 from .modeling.matcher import HungarianMatcher
+from .modeling.matcher_downsampled import HungarianMatcherDownSample
 from .modeling.meta_arch.build import build_mask_predictor_indexed
 
 
@@ -113,7 +115,7 @@ class MaskFiner(nn.Module):
         mask_weight = cfg.MODEL.MASK_FINER.MASK_WEIGHT
 
         # building criterion
-        matcher = HungarianMatcher(
+        matcher = HungarianMatcherDownSample(
             cost_class=class_weight,
             cost_mask=mask_weight,
             cost_dice=dice_weight,
@@ -131,7 +133,7 @@ class MaskFiner(nn.Module):
 
         losses = ["labels", "masks"]
 
-        criterion = SetCriterion(
+        criterion = SetCriterionDownSample(
             cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
             matcher=matcher,
             weight_dict=weight_dict,

@@ -802,6 +802,16 @@ class MixResNeighbour(MRNB, Backbone):
 
         return True
 
+    def get_top_disagreement_mask_and_pos(self, dis_mask, dis_mask_pos, level):
+        k_top = int(dis_mask.shape[0] * self.mask_predictors[level].backbone.upscale_ratio)
+        sorted_scores, sorted_indices = torch.sort(dis_mask, dim=1, descending=False)
+
+        top_indices = sorted_indices[:, -k_top:]
+
+        top_dis_mask = dis_mask.gather(dim=1, index=top_indices)
+        top_dis_mask_pos = dis_mask_pos.gather(dim=1, index=top_indices.unsqueeze(-1).expand(-1, 2))
+
+        return top_dis_mask, top_dis_mask_pos
 
 
 
