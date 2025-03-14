@@ -155,14 +155,14 @@ class SetCriterionDownSample(nn.Module):
         print("target_masks.shape", target_masks.shape)
         print("src_masks.shape", src_masks.shape)
 
+        N, C, H, W = src_masks.shape
+        target_masks_interpolated = torch.nn.functional.interpolate(target_masks, size=(H, W), mode='nearest-exact')
+
         src_masks = src_masks.squeeze(1).flatten(1)
-        target_masks = target_masks.squeeze(1).flatten(1)
+        target_masks_interpolated = target_masks_interpolated.squeeze(1).flatten(1)
 
         print("target_masks.shape after", target_masks.shape)
         print("src_masks.shape after", src_masks.shape)
-
-        N, C, H, W = src_masks.shape
-        target_masks_interpolated = torch.nn.functional.interpolate(target_masks, size=(H, W), mode='nearest-exact')
 
         losses = {
             "loss_mask": sigmoid_ce_loss_jit(src_masks, target_masks_interpolated, num_masks),
