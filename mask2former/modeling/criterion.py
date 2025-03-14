@@ -161,7 +161,7 @@ class SetCriterion(nn.Module):
                 self.oversample_ratio,
                 self.importance_sample_ratio,
             )
-            print("point coords shape: {}, min: {} and, max: {}".format(point_coords.shape, point_coords.min(), point_coords.max()))
+            #print("point coords shape: {}, min: {} and, max: {}".format(point_coords.shape, point_coords.min(), point_coords.max()))
             # get gt labels
             point_labels = point_sample(
                 target_masks,
