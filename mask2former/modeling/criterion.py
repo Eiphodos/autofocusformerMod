@@ -214,8 +214,8 @@ class SetCriterion(nn.Module):
         outputs_without_aux = {k: v for k, v in outputs.items() if k != "aux_outputs"}
 
         # Retrieve the matching between the outputs of the last layer and the targets
-        print("Output logits main loss shape: {}".format(outputs_without_aux[0]["pred_logits"].shape))
-        print("Output masks main loss shape: {}".format(outputs_without_aux[0]["pred_masks"].shape))
+        print("Output logits main loss shape: {}".format(outputs_without_aux["pred_logits"][0].shape))
+        print("Output masks main loss shape: {}".format(outputs_without_aux["pred_masks"][0].shape))
         print("Target labels main loss shape: {}".format(targets[0]["labels"].shape))
         print("Target masks main loss shape: {}".format(targets[0]["masks"].shape))
         indices = self.matcher(outputs_without_aux, targets)
@@ -237,8 +237,8 @@ class SetCriterion(nn.Module):
         # In case of auxiliary losses, we repeat this process with the output of each intermediate layer.
         if "aux_outputs" in outputs:
             for i, aux_outputs in enumerate(outputs["aux_outputs"]):
-                print("Output logits aux loss {} shape: {}".format(i, aux_outputs[0]["pred_logits"].shape))
-                print("Output masks aux loss {} shape: {}".format(i, aux_outputs[0]["pred_masks"].shape))
+                print("Output logits aux loss {} shape: {}".format(i, aux_outputs["pred_logits"][0].shape))
+                print("Output masks aux loss {} shape: {}".format(i, aux_outputs["pred_masks"][0].shape))
                 indices = self.matcher(aux_outputs, targets)
                 for loss in self.losses:
                     l_dict = self.get_loss(loss, aux_outputs, targets, indices, num_masks)
