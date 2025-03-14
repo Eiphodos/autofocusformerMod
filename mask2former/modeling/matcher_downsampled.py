@@ -124,6 +124,12 @@ class HungarianMatcherDownSample(nn.Module):
             N, C, H, W = out_mask.shape
             tgt_mask = torch.nn.functional.interpolate(tgt_mask, size=(H, W), mode='nearest-exact')
 
+            out_mask = out_mask.squeeze(1).flatten(1)
+            tgt_mask = tgt_mask.squeeze(1).flatten(1)
+
+            print("tgt_mask.shape after", tgt_mask.shape)
+            print("out_mask.shape after", out_mask.shape)
+
             with autocast(enabled=False):
                 out_mask = out_mask.float()
                 tgt_mask = tgt_mask.float()
