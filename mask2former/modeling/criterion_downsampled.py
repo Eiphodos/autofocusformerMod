@@ -155,6 +155,12 @@ class SetCriterionDownSample(nn.Module):
         print("target_masks.shape", target_masks.shape)
         print("src_masks.shape", src_masks.shape)
 
+        src_masks = src_masks.squeeze(1).flatten(1)
+        target_masks = target_masks.squeeze(1).flatten(1)
+
+        print("target_masks.shape after", target_masks.shape)
+        print("src_masks.shape after", src_masks.shape)
+
         N, C, H, W = src_masks.shape
         target_masks_interpolated = torch.nn.functional.interpolate(target_masks, size=(H, W), mode='nearest-exact')
 
@@ -211,6 +217,7 @@ class SetCriterionDownSample(nn.Module):
         if is_dist_avail_and_initialized():
             torch.distributed.all_reduce(num_masks)
         num_masks = torch.clamp(num_masks / get_world_size(), min=1).item()
+        print("Num masks is estimated to: {}".format(num_masks))
 
         # Compute all the requested losses
         losses = {}
