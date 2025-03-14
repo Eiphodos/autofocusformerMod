@@ -425,16 +425,16 @@ class MaskFiner(nn.Module):
 
     def create_disagreement_map(self, disagreement_map, dis_mask, dis_mask_pos, level, scale):
         min_pos, max_pos = self.get_min_max_position(dis_mask_pos[:,1:], disagreement_map.shape[1], disagreement_map.shape[0])
-        print("Min pos at level {} for all: {}".format(level, min_pos))
-        print("Max pos at level {} for all: {}".format(level, max_pos))
+        #print("Min pos at level {} for all: {}".format(level, min_pos))
+        #print("Max pos at level {} for all: {}".format(level, max_pos))
         dis_mask_at_scale, dis_pos_at_scale = self.get_disagreement_mask_and_pos_at_scale(dis_mask, dis_mask_pos, scale)
         min_pos, max_pos = self.get_min_max_position(dis_pos_at_scale, disagreement_map.shape[1], disagreement_map.shape[0])
-        print("Min pos at level {} for scale {}: {}".format(level, scale, min_pos))
-        print("Max pos at level {} for scale {}: {}".format(level, scale, max_pos))
+        #print("Min pos at level {} for scale {}: {}".format(level, scale, min_pos))
+        #print("Max pos at level {} for scale {}: {}".format(level, scale, max_pos))
         dis_mask_top, dis_pos_top = self.get_top_disagreement_mask_and_pos(dis_mask_at_scale, dis_pos_at_scale, level)
         min_pos, max_pos = self.get_min_max_position(dis_pos_top, disagreement_map.shape[1], disagreement_map.shape[0])
-        print("Min pos at level {} for top scale {}: {}".format(level, scale, min_pos))
-        print("Max pos at level {} for top scale {}: {}".format(level, scale, max_pos))
+        #print("Min pos at level {} for top scale {}: {}".format(level, scale, min_pos))
+        #print("Max pos at level {} for top scale {}: {}".format(level, scale, max_pos))
         pos_at_org_scale = dis_pos_top * self.mask_predictors[0].backbone.min_patch_size
         patch_size = self.mask_predictors[level].backbone.patch_sizes[scale]
 
