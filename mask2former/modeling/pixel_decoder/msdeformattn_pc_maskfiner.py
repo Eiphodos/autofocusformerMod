@@ -27,14 +27,15 @@ from ..clusten import CLUSTENWFFunction, MSDETRPCFunction
 
 
 def fix_pos_no_bias(pos, current_ss, finest_ss):
+    ret = pos.clone()
     ss_ratio_h = finest_ss[0] / current_ss[0]
     ss_ratio_w = finest_ss[1] / current_ss[1]
     shift_value_h = ss_ratio_h // 2
     shift_value_w = ss_ratio_w // 2
-    pos[:, :, 0] = pos[:, :, 0] + shift_value_w
-    pos[:, :, 1] = pos[:, :, 1] + shift_value_h
+    ret[:, :, 0] = ret[:, :, 0] + shift_value_w
+    ret[:, :, 1] = ret[:, :, 1] + shift_value_h
 
-    return pos
+    return ret
 
 def build_pixel_decoder(cfg, layer_index, input_shape):
     """
