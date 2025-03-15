@@ -16,6 +16,15 @@ from ..backbone.point_utils import upsample_feature_shepard
 
 from .build_maskfiner_decoder import TRANSFORMER_DECODER_REGISTRY
 
+def fix_pos_no_bias(pos, current_ss, finest_ss):
+    ss_ratio_h = finest_ss[0] / current_ss[0]
+    ss_ratio_w = finest_ss[1] / current_ss[1]
+    shift_value_h = ss_ratio_h // 2
+    shift_value_w = ss_ratio_w // 2
+    pos[:, :, 0] = pos[:, :, 0] + shift_value_w
+    pos[:, :, 1] = pos[:, :, 1] + shift_value_h
+
+    return pos
 
 def scale_pos(last_pos, last_ss, cur_ss, no_bias=False):
     """
@@ -462,7 +471,8 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         i = 0
         for p, inp_shape in zip(pos, input_shapes):
             #print("Feature {} max pos before scaling: {}".format(i, p.max()))
-            pos_scaled = scale_pos(p, finest_input_shape, finest_inp_feat_shape)
+            fixed_pos = fix_pos_no_bias(p, inp_shape, finest_input_shape)
+            pos_scaled = scale_pos(fixed_pos, finest_input_shape, finest_inp_feat_shape)
             #print("Feature {} max pos after scaling: {}".format(i, pos_scaled.max()))
             poss_scaled.append(pos_scaled)
             i += 1

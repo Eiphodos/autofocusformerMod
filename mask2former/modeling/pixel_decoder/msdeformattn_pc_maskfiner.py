@@ -26,6 +26,16 @@ from ..backbone.aff import pre_table, rel_pos_width, table_width
 from ..clusten import CLUSTENWFFunction, MSDETRPCFunction
 
 
+def fix_pos_no_bias(pos, current_ss, finest_ss):
+    ss_ratio_h = finest_ss[0] / current_ss[0]
+    ss_ratio_w = finest_ss[1] / current_ss[1]
+    shift_value_h = ss_ratio_h // 2
+    shift_value_w = ss_ratio_w // 2
+    pos[:, :, 0] = pos[:, :, 0] + shift_value_w
+    pos[:, :, 1] = pos[:, :, 1] + shift_value_h
+
+    return pos
+
 def build_pixel_decoder(cfg, layer_index, input_shape):
     """
     Build a pixel decoder from `cfg.MODEL.MASK_FORMER.PIXEL_DECODER_NAME`.
@@ -502,7 +512,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
                 print("Feature {} is {}".format(k, v))
         '''
         min_spatial_shape = features['min_spatial_shape']
-        scaled_poss = []
+        fixed_poss = []
         srcs = []
         poss = []
         scaless = []
@@ -528,19 +538,19 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             srcs.append(self.input_proj[idx](x))
             poss.append(pos)
             scaless.append(scales)
-            pos_embed.append(self.pe_layer(pos))
+            fixed_pos = fix_pos_no_bias(pos, spatial_shape, min_spatial_shape)
+            pos_embed.append(self.pe_layer(fixed_pos))
             spatial_shapes.append(spatial_shape)
             min_spatial_shapes.append(min_spatial_shape)
-            scaled_pos = scale_pos(pos, min_spatial_shape, grid_hw, no_bias=True)
             #print("Scaled Pos min for {}: {}".format(f, scaled_pos.min()))
             #print("Scaled Pos max for {}: {}".format(f, scaled_pos.max()))
-            scaled_poss.append(scaled_pos)
-            nb_idx.append(knn_keops(grid_pos, scaled_pos, 4))
+            fixed_poss.append(fixed_pos)
+            nb_idx.append(knn_keops(grid_pos, fixed_poss, 4))
         last_pos = poss[-1]
-        last_ss = min_spatial_shapes[-1]
+        last_ss = spatial_shapes[-1]
         spatial_shapes.append(grid_hw)
 
-        out = self.transformer(srcs, poss, min_spatial_shapes, pos_embed, nb_idx)
+        out = self.transformer(srcs, fixed_poss, min_spatial_shapes, pos_embed, nb_idx)
 
         multi_scale_features = []
 
@@ -566,14 +576,17 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             #print("Upsample last pos max: {} for {}".format(last_pos.max(), f))
             #print("Upsample last_ss: {} for {}".format(last_ss, f))
             #print("Upsample pos shape: {} for {}".format(pos.shape, f))
-            upfeat = upsample_feature_shepard(pos, last_pos, out[-1], custom_kernel=True)
+            fixed_pos = fix_pos_no_bias(pos, spatial_shape, min_spatial_shape)
+            fixed_poss.append(fixed_pos)
+            fixed_last_pos = fix_pos_no_bias(last_pos, last_ss, min_spatial_shape)
+            upfeat = upsample_feature_shepard(fixed_pos, fixed_last_pos, out[-1], custom_kernel=True)
             #print("Upsampled feature shape: {} for {}".format(upfeat.shape, f))
             y = cur_fpn + upfeat
-            y = output_conv((y, pos))
+            y = output_conv((y, fixed_pos))
             last_pos = pos
             #print("Pos min for {}: {}".format(f, last_pos.min()))
             #print("Pos max for {}: {}".format(f, last_pos.max()))
-            last_ss = min_spatial_shape
+            last_ss = spatial_shape
             out.append(y)
         #for i, o in enumerate(out):
         #    print("After Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
@@ -586,6 +599,6 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         '''
 
         mf = torch.cat(out, dim=1)
-        mf_pos = torch.cat(poss, dim=1)
+        mf_pos = torch.cat(fixed_poss, dim=1)
 
         return self.mask_features(mf), mf_pos, out, poss, scaless, min_spatial_shape, spatial_shapes
