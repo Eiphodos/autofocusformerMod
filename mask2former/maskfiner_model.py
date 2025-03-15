@@ -115,7 +115,7 @@ class MaskFiner(nn.Module):
         mask_weight = cfg.MODEL.MASK_FINER.MASK_WEIGHT
 
         # building criterion
-        matcher = HungarianMatcherDownSample(
+        matcher = HungarianMatcher(
             cost_class=class_weight,
             cost_mask=mask_weight,
             cost_dice=dice_weight,
@@ -133,7 +133,7 @@ class MaskFiner(nn.Module):
 
         losses = ["labels", "masks"]
 
-        criterion = SetCriterionDownSample(
+        criterion = SetCriterion(
             cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
             matcher=matcher,
             weight_dict=weight_dict,
