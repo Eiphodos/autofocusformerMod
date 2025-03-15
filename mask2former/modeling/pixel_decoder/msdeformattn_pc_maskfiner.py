@@ -545,7 +545,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             #print("Scaled Pos min for {}: {}".format(f, scaled_pos.min()))
             #print("Scaled Pos max for {}: {}".format(f, scaled_pos.max()))
             fixed_poss.append(fixed_pos)
-            nb_idx.append(knn_keops(grid_pos, fixed_poss, 4))
+            nb_idx.append(knn_keops(grid_pos, fixed_pos, 4))
         last_pos = poss[-1]
         last_ss = spatial_shapes[-1]
         spatial_shapes.append(grid_hw)
