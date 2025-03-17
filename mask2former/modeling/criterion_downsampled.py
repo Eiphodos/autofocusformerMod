@@ -156,7 +156,13 @@ class SetCriterionDownSample(nn.Module):
         #print("src_masks.shape", src_masks.shape)
 
         N, C, H, W = src_masks.shape
-        target_masks_interpolated = torch.nn.functional.interpolate(target_masks, size=(H, W), mode='nearest-exact')
+        Nt, Ct, Ht, Wt = target_masks.shape
+        t_s_ratio_h = Ht / H
+        t_s_ratio_w = Wt / W
+
+        target_masks_interpolated = torch.nn.functional.max_pool2d(target_masks, kernel_size=(t_s_ratio_h, t_s_ratio_w),
+                                                           stride=(t_s_ratio_h, t_s_ratio_w))
+        #target_masks_interpolated = torch.nn.functional.interpolate(target_masks, size=(H, W), mode='nearest-exact')
 
         src_masks = src_masks.squeeze(1).flatten(1)
         target_masks_interpolated = target_masks_interpolated.squeeze(1).flatten(1)

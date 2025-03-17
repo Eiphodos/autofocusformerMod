@@ -122,7 +122,13 @@ class HungarianMatcherDownSample(nn.Module):
             #print("out_mask.shape", out_mask.shape)
 
             N, C, H, W = out_mask.shape
-            tgt_mask = torch.nn.functional.interpolate(tgt_mask, size=(H, W), mode='nearest-exact')
+            Nt, Ct, Ht, Wt = tgt_mask.shape
+            t_s_ratio_h = Ht / H
+            t_s_ratio_w = Wt / W
+
+            tgt_mask = torch.nn.functional.max_pool2d(tgt_mask, kernel_size=(t_s_ratio_h, t_s_ratio_w),
+                                                           stride=(t_s_ratio_h, t_s_ratio_w))
+            #tgt_mask = torch.nn.functional.interpolate(tgt_mask, size=(H, W), mode='nearest-exact')
 
             out_mask = out_mask.squeeze(1).flatten(1)
             tgt_mask = tgt_mask.squeeze(1).flatten(1)
