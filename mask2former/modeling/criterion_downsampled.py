@@ -157,8 +157,8 @@ class SetCriterionDownSample(nn.Module):
 
         N, C, H, W = src_masks.shape
         Nt, Ct, Ht, Wt = target_masks.shape
-        t_s_ratio_h = Ht / H
-        t_s_ratio_w = Wt / W
+        t_s_ratio_h = int(Ht // H)
+        t_s_ratio_w = int(Wt // W)
 
         target_masks_interpolated = torch.nn.functional.max_pool2d(target_masks, kernel_size=(t_s_ratio_h, t_s_ratio_w),
                                                            stride=(t_s_ratio_h, t_s_ratio_w))
