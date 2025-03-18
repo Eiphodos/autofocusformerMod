@@ -152,6 +152,9 @@ class SetCriterionMix(nn.Module):
         src_masks = src_masks[:, None]
         target_masks = target_masks[:, None]
         N, C, H, W = src_masks.shape
+        Nt, Ct, Ht, Wt = target_masks.shape
+        t_s_ratio_h = int(Ht // H)
+        t_s_ratio_w = int(Wt // W)
 
         if H * W > self.num_points:
             with torch.no_grad():
@@ -177,7 +180,10 @@ class SetCriterionMix(nn.Module):
             ).squeeze(1)
 
         else:
-            point_labels = torch.nn.functional.interpolate(target_masks, size=(H, W), mode='nearest-exact')
+            point_labels = torch.nn.functional.max_pool2d(target_masks,
+                                                                       kernel_size=(t_s_ratio_h, t_s_ratio_w),
+                                                                       stride=(t_s_ratio_h, t_s_ratio_w))
+            #point_labels = torch.nn.functional.interpolate(target_masks, size=(H, W), mode='nearest-exact')
             point_logits = src_masks.squeeze(1).flatten(1)
             point_labels = point_labels.squeeze(1).flatten(1)
 

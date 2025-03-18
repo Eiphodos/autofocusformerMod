@@ -119,6 +119,9 @@ class HungarianMatcherMix(nn.Module):
             tgt_mask = tgt_mask[:, None]
 
             N, C, H, W = out_mask.shape
+            Nt, Ct, Ht, Wt = tgt_mask.shape
+            t_s_ratio_h = int(Ht // H)
+            t_s_ratio_w = int(Wt // W)
 
             if H * W > self.num_points:
                 # all masks share the same set of points for efficient matching!
@@ -136,7 +139,9 @@ class HungarianMatcherMix(nn.Module):
                     align_corners=False,
                 ).squeeze(1)
             else:
-                tgt_mask = torch.nn.functional.interpolate(tgt_mask, size=(H, W), mode='nearest-exact')
+                tgt_mask = torch.nn.functional.max_pool2d(tgt_mask, kernel_size=(t_s_ratio_h, t_s_ratio_w),
+                                                          stride=(t_s_ratio_h, t_s_ratio_w))
+                #tgt_mask = torch.nn.functional.interpolate(tgt_mask, size=(H, W), mode='nearest-exact')
                 out_mask = out_mask.squeeze(1).flatten(1)
                 tgt_mask = tgt_mask.squeeze(1).flatten(1)
 
