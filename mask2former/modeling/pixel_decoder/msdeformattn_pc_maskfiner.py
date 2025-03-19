@@ -580,9 +580,9 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             fixed_pos = fix_pos_no_bias(pos, spatial_shape, min_spatial_shape)
             fixed_poss.append(fixed_pos)
             fixed_last_pos = fix_pos_no_bias(last_pos, last_ss, min_spatial_shape)
-            #upfeat = upsample_feature_shepard(fixed_pos, fixed_last_pos, out[-1], custom_kernel=True)
+            upfeat = upsample_feature_shepard(fixed_pos, fixed_last_pos, out[-1], custom_kernel=True)
             #print("Upsampled feature shape: {} for {}".format(upfeat.shape, f))
-            y = cur_fpn #+ upfeat
+            y = cur_fpn + upfeat
             y = output_conv((y, fixed_pos))
             last_pos = pos
             #print("Pos min for {}: {}".format(f, last_pos.min()))
