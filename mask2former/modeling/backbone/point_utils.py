@@ -121,6 +121,17 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
     return up_features
 
 
+def find_pos_indices_in_pos(all_positions, some_positions):
+    # Intended to be used to create database_idx for upsample_feature_shepard
+    # Compute pairwise distances efficiently (B, N_, N)
+    # Can switch from p=1 to p=2 to use euclidian distance if positions are not exactly equal.
+    dists = torch.cdist(some_positions.float(), all_positions.float(), p=1)  # Manhattan distance
+
+    # Find the index of the closest match for each element in some_positions
+    pos_indices = torch.argmin(dists, dim=2)  # (B, N_)
+
+    return pos_indices.unsqueeze(-1)
+
 def space_filling_cluster(pos, m, h, w, no_reorder=False, sf_type='', use_anchor=True):
     """
     The balanced clustering algorithm based on space-filling curves
