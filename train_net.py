@@ -341,7 +341,8 @@ def main(args):
                    settings=wandb.Settings(start_method="thread", console="off"))
 
     trainer = Trainer(cfg)
-    #trainer.resume_or_load(resume=args.resume)
+    if args.resume:
+        trainer.resume_or_load(resume=args.resume)
     res = trainer.train()
 
     torch.distributed.barrier()
