@@ -632,9 +632,8 @@ class MRNB(nn.Module):
 
         return patches_scale_pos
 
-    def add_high_res_feat(self, tokens, pos, curr_scale, image):
-        patched_im = self.high_res_patcher(image)
-        pi_shape = patched_im.shape
+
+    def add_high_res_feat(self, tokens, pos, curr_scale, patched_im):
         b = torch.arange(pos.shape[0]).unsqueeze(-1).expand(-1, pos.shape[1])
         x = torch.div(pos[..., 0], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
         y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
@@ -654,7 +653,20 @@ class MRNB(nn.Module):
         feat_after_split = self.split_features(feat_to_split)
         pos_after_split = self.split_pos(pos_to_split, scale)
 
-        feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, im)
+
+        patched_im = self.high_res_patcher(im)
+        feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, patched_im)
+        feat_to_keep = self.add_high_res_feat(feat_to_keep, pos_to_keep[:, :, 1:], old_scale, patched_im)
+        all_old_feats = []
+        all_old_pos = []
+        for i in range(old_scale):
+            f_s, p_s, feat_old, pos_old, _ = self.divide_feat_pos_on_scale(feat_old, pos_old, i, upsampling_mask)
+            f_s = self.add_high_res_feat(f_s, p_s[:, :, 1:], i, patched_im)
+            all_old_feats.append(f_s)
+            all_old_pos.append(p_s)
+
+        feat_old = torch.cat(all_old_feats, dim=1)
+        pos_old = torch.cat(all_old_pos, dim=1)
 
         all_feat = torch.cat([feat_old, feat_to_keep, feat_after_split], dim=1)
         all_pos = torch.cat([pos_old, pos_to_keep, pos_after_split], dim=1)
