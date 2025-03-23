@@ -656,19 +656,7 @@ class MRNB(nn.Module):
 
         patched_im = self.high_res_patcher(im)
         feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, patched_im)
-        feat_to_keep = self.add_high_res_feat(feat_to_keep, pos_to_keep[:, :, 1:], old_scale, patched_im)
 
-        if old_scale > 0:
-            all_old_feats = []
-            all_old_pos = []
-            for i in range(old_scale):
-                f_s, p_s, feat_old, pos_old, _ = self.divide_feat_pos_on_scale(feat_old, pos_old, i, upsampling_mask)
-                f_s = self.add_high_res_feat(f_s, p_s[:, :, 1:], i, patched_im)
-                all_old_feats.append(f_s)
-                all_old_pos.append(p_s)
-
-            feat_old = torch.cat(all_old_feats, dim=1)
-            pos_old = torch.cat(all_old_pos, dim=1)
 
         all_feat = torch.cat([feat_old, feat_to_keep, feat_after_split], dim=1)
         all_pos = torch.cat([pos_old, pos_to_keep, pos_after_split], dim=1)

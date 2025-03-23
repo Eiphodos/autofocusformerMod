@@ -535,7 +535,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
 
-        disagreement_mask = self.create_disagreement_mask(pred_mask.detach().clone(), outputs_class.detach().clone())
+        disagreement_mask = self.create_disagreement_mask(pred_mask, outputs_class)
 
         assert len(predictions_class) == self.num_layers + 1
         if self.final_layer:
