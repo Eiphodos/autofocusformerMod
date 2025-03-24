@@ -113,7 +113,7 @@ class SetCriterionMix(nn.Module):
         self.oversample_ratio = oversample_ratio
         self.importance_sample_ratio = importance_sample_ratio
 
-    def loss_labels(self, outputs, targets, indices, num_masks):
+    def loss_labels(self, outputs, targets, indices, num_masks, print_logits):
         """Classification loss (NLL)
         targets dicts must contain the key "labels" containing a tensor of dim [nb_target_boxes]
         """
@@ -127,11 +127,15 @@ class SetCriterionMix(nn.Module):
         )
         target_classes[idx] = target_classes_o
 
+        if print_logits:
+            print("Final class labels shape: {}".format(target_classes.shape))
+            print("Final class logits shape: {}".format(src_logits.transpose(1, 2).shape))
+
         loss_ce = F.cross_entropy(src_logits.transpose(1, 2), target_classes, self.empty_weight)
         losses = {"loss_ce": loss_ce}
         return losses
 
-    def loss_masks(self, outputs, targets, indices, num_masks):
+    def loss_masks(self, outputs, targets, indices, num_masks, print_logits):
         """Compute the losses related to the masks: the focal loss and the dice loss.
         targets dicts must contain the key "masks" containing a tensor of dim [nb_target_boxes, h, w]
         """
@@ -187,8 +191,9 @@ class SetCriterionMix(nn.Module):
             point_logits = src_masks.squeeze(1).flatten(1)
             point_labels = point_labels.squeeze(1).flatten(1)
 
-        #print("point labels shape: {}".format(point_labels.shape))
-        #print("point logits shape: {}".format(point_labels.shape))
+        if print_logits:
+            print("Final mask labels shape: {}".format(point_labels.shape))
+            print("Final mask logits shape: {}".format(point_labels.shape))
 
         losses = {
             "loss_mask": sigmoid_ce_loss_jit(point_logits, point_labels, num_masks),
@@ -211,13 +216,13 @@ class SetCriterionMix(nn.Module):
         tgt_idx = torch.cat([tgt for (_, tgt) in indices])
         return batch_idx, tgt_idx
 
-    def get_loss(self, loss, outputs, targets, indices, num_masks):
+    def get_loss(self, loss, outputs, targets, indices, num_masks, print_logits=False):
         loss_map = {
             'labels': self.loss_labels,
             'masks': self.loss_masks,
         }
         assert loss in loss_map, f"do you really want to compute {loss} loss?"
-        return loss_map[loss](outputs, targets, indices, num_masks)
+        return loss_map[loss](outputs, targets, indices, num_masks, print_logits)
 
     def forward(self, outputs, targets, temperature=None):
         """This performs the loss computation.
@@ -247,7 +252,7 @@ class SetCriterionMix(nn.Module):
         # Compute all the requested losses
         losses = {}
         for loss in self.losses:
-            losses.update(self.get_loss(loss, outputs, targets, indices, num_masks))
+            losses.update(self.get_loss(loss, outputs, targets, indices, num_masks, print_logits=True))
 
         # In case of auxiliary losses, we repeat this process with the output of each intermediate layer.
         if "aux_outputs" in outputs:
@@ -256,7 +261,7 @@ class SetCriterionMix(nn.Module):
                 #print("Output masks aux loss {} shape: {}".format(i, aux_outputs["pred_masks"][0].shape))
                 indices = self.matcher(aux_outputs, targets)
                 for loss in self.losses:
-                    l_dict = self.get_loss(loss, aux_outputs, targets, indices, num_masks)
+                    l_dict = self.get_loss(loss, aux_outputs, targets, indices, num_masks, print_logits=False)
                     l_dict = {k + f"_{i}": v for k, v in l_dict.items()}
                     losses.update(l_dict)
 
