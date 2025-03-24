@@ -29,3 +29,4 @@ from .test_time_augmentation import SemanticSegmentorWithTTA
 from .evaluation.instance_evaluation import InstanceSegEvaluator
 from .evaluation.meta_loss_evaluation import MetaLossSemSegEvaluator
 from .evaluation.maskfiner_evaluation import MaskFinerSemSegEvaluator
+from .evaluation.semseg_evaluation import SemSegEvaluatorSave

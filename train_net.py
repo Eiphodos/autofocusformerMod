@@ -56,6 +56,7 @@ from mask2former import (
     InstanceSegEvaluator,
     MetaLossSemSegEvaluator,
     MaskFinerSemSegEvaluator,
+    SemSegEvaluatorSave,
     MaskFormerInstanceDatasetMapper,
     MaskFormerPanopticDatasetMapper,
     MaskFormerSemanticDatasetMapper,
@@ -102,7 +103,7 @@ class Trainer(DefaultTrainer):
                 )
             else:
                 evaluator_list.append(
-                    SemSegEvaluator(
+                    SemSegEvaluatorSave(
                         dataset_name,
                         distributed=True,
                         output_dir=output_folder,
