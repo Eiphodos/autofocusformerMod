@@ -443,6 +443,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         mf_pos - b x n x 2
         '''
         # x is a list of multi-scale feature
+        finest_inp_feat_shape = input_shapes[-1]
         x = x[:self.num_feature_levels]
         pos = pos[:self.num_feature_levels]
         input_shapes = input_shapes[:self.num_feature_levels]
@@ -465,7 +466,6 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         # scale positions to finest input positions
         b, _, _ = x[0].shape
         poss_scaled = []
-        finest_inp_feat_shape = input_shapes[-1]
         #print("Mask feature max pos before scaling: {}".format(mf_pos.max()))
         mf_pos_scaled = scale_pos(mf_pos, finest_input_shape, finest_inp_feat_shape)
         #print("Mask feature max pos after scaling: {}".format(mf_pos_scaled.max()))
