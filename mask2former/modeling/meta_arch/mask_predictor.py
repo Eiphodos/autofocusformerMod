@@ -82,8 +82,23 @@ class MaskPredictor(nn.Module):
         features = self.backbone(im, scale, features, features_pos, upsampling_mask)
         mask_features, mf_pos, multi_scale_features, multi_scale_poss, ms_scale, finest_input_shape, input_shapes = self.pixel_decoder.forward_features(features)
         predictions, upsampling_mask = self.mask_decoder(multi_scale_features, multi_scale_poss, mask_features, mf_pos, finest_input_shape, input_shapes)
-        all_pos = torch.cat(multi_scale_poss, dim=1)
-        all_scale = torch.cat(ms_scale, dim=1)
+        #all_pos = torch.cat(multi_scale_poss, dim=1)
+        #all_scale = torch.cat(ms_scale, dim=1)
+        #pos_scale = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
+        #all_feat = torch.cat(multi_scale_features, dim=1)
+        all_pos = []
+        all_feat = []
+        all_scale = []
+        for out_feat in self.backbone._out_features:
+            feat = features[out_feat]
+            pos = features[out_feat + '_pos']
+            scale = features[out_feat + '_scale']
+            all_pos.append(pos)
+            all_feat.append(feat)
+            all_scale.append(scale)
+        all_pos = torch.cat(all_pos, dim=1)
+        all_scale = torch.cat(all_scale, dim=1)
         pos_scale = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
-        all_feat = torch.cat(multi_scale_features, dim=1)
+        all_feat = torch.cat(all_feat, dim=1)
+
         return predictions, all_feat, pos_scale, upsampling_mask
