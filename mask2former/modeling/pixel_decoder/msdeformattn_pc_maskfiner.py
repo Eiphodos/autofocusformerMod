@@ -549,7 +549,6 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             nb_idx.append(knn_keops(grid_pos, fixed_pos, 4))
         last_pos = poss[-1]
         last_ss = spatial_shapes[-1]
-        spatial_shapes.append(grid_hw)
 
         out = self.transformer(srcs, fixed_poss, min_spatial_shapes, pos_embed, nb_idx)
 
