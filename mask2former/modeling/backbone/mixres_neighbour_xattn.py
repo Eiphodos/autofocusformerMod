@@ -351,7 +351,8 @@ class ClusterXATransformerBlock(nn.Module):
         # Divide all tokens into high-res and low-res to keep order
         feat_high, feat_low = divide_tensor_on_scale(feat, feat_pos, scale)
         member_idx_high, member_idx_low = divide_tensor_on_scale(member_idx, feat_pos, scale)
-        cluster_mask_high, cluster_mask_low = divide_tensor_on_scale(cluster_mask, feat_pos, scale)
+        if cluster_mask is not None:
+            cluster_mask_high, cluster_mask_low = divide_tensor_on_scale(cluster_mask, feat_pos, scale)
         pe_idx_high, pe_idx_low = divide_tensor_on_scale(pe_idx, feat_pos, scale)
         feat_pos_high, feat_pos_low = divide_tensor_on_scale(feat_pos, feat_pos, scale)
 
