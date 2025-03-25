@@ -6,6 +6,7 @@ from .backbone.mrml import MixResMetaLoss
 from .backbone.mrml_neighbour import MixResMetaLossNeighbour
 from .backbone.mrmean import MixResMeanAct
 from .backbone.mixres_neighbour import MixResNeighbour
+from .backbone.mixres_neighbour_xattn import MixResNeighbourXAttn
 from .backbone.mixres_vit import MixResViT
 
 from .pixel_decoder.msdeformattn_pc_maskfiner_proj import MSDeformAttnPixelDecoderMaskFinerProj
