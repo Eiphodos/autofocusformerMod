@@ -350,11 +350,17 @@ class ClusterXATransformerBlock(nn.Module):
 
         # Divide all tokens into high-res and low-res to keep order
         feat_high, feat_low = divide_tensor_on_scale(feat, feat_pos, scale)
+
+        # Reorder to ensure order is consistent
         member_idx_high, member_idx_low = divide_tensor_on_scale(member_idx, feat_pos, scale)
+        member_idx = torch.cat([member_idx_low, member_idx_high], dim=1)
         if cluster_mask is not None:
             cluster_mask_high, cluster_mask_low = divide_tensor_on_scale(cluster_mask, feat_pos, scale)
+            cluster_mask = torch.cat([cluster_mask_low, cluster_mask_high], dim=1)
         pe_idx_high, pe_idx_low = divide_tensor_on_scale(pe_idx, feat_pos, scale)
+        pe_idx = torch.cat([pe_idx_low, pe_idx_high], dim=1)
         feat_pos_high, feat_pos_low = divide_tensor_on_scale(feat_pos, feat_pos, scale)
+        feat_pos = torch.cat([feat_pos_low, feat_pos_high], dim=1)
 
         # Do cross attention between image features and high-res features
         feat_high = self.x_attn(feat_high, image_feat, memory_mask=None, memory_key_padding_mask=None, pos=None,
@@ -362,10 +368,7 @@ class ClusterXATransformerBlock(nn.Module):
 
         # Return all tokens again in identical order.
         feat = torch.cat([feat_low, feat_high], dim=1)
-        feat_pos = torch.cat([feat_pos_low, feat_pos_high], dim=1)
-        member_idx = torch.cat([member_idx_low, member_idx_high], dim=1)
-        cluster_mask = torch.cat([cluster_mask_low, cluster_mask_high], dim=1)
-        pe_idx = torch.cat([pe_idx_low, pe_idx_high], dim=1)
+
 
         shortcut = feat
         feat = self.norm1(feat)
