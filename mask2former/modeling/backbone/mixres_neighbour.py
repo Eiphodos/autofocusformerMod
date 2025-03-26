@@ -335,11 +335,9 @@ class OverlapPatchEmbedding(nn.Module):
             conv = DownSampleConvBlock(emb_dim_list[i], emb_dim_list[i + 1])
             conv_layers.append(conv)
         self.conv_layers = nn.Sequential(*conv_layers)
-        self.out_norm = nn.LayerNorm(embed_dim)
 
     def forward(self, im):
-        x = self.conv_layers(im).flatten(2).transpose(1, 2)
-        x = self.out_norm(x)
+        x = self.conv_layers(im)
         return x
 
 class BasicLayer(nn.Module):
