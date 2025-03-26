@@ -1,6 +1,7 @@
 from detectron2.evaluation import SemSegEvaluator
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from torchvision.transforms.functional import to_pil_image
 import os
 from PIL import Image
@@ -54,9 +55,17 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
 
         ss = outp["sem_seg"].argmax(dim=0).to(self._cpu_device)
         ss = np.array(ss, dtype=int)
-        #print("Got sem_seg for {} with shape {} and saving to {}".format(fn, ss.shape, inference_out_dir))
 
-        plt.imsave(os.path.join(inference_out_dir, fn + '_sem_seg.png'), np.asarray(ss), cmap='tab20b')
+        hsv_colors = [(i / self._num_classes, 1.0, 1.0) for i in range(self._num_classes)]
+        rgb_colors = [mcolors.hsv_to_rgb(hsv) for hsv in hsv_colors]
+        color_map = (np.array(rgb_colors) * 255).astype(np.uint8)
+        H, W = ss.shape
+        rgb_image = np.zeros((H, W, 3), dtype=np.uint8)
+        for label in range(self._num_classes):
+            rgb_image[ss == label] = color_map[label]
+        image = Image.fromarray(rgb_image)
+
+        image.save(os.path.join(inference_out_dir, fn + '_sem_seg.png'))
         np.save(os.path.join(inference_out_dir, fn + '_sem_seg_raw.npy'), ss)
 
         disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
