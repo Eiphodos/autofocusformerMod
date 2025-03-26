@@ -1,5 +1,6 @@
 from detectron2.evaluation import SemSegEvaluator
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from torchvision.transforms.functional import to_pil_image
@@ -57,6 +58,7 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
         ss = np.array(ss, dtype=int)
 
         hsv_colors = [(i / self._num_classes, 1.0, 1.0) for i in range(self._num_classes)]
+        random.Random(42).shuffle(hsv_colors)
         rgb_colors = [mcolors.hsv_to_rgb(hsv) for hsv in hsv_colors]
         color_map = (np.array(rgb_colors) * 255).astype(np.uint8)
         H, W = ss.shape
