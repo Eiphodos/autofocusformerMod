@@ -57,8 +57,8 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
         ss = outp["sem_seg"].argmax(dim=0).to(self._cpu_device)
         ss = np.array(ss, dtype=int)
 
-        hsv_colors = [(i / self._num_classes, 1.0, 1.0) for i in range(self._num_classes)]
-        random.Random(42).shuffle(hsv_colors)
+        hsv_colors = [(i / self._num_classes, 0.75, 0.75) for i in range(self._num_classes)]
+        random.Random(1337).shuffle(hsv_colors)
         rgb_colors = [mcolors.hsv_to_rgb(hsv) for hsv in hsv_colors]
         color_map = (np.array(rgb_colors) * 255).astype(np.uint8)
         H, W = ss.shape
