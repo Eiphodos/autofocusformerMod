@@ -324,6 +324,7 @@ class PatchEmbedding(nn.Module):
 class OverlapPatchEmbedding(nn.Module):
     def __init__(self, patch_size, embed_dim, channels):
         super().__init__()
+
         self.patch_size = patch_size
 
         n_layers = int(torch.log2(torch.tensor([patch_size])).item())
@@ -334,11 +335,12 @@ class OverlapPatchEmbedding(nn.Module):
             conv = DownSampleConvBlock(emb_dim_list[i], emb_dim_list[i + 1])
             conv_layers.append(conv)
         self.conv_layers = nn.Sequential(*conv_layers)
+        self.out_norm = nn.LayerNorm(embed_dim)
 
     def forward(self, im):
-        x = self.conv_layers(im)
+        x = self.conv_layers(im).flatten(2).transpose(1, 2)
+        x = self.out_norm(x)
         return x
-
 
 class BasicLayer(nn.Module):
     """ AutoFocusFormer layer for one stage.
@@ -540,8 +542,8 @@ class MRNB(nn.Module):
         # Split layers
         self.split = nn.Linear(channels, channels * self.split_ratio)
 
-        self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
-        #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
+        #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
+        self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
         #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
         self.token_projection = nn.Linear(channels, d_model)
