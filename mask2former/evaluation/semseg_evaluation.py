@@ -1,8 +1,11 @@
 from detectron2.evaluation import SemSegEvaluator
 import numpy as np
+import random
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from torchvision.transforms.functional import to_pil_image
 import os
+from PIL import Image
 
 class SemSegEvaluatorSave(SemSegEvaluator):
 
@@ -24,6 +27,8 @@ class SemSegEvaluatorSave(SemSegEvaluator):
 
             gt_filename = self.input_file_to_gt_file[input["file_name"]]
             gt = self.sem_seg_loading_fn(gt_filename, dtype=int)
+
+            self.save_error_map(pred, gt, input["file_name"])
 
             gt[gt == self._ignore_label] = self._num_classes
 
@@ -51,7 +56,31 @@ class SemSegEvaluatorSave(SemSegEvaluator):
 
         ss = outp["sem_seg"].argmax(dim=0).to(self._cpu_device)
         ss = np.array(ss, dtype=int)
-        #print("Got sem_seg for {} with shape {} and saving to {}".format(fn, ss.shape, inference_out_dir))
 
-        plt.imsave(os.path.join(inference_out_dir, fn + '_sem_seg.png'), np.asarray(ss), cmap='tab20b')
+        hsv_colors = [(i / self._num_classes, 0.75, 0.75) for i in range(self._num_classes)]
+        random.Random(1337).shuffle(hsv_colors)
+        rgb_colors = [mcolors.hsv_to_rgb(hsv) for hsv in hsv_colors]
+        color_map = (np.array(rgb_colors) * 255).astype(np.uint8)
+        H, W = ss.shape
+        rgb_image = np.zeros((H, W, 3), dtype=np.uint8)
+        for label in range(self._num_classes):
+            rgb_image[ss == label] = color_map[label]
+        image = Image.fromarray(rgb_image)
+
+        image.save(os.path.join(inference_out_dir, fn + '_sem_seg.png'))
         np.save(os.path.join(inference_out_dir, fn + '_sem_seg_raw.npy'), ss)
+
+
+    def save_error_map(self, pred, gt, fp):
+        H, W = pred.shape
+        error = np.zeros((H, W), dtype=np.uint8)
+        empty = np.zeros((H, W, 2), dtype=np.uint8)
+        error[pred != gt ] = 255
+        error[gt == self._ignore_label] = 0
+        error_rgb = np.concatenate([np.expand_dims(error, axis=2), empty], axis=2)
+        im = Image.fromarray(error_rgb, 'RGB')
+
+        inference_out_dir = os.path.join(self._output_dir, 'inference_output')
+        fn = os.path.splitext(os.path.basename(fp))[0]
+
+        im.save(os.path.join(inference_out_dir, fn + '_error.png'))
