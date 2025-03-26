@@ -68,11 +68,11 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
 
     def save_error_map(self, pred, gt, fp):
         H, W = pred.shape
-        error = np.zeros(H, W, dtype=np.uint8)
-        empty = np.zeros(H, W, 2, dtype=np.uint8)
+        error = np.zeros((H, W), dtype=np.uint8)
+        empty = np.zeros((H, W, 2), dtype=np.uint8)
         error[pred != gt ] = 255
         error[gt == self._ignore_label] = 0
-        error_rgb = np.concatenate([error.expand_dims(0), empty], axis=2)
+        error_rgb = np.concatenate([np.expand_dims(error, axis=2), empty], axis=2)
         im = Image.fromarray(error_rgb, 'RGB')
 
         inference_out_dir = os.path.join(self._output_dir, 'inference_output')
