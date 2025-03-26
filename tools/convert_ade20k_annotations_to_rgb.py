@@ -27,7 +27,7 @@ def convert_to_rgb(input, output, color_map):
 
 if __name__ == "__main__":
     dataset_dir = Path(os.getenv("DETECTRON2_DATASETS", "datasets")) / "ADEChallengeData2016"
-    for name in ["training", "validation"]:
+    for name in ["validation"]:
         annotation_dir = dataset_dir / "annotations" / name
         output_dir = dataset_dir / "annotations_detectron2_rgb" / name
         output_dir.mkdir(parents=True, exist_ok=True)
