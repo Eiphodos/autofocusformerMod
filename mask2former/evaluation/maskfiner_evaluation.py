@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torchvision.transforms.functional import to_pil_image
 import os
+from PIL import Image
 
 class MaskFinerSemSegEvaluator(SemSegEvaluator):
 
@@ -24,6 +25,8 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
 
             gt_filename = self.input_file_to_gt_file[input["file_name"]]
             gt = self.sem_seg_loading_fn(gt_filename, dtype=int)
+
+            self.save_error_map(self, pred, gt, input["file_name"])
 
             gt[gt == self._ignore_label] = self._num_classes
 
@@ -61,3 +64,18 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
             ml_out = outp[k]
             scale = k[-1]
             plt.imsave(os.path.join(inference_out_dir, fn + '_disagreement_mask_{}.png'.format(scale)), np.asarray(ml_out), cmap='afmhot')
+
+
+    def save_error_map(self, pred, gt, fp):
+        H, W = pred.shape
+        error = np.zeros(H, W, dtype=np.uint8)
+        empty = np.zeros(H, W, 2, dtype=np.uint8)
+        error[pred != gt ] = 255
+        error[gt == self._ignore_label] = 0
+        error_rgb = np.concatenate([error.expand_dims(0), empty], axis=2)
+        im = Image.fromarray(error_rgb, 'RGB')
+
+        inference_out_dir = os.path.join(self._output_dir, 'inference_output')
+        fn = os.path.splitext(os.path.basename(fp))[0]
+
+        im.save(os.path.join(inference_out_dir, fn + '_error.png'))
