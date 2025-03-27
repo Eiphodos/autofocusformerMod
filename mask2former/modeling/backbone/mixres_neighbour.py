@@ -541,7 +541,10 @@ class MRNB(nn.Module):
         self.split = nn.Linear(channels, channels * self.split_ratio)
 
         #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
-        self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
+        #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
+        input_dim = channels * self.patch_size ** 2
+        self.high_res_patcher = nn.Conv2d(3, input_dim, kernel_size=self.patch_size, stride=self.patch_size)
+        self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels, act_layer=nn.LeakyReLU)
         #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
         self.token_projection = nn.Linear(channels, d_model)
@@ -640,6 +643,7 @@ class MRNB(nn.Module):
         patched_im = patched_im[b, :, y, x]
         #print("For pos {} for token 0 in scale {} and features of shape {}, take pos {},{}".format(pos[0,0], curr_scale, pi_shape, x[0,0], y[0,0]))
         #print("For pos {} for token 1 in scale {} and features of shape {}, take pos {},{}".format(pos[0, 1], curr_scale, pi_shape, x[0, 1], y[0, 1]))
+        patched_im = self.high_res_mlp(patched_im)
         tokens = tokens + patched_im
 
         return tokens
