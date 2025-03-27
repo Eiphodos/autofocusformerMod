@@ -252,7 +252,7 @@ class SetCriterionMix(nn.Module):
         # Compute all the requested losses
         losses = {}
         for loss in self.losses:
-            losses.update(self.get_loss(loss, outputs, targets, indices, num_masks, print_logits=True))
+            losses.update(self.get_loss(loss, outputs, targets, indices, num_masks, print_logits=False))
 
         # In case of auxiliary losses, we repeat this process with the output of each intermediate layer.
         if "aux_outputs" in outputs:
