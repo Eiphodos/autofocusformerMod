@@ -542,7 +542,7 @@ class MRNB(nn.Module):
 
         #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
         #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
-        input_dim = channels * self.patch_size ** 2
+        input_dim = max(channels, 3 * self.patch_size ** 2)
         self.high_res_patcher = nn.Conv2d(3, input_dim, kernel_size=self.patch_size, stride=self.patch_size)
         self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels, act_layer=nn.LeakyReLU)
         #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
