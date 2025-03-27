@@ -657,6 +657,8 @@ class MRNBXA(nn.Module):
                                )
 
         self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), d_model)
+        self.high_res_norm1 = nn.LayerNorm(d_model)
+        self.high_res_mlp = Mlp(in_features=d_model, out_features=d_model, hidden_features=d_model, act_layer=nn.LeakyReLU)
 
         self.token_projection = nn.Linear(channels, d_model)
 
@@ -784,6 +786,8 @@ class MRNBXA(nn.Module):
         im_high = im[b_, :, y_pos, x_pos]
         im_high = rearrange(im_high, 'b (n p) c -> b n (p c)', b=b, n=n, c=3)
         im_high_feats = self.image_patch_projection(im_high)
+        im_high_feats = self.high_res_norm1(im_high_feats)
+        im_high_feats = self.high_res_mlp(im_high_feats)
 
         return im_high_feats
 
