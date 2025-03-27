@@ -239,4 +239,5 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MR.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
     cfg.MODEL.MR.CLUSTER_SIZE = [8, 8, 8, 8]
     cfg.MODEL.MR.NBHD_SIZE = [48, 48, 48, 48]
+    cfg.MODEl.MR.KEEP_OLD_SCALE = False
 

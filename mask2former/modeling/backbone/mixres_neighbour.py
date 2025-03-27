@@ -492,7 +492,8 @@ class MRNB(nn.Module):
             nbhd_size=[48, 48, 48, 48],
             layer_scale=0.0,
             min_patch_size=4,
-            upscale_ratio=0.25
+            upscale_ratio=0.25,
+            keep_old_scale=False
     ):
         super().__init__()
         self.patch_size = patch_sizes[-1]
@@ -509,6 +510,7 @@ class MRNB(nn.Module):
         self.cluster_size = cluster_size,
         self.nbhd_size = nbhd_size
         self.upscale_ratio = upscale_ratio
+        self.keep_old_scale = keep_old_scale
 
         num_features = d_model
         self.num_features = num_features
@@ -658,16 +660,35 @@ class MRNB(nn.Module):
             features, features_pos, old_scale, upsampling_mask)
         feat_to_split, pos_to_split, feat_to_keep, pos_to_keep = self.divide_tokens_to_split_and_keep(
             feat_curr, pos_curr, upsampling_mask_curr)
-        feat_after_split = self.split_features(feat_to_split)
-        pos_after_split = self.split_pos(pos_to_split, scale)
+
+        all_feat = [feat_old, feat_to_keep]
+        all_pos = [pos_old, pos_to_keep]
+
+        if self.keep_old_scale:
+            all_feat.append(feat_to_split)
+            all_pos.append(pos_to_split)
+
+            upsampled_feat = self.split_features(feat_to_split.detach().clone())
+            upsampled_pos = self.split_pos(pos_to_split.detach().clone(), scale)
+
+            patched_im = self.high_res_patcher(im)
+            upsampled_feat = self.add_high_res_feat(upsampled_feat, upsampled_pos[:, :, 1:], scale, patched_im)
+
+            all_feat.append(upsampled_feat)
+            all_pos.append(upsampled_pos)
+        else:
+            feat_after_split = self.split_features(feat_to_split)
+            pos_after_split = self.split_pos(pos_to_split, scale)
+
+            patched_im = self.high_res_patcher(im)
+            feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, patched_im)
+
+            all_feat.append(feat_after_split)
+            all_pos.append(pos_after_split)
 
 
-        patched_im = self.high_res_patcher(im)
-        feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, patched_im)
-
-
-        all_feat = torch.cat([feat_old, feat_to_keep, feat_after_split], dim=1)
-        all_pos = torch.cat([pos_old, pos_to_keep, pos_after_split], dim=1)
+        all_feat = torch.cat(all_feat, dim=1)
+        all_pos = torch.cat(all_pos, dim=1)
 
         all_feat = self.token_projection(all_feat)
 
@@ -709,6 +730,7 @@ class MixResNeighbour(MRNB, Backbone):
             in_chans = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index - 1]
         image_size = cfg.INPUT.CROP.SIZE
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
+        keep_old_scale = cfg.MODEL.MR.KEEP_OLD_SCALE
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
 
         patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
@@ -723,6 +745,7 @@ class MixResNeighbour(MRNB, Backbone):
         cluster_size = cfg.MODEL.MR.CLUSTER_SIZE[layer_index]
         nbhd_size = cfg.MODEL.MR.NBHD_SIZE[layer_index]
         upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
+
 
 
 
@@ -742,7 +765,8 @@ class MixResNeighbour(MRNB, Backbone):
             nbhd_size=nbhd_size,
             n_scales=n_scales,
             min_patch_size=min_patch_size,
-            upscale_ratio=upscale_ratio
+            upscale_ratio=upscale_ratio,
+            keep_old_scale=keep_old_scale
         )
 
         self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
