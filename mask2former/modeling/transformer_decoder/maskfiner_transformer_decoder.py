@@ -444,6 +444,13 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         '''
         # x is a list of multi-scale feature
         finest_inp_feat_shape = input_shapes[-1]
+
+        disagreement_pos_scaled_no_fix = []
+        for p in pos:
+            p_scaled = scale_pos(p, finest_input_shape, finest_inp_feat_shape)
+            disagreement_pos_scaled_no_fix.append(p_scaled)
+        disagreement_pos_scaled_no_fix = torch.cat(disagreement_pos_scaled_no_fix, dim=1)
+
         x = x[:self.num_feature_levels]
         pos = pos[:self.num_feature_levels]
         input_shapes = input_shapes[:self.num_feature_levels]
@@ -536,6 +543,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             predictions_mask.append(outputs_mask)
 
         disagreement_mask = self.create_disagreement_mask(pred_mask, outputs_class)
+        disagreement_mask = self.zero_edges(disagreement_mask, disagreement_pos_scaled_no_fix, finest_inp_feat_shape[0], finest_inp_feat_shape[1])
 
         assert len(predictions_class) == self.num_layers + 1
         if self.final_layer:
@@ -603,6 +611,14 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
                 #batch_cls_mask = (batch_cls_mask > 0.5).int()
                 disagreement_mask[b] = disagreement_mask[b] + batch_cls_mask
         #print("Number of unique classes in sample 0: {}".format(len(cls_i[0].unique())))
+        return disagreement_mask
+
+    def zero_edges(self, disagreement_mask, disagreement_pos, max_height, max_width):
+        disagreement_mask[disagreement_pos[..., 0] == 0] = 0
+        disagreement_mask[disagreement_pos[..., 1] == 0] = 0
+        disagreement_mask[disagreement_pos[..., 0] == (max_width - 1)] = 0
+        disagreement_mask[disagreement_pos[..., 1] == (max_height - 1)] = 0
+
         return disagreement_mask
 
 

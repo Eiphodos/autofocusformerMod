@@ -28,7 +28,6 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
             gt_filename = self.input_file_to_gt_file[input["file_name"]]
             gt = self.sem_seg_loading_fn(gt_filename, dtype=int)
 
-            self.save_input_image(output["image_tensor"], input["file_name"])
             self.save_error_map(pred, gt, input["file_name"])
 
             gt[gt == self._ignore_label] = self._num_classes
