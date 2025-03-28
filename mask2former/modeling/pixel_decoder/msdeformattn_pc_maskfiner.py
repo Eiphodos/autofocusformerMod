@@ -399,17 +399,29 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             input_proj_list = []
             # from low resolution to high resolution (res5 -> res2)
             for in_channels in transformer_in_channels[::-1]:
-                input_proj_list.append(nn.Sequential(
-                    nn.Linear(in_channels, conv_dim, bias=True),
-                    nn.LayerNorm(conv_dim)
-                ))
+                if in_channels != conv_dim:
+                    input_proj_list.append(nn.Sequential(
+                        nn.Linear(in_channels, conv_dim, bias=True),
+                        nn.LayerNorm(conv_dim)
+                    ))
+                    nn.init.xavier_uniform_(input_proj_list[-1][0].weight, gain=1)
+                    nn.init.constant_(input_proj_list[-1][0].bias, 0)
+                else:
+                    input_proj_list.append(nn.Sequential(
+                        nn.LayerNorm(conv_dim)
+                    ))
             self.input_proj = nn.ModuleList(input_proj_list)
         else:
-            self.input_proj = nn.ModuleList([
-                nn.Sequential(
-                    nn.Linear(transformer_in_channels[-1], conv_dim, bias=True),
-                    nn.LayerNorm(conv_dim)
-                )])
+            if transformer_in_channels[-1] != conv_dim:
+                self.input_proj = nn.ModuleList([
+                    nn.Sequential(
+                        nn.Linear(transformer_in_channels[-1], conv_dim, bias=True),
+                        nn.LayerNorm(conv_dim)
+                    )])
+                nn.init.xavier_uniform_(self.input_proj[0][0].weight, gain=1)
+                nn.init.constant_(self.input_proj[0][0].bias, 0)
+            else:
+                self.input_proj = nn.ModuleList([nn.Sequential(nn.LayerNorm(conv_dim))])
 
         for proj in self.input_proj:
             nn.init.xavier_uniform_(proj[0].weight, gain=1)

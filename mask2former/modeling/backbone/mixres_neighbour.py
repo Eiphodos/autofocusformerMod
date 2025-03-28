@@ -545,7 +545,7 @@ class MRNB(nn.Module):
         #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
         #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
         input_dim = max(channels, 3 * self.patch_size ** 2)
-        self.high_res_patcher = nn.Conv2d(3, input_dim, kernel_size=self.patch_size, stride=self.patch_size)
+        self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
         self.high_res_norm1 = nn.LayerNorm(input_dim)
         self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels, act_layer=nn.LeakyReLU)
         self.high_res_norm2 = nn.LayerNorm(channels)
@@ -640,17 +640,25 @@ class MRNB(nn.Module):
         return patches_scale_pos
 
 
-    def add_high_res_feat(self, tokens, pos, curr_scale, patched_im):
-        b = torch.arange(pos.shape[0]).unsqueeze(-1).expand(-1, pos.shape[1])
-        x = torch.div(pos[..., 0], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
-        y = torch.div(pos[..., 1], 2 ** (self.n_scales - curr_scale - 1), rounding_mode='trunc').long()
-        patched_im = patched_im[b, :, y, x]
-        #print("For pos {} for token 0 in scale {} and features of shape {}, take pos {},{}".format(pos[0,0], curr_scale, pi_shape, x[0,0], y[0,0]))
-        #print("For pos {} for token 1 in scale {} and features of shape {}, take pos {},{}".format(pos[0, 1], curr_scale, pi_shape, x[0, 1], y[0, 1]))
-        patched_im = self.high_res_norm1(patched_im)
-        patched_im = self.high_res_mlp(patched_im)
-        patched_im = self.high_res_norm2(patched_im)
-        tokens = tokens + patched_im
+    def add_high_res_feat(self, tokens, pos, curr_scale, im):
+        b, n, _ = pos.shape
+
+        patch_coords = torch.stack(torch.meshgrid(torch.arange(0, self.patch_size), torch.arange(0, self.patch_size)))
+        patch_coords = patch_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(pos.device)
+        patch_coords = patch_coords.repeat(b, 1, 1)
+        pos_patches = pos.unsqueeze(2) + patch_coords.unsqueeze(1)
+        pos_patches = pos_patches.view(b, -1, 2)
+        x_pos = pos_patches[..., 0].long()
+        y_pos = pos_patches[..., 1].long()
+        b_ = torch.arange(b).unsqueeze(-1).expand(-1, pos_patches.shape[1])
+        im_high = im[b_, :, y_pos, x_pos]
+        im_high = rearrange(im_high, 'b (n p) c -> b n (p c)', b=b, n=n, c=3)
+        im_high = self.image_patch_projection(im_high)
+        im_high = nn.functional.leaky_relu(im_high)
+        im_high = self.high_res_norm1(im_high)
+        im_high = self.high_res_mlp(im_high)
+        im_high = self.high_res_norm2(im_high)
+        tokens = tokens + im_high
 
         return tokens
 
@@ -671,8 +679,7 @@ class MRNB(nn.Module):
             upsampled_feat = self.split_features(feat_to_split.detach().clone())
             upsampled_pos = self.split_pos(pos_to_split.detach().clone(), scale)
 
-            patched_im = self.high_res_patcher(im)
-            upsampled_feat = self.add_high_res_feat(upsampled_feat, upsampled_pos[:, :, 1:], scale, patched_im)
+            upsampled_feat = self.add_high_res_feat(upsampled_feat, upsampled_pos[:, :, 1:], scale, im)
 
             all_feat.append(upsampled_feat)
             all_pos.append(upsampled_pos)
@@ -680,8 +687,7 @@ class MRNB(nn.Module):
             feat_after_split = self.split_features(feat_to_split)
             pos_after_split = self.split_pos(pos_to_split, scale)
 
-            patched_im = self.high_res_patcher(im)
-            feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, patched_im)
+            feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, im)
 
             all_feat.append(feat_after_split)
             all_pos.append(pos_after_split)
