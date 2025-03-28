@@ -28,6 +28,7 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
             gt_filename = self.input_file_to_gt_file[input["file_name"]]
             gt = self.sem_seg_loading_fn(gt_filename, dtype=int)
 
+            self.save_input_image(output["image_tensor"], input["file_name"])
             self.save_error_map(pred, gt, input["file_name"])
 
             gt[gt == self._ignore_label] = self._num_classes
@@ -76,6 +77,14 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
             scale = k[-1]
             plt.imsave(os.path.join(inference_out_dir, fn + '_disagreement_mask_{}.png'.format(scale)), np.asarray(ml_out), cmap='afmhot')
 
+
+    def save_input_image(self, image_tensor, fp):
+        im = Image.fromarray(image_tensor.detach().cpu().squeeze().permute(1,2,0).numpy(), 'RGB')
+
+        inference_out_dir = os.path.join(self._output_dir, 'inference_output')
+        fn = os.path.splitext(os.path.basename(fp))[0]
+
+        im.save(os.path.join(inference_out_dir, fn + '_input_image.png'))
 
     def save_error_map(self, pred, gt, fp):
         H, W = pred.shape

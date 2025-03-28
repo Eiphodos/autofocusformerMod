@@ -272,6 +272,7 @@ class MaskFiner(nn.Module):
                 width = input_per_image.get("width", image_size[1])
                 processed_results.append({})
 
+                processed_results[-1]["image_tensor"] = images.tensor
 
 
                 for level, dmp in enumerate(disagreement_masks):
