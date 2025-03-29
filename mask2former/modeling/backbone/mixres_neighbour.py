@@ -655,11 +655,11 @@ class MRNB(nn.Module):
 
     def add_high_res_feat(self, tokens, pos, curr_scale, im):
         b, n, _ = pos.shape
-
+        pos_org = pos.clone() * self.min_patch_size
         patch_coords = torch.stack(torch.meshgrid(torch.arange(0, self.patch_size), torch.arange(0, self.patch_size)))
         patch_coords = patch_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(pos.device)
         patch_coords = patch_coords.repeat(b, 1, 1)
-        pos_patches = pos.unsqueeze(2) + patch_coords.unsqueeze(1)
+        pos_patches = pos_org.unsqueeze(2) + patch_coords.unsqueeze(1)
         pos_patches = pos_patches.view(b, -1, 2)
         x_pos = pos_patches[..., 0].long()
         y_pos = pos_patches[..., 1].long()
@@ -713,11 +713,12 @@ class MRNB(nn.Module):
 
     def get_image_features(self, pos, scale, im):
         b, n, _ = pos.shape
+        pos_org = pos.clone() * self.min_patch_size
         patch_size = self.patch_sizes[scale]
         patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
         patch_coords = patch_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(pos.device)
         patch_coords = patch_coords.repeat(b, 1, 1)
-        pos_patches = pos.unsqueeze(2) + patch_coords.unsqueeze(1)
+        pos_patches = pos_org.unsqueeze(2) + patch_coords.unsqueeze(1)
         pos_patches = pos_patches.view(b, -1, 2)
         x_pos = pos_patches[..., 0].long()
         y_pos = pos_patches[..., 1].long()
