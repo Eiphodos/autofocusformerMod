@@ -748,11 +748,15 @@ class MRNB(nn.Module):
             if self.add_image_data_to_all:
                 all_feat.append(upsampled_feat)
                 all_pos.append(upsampled_pos)
+                all_feat = torch.cat(all_feat, dim=1)
+                all_pos = torch.cat(all_pos, dim=1)
                 all_feat, all_pos = self.add_image_data_to_all_tokens(all_feat, all_pos, scale, im)
             else:
                 upsampled_feat = self.add_high_res_feat(upsampled_feat, upsampled_pos[:, :, 1:], scale, im)
                 all_feat.append(upsampled_feat)
                 all_pos.append(upsampled_pos)
+                all_feat = torch.cat(all_feat, dim=1)
+                all_pos = torch.cat(all_pos, dim=1)
         else:
             feat_after_split = self.split_features(feat_to_split)
             pos_after_split = self.split_pos(pos_to_split, scale)
@@ -760,15 +764,15 @@ class MRNB(nn.Module):
             if self.add_image_data_to_all:
                 all_feat.append(feat_after_split)
                 all_pos.append(pos_after_split)
+                all_feat = torch.cat(all_feat, dim=1)
+                all_pos = torch.cat(all_pos, dim=1)
                 all_feat, all_pos = self.add_image_data_to_all_tokens(all_feat, all_pos, scale, im)
             else:
                 feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, im)
                 all_feat.append(feat_after_split)
                 all_pos.append(pos_after_split)
-
-
-        all_feat = torch.cat(all_feat, dim=1)
-        all_pos = torch.cat(all_pos, dim=1)
+                all_feat = torch.cat(all_feat, dim=1)
+                all_pos = torch.cat(all_pos, dim=1)
 
         all_feat = self.token_projection(all_feat)
 
