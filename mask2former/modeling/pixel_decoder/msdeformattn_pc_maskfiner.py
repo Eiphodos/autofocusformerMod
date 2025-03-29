@@ -423,10 +423,6 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             else:
                 self.input_proj = nn.ModuleList([nn.Sequential(nn.LayerNorm(conv_dim))])
 
-        for proj in self.input_proj:
-            nn.init.xavier_uniform_(proj[0].weight, gain=1)
-            nn.init.constant_(proj[0].bias, 0)
-
         self.transformer = MSDeformAttnTransformerEncoderOnlyPc(
             d_model=conv_dim,
             dropout=transformer_dropout,
