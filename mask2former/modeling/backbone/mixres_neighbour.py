@@ -493,7 +493,9 @@ class MRNB(nn.Module):
             layer_scale=0.0,
             min_patch_size=4,
             upscale_ratio=0.25,
-            keep_old_scale=False
+            keep_old_scale=False,
+            scale=1,
+            add_image_data_to_all=False
     ):
         super().__init__()
         self.patch_size = patch_sizes[-1]
@@ -511,6 +513,8 @@ class MRNB(nn.Module):
         self.nbhd_size = nbhd_size
         self.upscale_ratio = upscale_ratio
         self.keep_old_scale = keep_old_scale
+        self.scale = scale
+        self.add_image_data_to_all = add_image_data_to_all
 
         num_features = d_model
         self.num_features = num_features
@@ -544,8 +548,17 @@ class MRNB(nn.Module):
 
         #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
         #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
-        input_dim = max(channels, 3 * self.patch_size ** 2)
-        self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
+        if self.add_image_data_to_all:
+            input_dim = channels
+            image_projectors = []
+            for i in range(self.scale + 1):
+                in_dim = 3 * (self.patch_sizes[i]**2)
+                proj = nn.Linear(in_dim, channels)
+                image_projectors.append(proj)
+            self.image_patch_projectors = nn.ModuleList(image_projectors)
+        else:
+            input_dim = max(channels, 3 * self.patch_size ** 2)
+            self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
         self.high_res_norm1 = nn.LayerNorm(input_dim)
         self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels, act_layer=nn.LeakyReLU)
         self.high_res_norm2 = nn.LayerNorm(channels)
@@ -662,6 +675,60 @@ class MRNB(nn.Module):
 
         return tokens
 
+    def add_image_data_to_all_tokens(self, all_tokens, all_pos, max_scale, im):
+        all_tokens_sorted_by_scale = []
+        all_pos_sorted_by_scale = []
+        all_projected_image_features = []
+
+        for scale in range(max_scale + 1):
+            tokens_at_scale, pos_at_scale = self.get_tokens_pos_at_scale(all_tokens, all_pos, scale)
+            image_features = self.get_image_features(pos_at_scale[:, :, 1:], scale, im)
+            all_tokens_sorted_by_scale.append(tokens_at_scale)
+            all_pos_sorted_by_scale.append(pos_at_scale)
+            all_projected_image_features.append(image_features)
+
+        all_tokens_sorted_by_scale = torch.cat(all_tokens_sorted_by_scale, dim=1)
+        all_pos_sorted_by_scale = torch.cat(all_pos_sorted_by_scale, dim=1)
+        all_projected_image_features = torch.cat(all_projected_image_features, dim=1)
+
+        all_projected_image_features = nn.functional.leaky_relu(all_projected_image_features)
+        all_projected_image_features = self.high_res_norm1(all_projected_image_features)
+        all_projected_image_features = self.high_res_mlp(all_projected_image_features)
+        all_projected_image_features = self.high_res_norm2(all_projected_image_features)
+        all_tokens_sorted_by_scale = all_tokens_sorted_by_scale + all_projected_image_features
+
+        return all_tokens_sorted_by_scale, all_pos_sorted_by_scale
+
+
+    def get_tokens_pos_at_scale(self, tokens, pos, scale):
+        B, _, _ = tokens.shape
+        b_scale_idx, n_scale_idx = torch.where(pos[:, :, 0] == scale)
+        coords_at_curr_scale = pos[b_scale_idx, n_scale_idx, :]
+        coords_at_curr_scale = rearrange(coords_at_curr_scale, '(b n) p -> b n p', b=B).contiguous()
+        tokens_at_curr_scale = tokens[b_scale_idx, n_scale_idx, :]
+        tokens_at_curr_scale = rearrange(tokens_at_curr_scale, '(b n) c -> b n c', b=B).contiguous()
+
+        return tokens_at_curr_scale, coords_at_curr_scale
+
+
+    def get_image_features(self, pos, scale, im):
+        b, n, _ = pos.shape
+        patch_size = self.patch_sizes[scale]
+        patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
+        patch_coords = patch_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(pos.device)
+        patch_coords = patch_coords.repeat(b, 1, 1)
+        pos_patches = pos.unsqueeze(2) + patch_coords.unsqueeze(1)
+        pos_patches = pos_patches.view(b, -1, 2)
+        x_pos = pos_patches[..., 0].long()
+        y_pos = pos_patches[..., 1].long()
+        b_ = torch.arange(b).unsqueeze(-1).expand(-1, pos_patches.shape[1])
+        im_high = im[b_, :, y_pos, x_pos]
+        im_high = rearrange(im_high, 'b (n p) c -> b n (p c)', b=b, n=n, c=3)
+        im_high = self.image_patch_projectors[scale](im_high)
+
+        return im_high
+
+
     def upsample_features(self, im, scale, features, features_pos, upsampling_mask):
         old_scale = scale - 1
         feat_curr, pos_curr, feat_old, pos_old, upsampling_mask_curr = self.divide_feat_pos_on_scale(
@@ -675,22 +742,29 @@ class MRNB(nn.Module):
         if self.keep_old_scale:
             all_feat.append(feat_to_split)
             all_pos.append(pos_to_split)
-
             upsampled_feat = self.split_features(feat_to_split.detach().clone())
             upsampled_pos = self.split_pos(pos_to_split.detach().clone(), scale)
 
-            upsampled_feat = self.add_high_res_feat(upsampled_feat, upsampled_pos[:, :, 1:], scale, im)
-
-            all_feat.append(upsampled_feat)
-            all_pos.append(upsampled_pos)
+            if self.add_image_data_to_all:
+                all_feat.append(upsampled_feat)
+                all_pos.append(upsampled_pos)
+                all_feat, all_pos = self.add_image_data_to_all_tokens(all_feat, all_pos, scale, im)
+            else:
+                upsampled_feat = self.add_high_res_feat(upsampled_feat, upsampled_pos[:, :, 1:], scale, im)
+                all_feat.append(upsampled_feat)
+                all_pos.append(upsampled_pos)
         else:
             feat_after_split = self.split_features(feat_to_split)
             pos_after_split = self.split_pos(pos_to_split, scale)
 
-            feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, im)
-
-            all_feat.append(feat_after_split)
-            all_pos.append(pos_after_split)
+            if self.add_image_data_to_all:
+                all_feat.append(feat_after_split)
+                all_pos.append(pos_after_split)
+                all_feat, all_pos = self.add_image_data_to_all_tokens(all_feat, all_pos, scale, im)
+            else:
+                feat_after_split = self.add_high_res_feat(feat_after_split, pos_after_split[:, :, 1:], scale, im)
+                all_feat.append(feat_after_split)
+                all_pos.append(pos_after_split)
 
 
         all_feat = torch.cat(all_feat, dim=1)
@@ -737,6 +811,7 @@ class MixResNeighbour(MRNB, Backbone):
         image_size = cfg.INPUT.CROP.SIZE
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         keep_old_scale = cfg.MODEL.MR.KEEP_OLD_SCALE
+        add_image_data_to_all = cfg.MODEL.MR.ADD_IMAGE_DATA_TO_ALL
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
 
         patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
@@ -772,7 +847,9 @@ class MixResNeighbour(MRNB, Backbone):
             n_scales=n_scales,
             min_patch_size=min_patch_size,
             upscale_ratio=upscale_ratio,
-            keep_old_scale=keep_old_scale
+            keep_old_scale=keep_old_scale,
+            scale=layer_index,
+            add_image_data_to_all=add_image_data_to_all
         )
 
         self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
