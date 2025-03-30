@@ -505,8 +505,8 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
         outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         #print("Mask feature max x: {}, max y: {}".format(mf_pos_scaled[:,:,0].max(), mf_pos_scaled[:,:,1].max()))
         #print("Finest pos max x: {}, max y: {} from finest inp shape {}".format(finest_pos[:,:,0].max(), finest_pos[:,:,1].max(), finest_inp_feat_shape))
-        #pos_indices = find_pos_indices_in_pos(finest_pos, mf_pos_scaled)
-        outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, pred_mask.permute(0, 2, 1)).permute(0, 2, 1)
+        pos_indices = find_pos_indices_in_pos(finest_pos, mf_pos_scaled)
+        outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, pred_mask.permute(0, 2, 1), database_idx=pos_indices).permute(0, 2, 1)
         outputs_mask = point2img(outputs_mask, finest_pos)
         predictions_class.append(outputs_class)
         predictions_mask.append(outputs_mask)
@@ -537,7 +537,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             )
 
             outputs_class, pred_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
-            outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, pred_mask.permute(0, 2, 1)).permute(0, 2, 1)
+            outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, pred_mask.permute(0, 2, 1), database_idx=pos_indices).permute(0, 2, 1)
             outputs_mask = point2img(outputs_mask, finest_pos)
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
