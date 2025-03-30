@@ -691,7 +691,7 @@ class MRNB(nn.Module):
         all_pos_sorted_by_scale = torch.cat(all_pos_sorted_by_scale, dim=1)
         all_projected_image_features = torch.cat(all_projected_image_features, dim=1)
 
-        all_projected_image_features = nn.functional.leaky_relu(all_projected_image_features)
+        #all_projected_image_features = nn.functional.leaky_relu(all_projected_image_features)
         all_projected_image_features = self.high_res_norm1(all_projected_image_features)
         all_projected_image_features = self.high_res_mlp(all_projected_image_features)
         all_projected_image_features = self.high_res_norm2(all_projected_image_features)
@@ -792,7 +792,7 @@ class MRNB(nn.Module):
         for s in range(scale + 1):
             out_idx = self.n_scales - s + 1
             patched_im_size = (H // self.patch_sizes[s], W // self.patch_sizes[s])
-            b_scale_idx, n_scale_idx = torch.where(pos[:,:,0] == s)
+            b_scale_idx, n_scale_idx = torch.where(pos[:, :, 0] == s)
             pos_scale = pos[b_scale_idx, n_scale_idx, :]
             pos_scale = rearrange(pos_scale, '(b n) p -> b n p', b=B).contiguous()
             out_scale = x[b_scale_idx, n_scale_idx, :]

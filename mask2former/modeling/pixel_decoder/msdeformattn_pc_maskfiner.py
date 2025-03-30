@@ -394,12 +394,13 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         transformer_in_channels = [v.channels for k, v in transformer_input_shape]
         self.transformer_feature_strides = [v.stride for k, v in transformer_input_shape]  # to decide extra FPN layers
 
+        force_proj = True
         self.transformer_num_feature_levels = len(self.transformer_in_features)
         if self.transformer_num_feature_levels > 1:
             input_proj_list = []
             # from low resolution to high resolution (res5 -> res2)
             for in_channels in transformer_in_channels[::-1]:
-                if in_channels != conv_dim:
+                if force_proj or in_channels != conv_dim:
                     input_proj_list.append(nn.Sequential(
                         nn.Linear(in_channels, conv_dim, bias=True),
                         nn.LayerNorm(conv_dim)
@@ -412,7 +413,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
                     ))
             self.input_proj = nn.ModuleList(input_proj_list)
         else:
-            if transformer_in_channels[-1] != conv_dim:
+            if force_proj or transformer_in_channels[-1] != conv_dim:
                 self.input_proj = nn.ModuleList([
                     nn.Sequential(
                         nn.Linear(transformer_in_channels[-1], conv_dim, bias=True),
