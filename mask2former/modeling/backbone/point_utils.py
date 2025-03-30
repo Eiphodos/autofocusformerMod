@@ -118,6 +118,17 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
     if database_idx is not None:
         up_features.scatter_(dim=1, index=database_idx.long().expand(-1, -1, c), src=feature)
 
+    # eq[b, i, j] = True if query[b, i] == database[b, j]
+    eq = (query.unsqueeze(2) == database.unsqueeze(1)).all(dim=-1)  # [b, n_q, n_db]
+
+    # For every match, we want up_features[b, i] = feature[b, j]
+    # eq.nonzero(as_tuple=False) gives shape [num_matches, 3] => (b_idx, q_idx, db_idx)
+    matches = eq.nonzero(as_tuple=False)  # returns e.g. [[b_i, q_i, db_i], ...]
+
+    # Overwrite those in up_features
+    for (b_i, q_i, db_i) in matches:
+        up_features[b_i, q_i, :] = feature[b_i, db_i, :]
+
     return up_features
 
 
