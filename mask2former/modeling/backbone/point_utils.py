@@ -281,6 +281,156 @@ def space_filling_cluster(pos, m, h, w, no_reorder=False, sf_type='', use_anchor
             return pos, cluster_mean_pos, member_idx, cluster_mask, pos_ranking
 
 
+def upsample_shepard_cdist(
+        query,
+        database,
+        feature,
+        eps=1e-9
+):
+    """
+    Vectorized approach that:
+      1) Finds which queries exactly/near-exactly match a database position
+      2) *Skips* interpolation for those exact queries
+      3) Interpolates only the non-exact queries in a single batched call
+      4) Reintegrates results so final_features[b,iQ] is either:
+         - The original feature if query[b,iQ] is exact
+         - The interpolated feature otherwise
+    Assumes each batch has the same number 'E' of exact matches.
+
+    Args:
+      query:    (B, nQ, D) positions to upsample
+      database: (B, nDB, D) known positions
+      feature:  (B, nDB, C) features at those positions
+      upsample_fn: function that does interpolation:
+                   upsample_fn(query_sub, database_sub, feature_sub) -> (B, nSub, C)
+      eps:      threshold for "exact" (floating coords). Use eps=0 if integer.
+
+    Returns:
+      final_features: (B, nQ, C)
+    """
+    device = query.device
+    B, nQ, D = query.shape
+    B2, nDB, D2 = database.shape
+    B3, nDB2, C = feature.shape
+    assert B == B2 == B3, "Batch dimension mismatch"
+    assert D == D2, "Position dimension mismatch"
+    assert nDB == nDB2, "Database vs. feature mismatch"
+
+    # ------------------------------------------------------------
+    # 1) Identify which queries are "exact" matches.
+    #    We'll say min distance < eps => "exact match"
+    #    cdist => shape [B, nQ, nDB]
+    # ------------------------------------------------------------
+    dists = torch.cdist(query, database)  # [B, nQ, nDB]
+    min_dists, min_idxs = dists.min(dim=2)  # both => [B, nQ]
+    exact_mask = (min_dists < eps)  # bool [B, nQ]
+
+    # Verify each batch has the same number E of exact matches
+    # (User has told us that is guaranteed, but let's check for safety.)
+    exact_counts = exact_mask.sum(dim=1)  # [B], number of exact matches per batch
+    E = exact_counts[0].item()
+    if not bool((exact_counts == E).all()):
+        raise ValueError("Not all batches have the same # of exact matches, but it was assumed!")
+    # So each batch has exactly E exact queries => nQ-E non-exact.
+
+    # ------------------------------------------------------------
+    # 2) We'll reorder each batch so that the "non-exact" queries come first
+    #    Then we can easily slice out the first (nQ - E) as the sub-tensor.
+    #
+    #    Trick:
+    #      - Make an index array [0..nQ-1]
+    #      - Sort it so that the "non-exact" queries come first,
+    #        preserving their original order among themselves (stable sort).
+    # ------------------------------------------------------------
+    idx_arange = torch.arange(nQ, device=device).unsqueeze(0).expand(B, nQ)  # (B, nQ)
+    # Convert exact_mask to an int, so "non-exact" = 1, "exact" = 0
+    # and use that as a high-level sorting key.
+    # We want the non-exact queries to appear first => bigger "sort key".
+    sort_key = (~exact_mask).to(torch.int64)  # shape (B, nQ), has 1 for non-exact, 0 for exact
+
+    # Combine with original index to keep stable ordering among queries that share the same sort_key:
+    # We'll multiply the primary key by a large enough factor to ensure it dominates,
+    # then add the original index as a tiebreaker for stability.
+    # e.g. if nQ <= 65535, we can do:
+    #   combined_key = sort_key * 100000 + idx_arange
+    # or simply something bigger than nQ:
+    combined_key = sort_key * (nQ + 1) + idx_arange
+
+    # Sort ascending => those with bigger combined_key come last,
+    # but we want non-exact (sort_key=1) first.
+    # So we can either invert the logic or simply sort descending:
+    # If you do descending => non-exact (sort_key=1) get bigger keys than exact (sort_key=0),
+    # so they'll come first.
+    sorted_indices = combined_key.argsort(dim=1, descending=True)  # (B, nQ)
+
+    # The first (nQ - E) entries in `sorted_indices` are the non‐exact queries for each batch
+    # The last E entries are the exact queries for each batch
+    nonexact_count = nQ - E
+
+    idx_nonexact = sorted_indices[:, :nonexact_count]  # (B, nQ-E)
+    idx_exact = sorted_indices[:, nonexact_count:]  # (B, E)
+
+    # ------------------------------------------------------------
+    # 3) Gather the non-exact queries => shape (B, nQ-E, D)
+    #    Then do one big interpolation call.
+    # ------------------------------------------------------------
+    # Expand for gather:
+    gather_idx_nonexact = idx_nonexact.unsqueeze(-1).expand(-1, -1, D)  # (B, nQ-E, D)
+    # Gather from 'query'
+    query_nonexact = torch.gather(query, dim=1, index=gather_idx_nonexact)
+
+    # We do the same for 'database' and 'feature' if your upsample_fn expects (B, nDB, D)/(B, nDB, C) for each batch.
+    # Typically your upsample_fn can just see the full database. So:
+    #   upsample_fn(query_nonexact, database, feature) -> (B, nQ-E, C)
+    # If your upsample_fn uses KNN, it will internally do partial computations only for these queries.
+
+    up_features_nonexact = upsample_feature_shepard(query_nonexact, database, feature)  # (B, nQ-E, C)
+
+    # ------------------------------------------------------------
+    # 4) Build the final output of shape (B, nQ, C).
+    #    We'll fill in:
+    #      - the non-exacts from up_features_nonexact
+    #      - the exact matches from 'feature' at the right db index
+    # ------------------------------------------------------------
+    final_features = torch.empty(B, nQ, C, device=device, dtype=feature.dtype)
+
+    # (a) Scatter the interpolation results for non‐exact queries
+    # We want final_features[b, idx_nonexact[b], :] = up_features_nonexact[b, :, :]
+    gather_idx_nonexact_c = idx_nonexact.unsqueeze(-1).expand(-1, -1, C)  # (B, nQ-E, C)
+    final_features.scatter_(dim=1, index=gather_idx_nonexact_c, src=up_features_nonexact)
+
+    # (b) For exact queries, copy from the original 'feature' using min_idxs
+    #     Because for an exact query iQ, min_idxs[b,iQ] = that DB index
+    #     We'll gather the matching features => shape (B, nQ, C),
+    #     then scatter that into final_features only at the exact spots.
+    #
+    # We'll do it in a single advanced-index step.
+    # First gather from feature => shape (B, nQ, C)
+    # We can gather all at once, then we only scatter the exact ones.
+    # But let's do it more directly:
+
+    # Build a flat view:
+    b_arange = torch.arange(B, device=device).unsqueeze(1).expand(B, nQ)  # (B, nQ)
+    # Flatten everything to 1D to do advanced indexing
+    b_flat = b_arange.reshape(-1)  # (B*nQ)
+    iQ_flat = torch.arange(nQ, device=device).unsqueeze(0).expand(B, nQ).reshape(-1)  # (B*nQ)
+    db_flat = min_idxs.reshape(-1)  # (B*nQ)
+    mask_flat = exact_mask.reshape(-1)  # bool (B*nQ)
+
+    # We can gather all features in one shot => feature[b_flat, db_flat], shape (B*nQ, C),
+    # then apply the mask.
+    matched_feats = feature[b_flat, db_flat]  # (B*nQ, C)
+    # matched_feats[mask_flat] are the features for the "exact" queries.
+
+    # Now place them into final_features in a single shot.
+    # final_features[b_flat[mask_flat], iQ_flat[mask_flat]] = matched_feats[mask_flat]
+    # We'll do that with advanced indexing:
+    final_features[b_flat[mask_flat], iQ_flat[mask_flat]] = matched_feats[mask_flat]
+
+    return final_features
+
+
+
 def calculate_peano_order(h, w, pos):
     """
     Given height and width of the canvas and position of tokens,
