@@ -115,6 +115,9 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
         nn_features = feature.gather(index=nn_idx.view(b, -1).unsqueeze(2).expand(-1, -1, c), dim=1).reshape(b, n, k, c)
         up_features = nn_features.mul(nn_weights.unsqueeze(3).expand(-1, -1, -1, c)).sum(dim=2)  # b x n x c
 
+    if database_idx is not None:
+         up_features.scatter_(dim=1, index=database_idx.long().expand(-1, -1, c), src=feature)
+
     return up_features
 
 
