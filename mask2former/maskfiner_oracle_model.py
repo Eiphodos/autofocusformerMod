@@ -546,13 +546,12 @@ class MaskFinerOracle(nn.Module):
         B,N,C = pos.shape
         patch_size = self.mask_predictors[level].backbone.patch_size
         disagreement_map = []
-        pos_level = self.get_pos_at_scale(pos, level)
-        print("Subsequent pos level shape: {}".format(pos_level.shape))
-        n_scale = pos_level.shape[1]
+        #pos_level = self.get_pos_at_scale(pos, level)
+        print("Subsequent pos shape: {}".format(pos.shape))
         for batch in range(B):
             targets_batch = targets[batch].squeeze()
             print("Subsequent oracle target shape: {}".format(targets_batch.shape))
-            pos_batch = pos_level[batch][:,1:]
+            pos_batch = pos[batch][:,1:]
             p_org = (pos_batch * self.mask_predictors[level].backbone.min_patch_size).long()
             patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
             patch_coords = patch_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(pos.device)
@@ -561,7 +560,7 @@ class MaskFinerOracle(nn.Module):
             x_pos = pos_patches[..., 0].long()
             y_pos = pos_patches[..., 1].long()
             targets_patched = targets_batch[y_pos, x_pos]
-            targets_patched = rearrange(targets_patched, '(n p) -> n p', n=n_scale)
+            targets_patched = rearrange(targets_patched, '(n p) -> n p', n=N)
             print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
             targets_shifted = (targets_patched.byte() + 1).long()
             histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=151).sum(dim=1)
@@ -569,6 +568,7 @@ class MaskFinerOracle(nn.Module):
             print("Subsequent histogram shape: {}".format(histogram.shape))
             disagreement = 1 - self.gini(histogram.float())
             print("Subsequent disagreement shape: {}".format(disagreement.shape))
+            disagreement[pos[batch][:, 0] != level] = 0
             disagreement_map.append(disagreement)
         disagreement_map_tensor = torch.stack(disagreement_map)
 
