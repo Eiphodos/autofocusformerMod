@@ -332,9 +332,9 @@ class MaskFinerOracle(nn.Module):
         h_pad, w_pad = images.tensor.shape[-2:]
         new_targets = []
         print("image shape for preparation is: {}".format(images.tensor.shape))
-        print("target shape for preparation is: {}".format(targets.shape))
         for targets_per_image in targets:
             # pad gt
+            print("target shape for preparation is: {}".format(targets_per_image.shape))
             padded_masks = torch.zeros((targets_per_image.shape[0], h_pad, w_pad), dtype=targets_per_image.dtype, device=targets_per_image.device)
             padded_masks = padded_masks + 255
             padded_masks[:, : targets_per_image.shape[1], : targets_per_image.shape[2]] = targets_per_image
