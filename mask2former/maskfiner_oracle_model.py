@@ -517,7 +517,7 @@ class MaskFinerOracle(nn.Module):
             print("Initial patched target shape: {}".format(targets_patched.shape))
             for patch in range(targets_patched.shape[0]):
                 unique_classes, unique_counts = torch.unique(targets_patched[patch], return_counts=True)
-                unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts)))])
+                unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts))).to(unique_counts.device)], dim=0)
                 disagreement = 1 - self.gini(unique_counts_all_classes.float())
                 disagreement_map_batch.append(disagreement)
             disagreement_map_batch_tensor = torch.cat(disagreement_map_batch, dim=0)
@@ -541,7 +541,7 @@ class MaskFinerOracle(nn.Module):
                     p_org = p * self.mask_predictors[0].backbone.min_patch_size
                     patch = targets_batch[p_org[1]:p_org[1]+patch_size, p_org[0]:p_org[0]+patch_size]
                     unique_classes, unique_counts = torch.unique(patch, return_counts=True)
-                    unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts)))])
+                    unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts))).to(unique_counts.device)])
                     disagreement = 1 - self.gini(unique_counts_all_classes.float())
                 disagreement_map_batch.append(disagreement)
             disagreement_map_batch_tensor = torch.cat(disagreement_map_batch, dim=0)
