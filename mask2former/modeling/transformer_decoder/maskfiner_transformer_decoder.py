@@ -611,7 +611,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             for i, c in enumerate(cls_unique):
                 batch_cls_mask = outputs_mask[b, cls_i[b] == c].sum(dim=0)
                 disagreement_mask_b[:, i] = batch_cls_mask
-            disagreement_mask[b, :] = self.gini(disagreement_mask)
+            disagreement_mask[b, :] = self.gini(disagreement_mask_b)
 
         return disagreement_mask
 
