@@ -213,7 +213,7 @@ class MaskFinerOracle(nn.Module):
         outputs['aux_outputs'] = []
 
         sem_seg_gt = [x["sem_seg"].to(self.device) for x in batched_inputs]
-        sem_seg_gt = self.prepare_oracle_targets(self, sem_seg_gt, images)
+        sem_seg_gt = self.prepare_oracle_targets(sem_seg_gt, images)
 
         for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
