@@ -538,11 +538,11 @@ class MaskFinerOracle(nn.Module):
             for p in pos[batch]:
                 #print("pos is {}".format(p))
                 if p[0] != level:
-                    disagreement = 0
+                    disagreement = torch.tensor([0]).to(pos.device)
                 else:
-                    p_org = p * self.mask_predictors[level].backbone.min_patch_size
+                    p_org = (p * self.mask_predictors[level].backbone.min_patch_size).long()
                     #print("pos org is {}".format(p_org))
-                    patch = targets_batch[p_org[1]:p_org[1]+patch_size, p_org[0]:p_org[0]+patch_size]
+                    patch = targets_batch[p_org[2]:p_org[2]+patch_size, p_org[1]:p_org[1]+patch_size]
                     unique_classes, unique_counts = torch.unique(patch, return_counts=True)
                     unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts))).to(unique_counts.device)])
                     disagreement = 1 - self.gini(unique_counts_all_classes.float())
