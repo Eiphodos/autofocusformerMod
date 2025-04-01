@@ -217,7 +217,7 @@ class MaskFinerOracle(nn.Module):
 
         for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
-            print("Original upsampling mask shape for layer {} is {}".format(l_idx, upsampling_mask.shape))
+            #print("Original upsampling mask shape for layer {} is {}".format(l_idx, upsampling_mask.shape))
             if l_idx == 0:
                 upsampling_mask = self.generate_initial_oracle_upsampling_mask(sem_seg_gt)
             else:
@@ -331,15 +331,15 @@ class MaskFinerOracle(nn.Module):
     def prepare_oracle_targets(self, targets, images):
         h_pad, w_pad = images.tensor.shape[-2:]
         new_targets = []
-        print("image shape for preparation is: {}".format(images.tensor.shape))
+        #print("image shape for preparation is: {}".format(images.tensor.shape))
         for targets_per_image in targets:
             # pad gt
-            print("target shape for preparation is: {}".format(targets_per_image.shape))
+            #print("target shape for preparation is: {}".format(targets_per_image.shape))
             padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype, device=targets_per_image.device)
             padded_masks = padded_masks + 255
             padded_masks[: targets_per_image.shape[0], : targets_per_image.shape[1]] = targets_per_image
             new_targets.append(padded_masks)
-            print("padded shape is {}".format(padded_masks.shape))
+            #print("padded shape is {}".format(padded_masks.shape))
         return new_targets
 
     def semantic_inference(self, mask_cls, mask_pred):
@@ -526,7 +526,7 @@ class MaskFinerOracle(nn.Module):
         disagreement_map = []
         for batch in range(len(targets)):
             targets_batch = targets[batch].squeeze()
-            print("Initial oracle target shape: {}".format(targets_batch.shape))
+            #print("Initial oracle target shape: {}".format(targets_batch.shape))
             H, W = targets_batch.shape
             targets_patched = rearrange(targets_batch, '(hp ph) (wp pw) -> (hp wp) (ph pw)', ph=patch_size,
                                         pw=patch_size, hp=H // patch_size, wp=W // patch_size)
@@ -534,12 +534,12 @@ class MaskFinerOracle(nn.Module):
             targets_shifted = (targets_patched.byte() + 1).long()
             histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=151).sum(dim=1)
             histogram = histogram[:, 1:]
-            print("Initial histogram shape: {}".format(targets_batch.shape))
+            #print("Initial histogram shape: {}".format(targets_batch.shape))
             disagreement = 1 - self.gini(histogram.float())
-            print("Initial disagreement shape: {}".format(disagreement.shape))
+            #print("Initial disagreement shape: {}".format(disagreement.shape))
             disagreement_map.append(disagreement)
         disagreement_map_tensor = torch.stack(disagreement_map)
-        print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
+        #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map_tensor
 
     def generate_subsequent_oracle_upsampling_mask(self, targets, pos, level):
@@ -547,10 +547,10 @@ class MaskFinerOracle(nn.Module):
         patch_size = self.mask_predictors[level].backbone.patch_size
         disagreement_map = []
         #pos_level = self.get_pos_at_scale(pos, level)
-        print("Subsequent pos shape: {}".format(pos.shape))
+        #print("Subsequent pos shape: {}".format(pos.shape))
         for batch in range(B):
             targets_batch = targets[batch].squeeze()
-            print("Subsequent oracle target shape: {}".format(targets_batch.shape))
+            #print("Subsequent oracle target shape: {}".format(targets_batch.shape))
             pos_batch = pos[batch][:,1:]
             p_org = (pos_batch * self.mask_predictors[level].backbone.min_patch_size).long()
             patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
@@ -561,18 +561,18 @@ class MaskFinerOracle(nn.Module):
             y_pos = pos_patches[..., 1].long()
             targets_patched = targets_batch[y_pos, x_pos]
             targets_patched = rearrange(targets_patched, '(n p) -> n p', n=N)
-            print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
+            #print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
             targets_shifted = (targets_patched.byte() + 1).long()
             histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=151).sum(dim=1)
             histogram = histogram[:, 1:]
-            print("Subsequent histogram shape: {}".format(histogram.shape))
+            #print("Subsequent histogram shape: {}".format(histogram.shape))
             disagreement = 1 - self.gini(histogram.float())
-            print("Subsequent disagreement shape: {}".format(disagreement.shape))
+            #print("Subsequent disagreement shape: {}".format(disagreement.shape))
             disagreement[pos[batch][:, 0] != level] = 0
             disagreement_map.append(disagreement)
         disagreement_map_tensor = torch.stack(disagreement_map)
 
-        print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
+        #print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map_tensor
 
     def gini(self, class_counts):
