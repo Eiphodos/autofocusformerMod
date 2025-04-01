@@ -527,19 +527,18 @@ class MaskFinerOracle(nn.Module):
         return all_disagreement_maps
 
     def generate_subsequent_oracle_upsampling_mask(self, targets, pos, level):
-        targets = targets.squeeze()
-        B,H,W = targets.shape()
         B,N,C = pos.shape()
         patch_size = self.mask_predictors[level].backbone.patch_size
         disagreement_map = []
         for batch in range(B):
             disagreement_map_batch = []
+            targets_batch = targets[batch].squeeze()
             for p in pos[batch]:
                 if p[0] != level:
                     disagreement = 0
                 else:
                     p_org = p * self.mask_predictors[0].backbone.min_patch_size
-                    patch = targets[batch, p_org[1]:p_org[1]+patch_size, p_org[0]:p_org[0]+patch_size]
+                    patch = targets_batch[p_org[1]:p_org[1]+patch_size, p_org[0]:p_org[0]+patch_size]
                     unique_classes, unique_counts = torch.unique(patch, return_counts=True)
                     unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts)))])
                     disagreement = 1 - self.gini(unique_counts_all_classes.float())
