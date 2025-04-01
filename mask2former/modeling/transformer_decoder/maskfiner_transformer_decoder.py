@@ -604,19 +604,20 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
     def create_disagreement_mask(self, outputs_mask, outputs_class):
         b, q, n = outputs_mask.shape
         cls_i = outputs_class.argmax(dim=-1)
-        disagreement_mask = torch.zeros(b, n, 150, requires_grad=True).to(outputs_mask.device)
+        disagreement_mask = torch.zeros(b, n, requires_grad=True).to(outputs_mask.device)
         for b in range(cls_i.shape[0]):
-            for c in range(150):
+            cls_unique = torch.unique(cls_i)
+            disagreement_mask_b = torch.zeros(n, len(cls_unique)).to(outputs_mask.device)
+            for i, c in enumerate(cls_unique):
                 batch_cls_mask = outputs_mask[b, cls_i[b] == c].sum(dim=0)
-                disagreement_mask[b, :, c] = batch_cls_mask
-
-        disagreement_mask = self.gini(disagreement_mask)
+                disagreement_mask_b[:, i] = batch_cls_mask
+            disagreement_mask[b, :] = self.gini(disagreement_mask)
 
         return disagreement_mask
 
     def gini(self, disagreement_mask):
-        mad = torch.abs(disagreement_mask.unsqueeze(2) - disagreement_mask.unsqueeze(3)).mean(dim=(2, 3))
-        rmad = mad / disagreement_mask.mean(dim=2)
+        mad = torch.abs(disagreement_mask.unsqueeze(1) - disagreement_mask.unsqueeze(2)).mean(dim=(1, 2))
+        rmad = mad / disagreement_mask.mean(dim=1)
         g = 0.5 * rmad
         return g
 
