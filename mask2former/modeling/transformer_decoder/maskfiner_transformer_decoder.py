@@ -542,7 +542,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
 
-        disagreement_mask = self.create_disagreement_mask4(pred_mask)
+        disagreement_mask = self.create_disagreement_mask(pred_mask)
         #disagreement_mask = self.zero_edges(disagreement_mask, disagreement_pos_scaled_no_fix, finest_inp_feat_shape[0], finest_inp_feat_shape[1])
 
         assert len(predictions_class) == self.num_layers + 1
@@ -604,14 +604,21 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
     def create_disagreement_mask(self, outputs_mask, outputs_class):
         b, q, n = outputs_mask.shape
         cls_i = outputs_class.argmax(dim=-1)
-        disagreement_mask = torch.zeros(b, n, requires_grad=True).to(outputs_mask.device)
+        disagreement_mask = torch.zeros(b, n, 150, requires_grad=True).to(outputs_mask.device)
         for b in range(cls_i.shape[0]):
-            for c in cls_i[b].unique():
+            for c in range(150):
                 batch_cls_mask = outputs_mask[b, cls_i[b] == c].sum(dim=0)
-                #batch_cls_mask = (batch_cls_mask > 0.5).int()
-                disagreement_mask[b] = disagreement_mask[b] + batch_cls_mask
-        #print("Number of unique classes in sample 0: {}".format(len(cls_i[0].unique())))
+                disagreement_mask[b, :, c] = batch_cls_mask
+
+        disagreement_mask = self.gini(disagreement_mask)
+
         return disagreement_mask
+
+    def gini(self, disagreement_mask):
+        mad = torch.abs(disagreement_mask.unsqueeze(2) - disagreement_mask.unsqueeze(3)).mean(dim=(2, 3))
+        rmad = mad / disagreement_mask.mean(dim=2)
+        g = 0.5 * rmad
+        return g
 
     def zero_edges(self, disagreement_mask, disagreement_pos, max_height, max_width):
         disagreement_mask[disagreement_pos[..., 0] == 0] = 0
