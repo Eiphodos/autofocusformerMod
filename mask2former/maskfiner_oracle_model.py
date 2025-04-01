@@ -506,25 +506,24 @@ class MaskFinerOracle(nn.Module):
 
 
     def generate_initial_oracle_upsampling_mask(self, targets):
-        targets = targets.squeeze()
-        B,H,W = targets.shape()
-        all_disagreement_maps = []
-        for s in len(self.mask_predictors) - 1:
-            patch_size = self.mask_predictors[s].backbone.patch_size
-            disagreement_map = []
-            targets_patched = rearrange(targets, 'b (hp ph) (wp pw) -> b (hp wp) (ph pw)', ph=patch_size, pw=patch_size, hp=H//patch_size, wp=W//patch_size)
-            for batch in range(B):
-                disagreement_map_batch = []
-                for patch in range(targets_patched.shape[1]):
-                    unique_classes, unique_counts = torch.unique(targets_patched[batch, patch], return_counts=True)
-                    disagreement = len(unique_counts) * (1 - torch.nn.functional.normalize(unique_counts.float(), dim=0).var())
-                    disagreement_map_batch.append(disagreement)
-                disagreement_map_batch_tensor = torch.cat(disagreement_map_batch, dim=0)
-                disagreement_map.append(disagreement_map_batch_tensor)
-            disagreement_map_tensor = torch.stack(disagreement_map)
-            all_disagreement_maps.append(disagreement_map_tensor)
+        patch_size = self.mask_predictors[0].backbone.patch_size
+        disagreement_map = []
+        for batch in range(len(targets)):
+            disagreement_map_batch = []
+            targets_batch = targets[batch].squeeze()
+            H, W = targets_batch.shape()
+            targets_patched = rearrange(targets_batch, '(hp ph) (wp pw) -> (hp wp) (ph pw)', ph=patch_size,
+                                        pw=patch_size, hp=H // patch_size, wp=W // patch_size)
+            for patch in range(targets_patched.shape[0]):
+                unique_classes, unique_counts = torch.unique(targets_patched[patch], return_counts=True)
+                unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts)))])
+                disagreement = 1 - self.gini(unique_counts_all_classes.float())
+                disagreement_map_batch.append(disagreement)
+            disagreement_map_batch_tensor = torch.cat(disagreement_map_batch, dim=0)
+            disagreement_map.append(disagreement_map_batch_tensor)
+        disagreement_map_tensor = torch.stack(disagreement_map)
 
-        return all_disagreement_maps
+        return disagreement_map_tensor
 
     def generate_subsequent_oracle_upsampling_mask(self, targets, pos, level):
         B,N,C = pos.shape()
