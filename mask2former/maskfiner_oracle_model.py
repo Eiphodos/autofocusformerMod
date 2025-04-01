@@ -552,7 +552,7 @@ class MaskFinerOracle(nn.Module):
         return disagreement_map_tensor
 
     def gini(self, class_counts):
-        mad = torch.abs(class_counts.unqueeze(0) - class_counts.unsqueeze(1)).mean()
+        mad = torch.abs(class_counts.unsqueeze(0) - class_counts.unsqueeze(1)).mean()
         rmad = mad / class_counts.mean()
         g = 0.5 * rmad
         return g
