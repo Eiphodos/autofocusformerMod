@@ -212,15 +212,14 @@ class MaskFinerOracle(nn.Module):
         outputs['pred_logits'] = None
         outputs['aux_outputs'] = []
 
-        gt_instances = [x["instances"].to(self.device) for x in batched_inputs]
-        targets = self.prepare_targets(gt_instances, images)
+        sem_seg_gt = [x["sem_seg"].to(self.device) for x in batched_inputs]
 
         for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
             if l_idx == 0:
-                upsampling_mask = self.generate_initial_oracle_upsampling_mask(targets)
+                upsampling_mask = self.generate_initial_oracle_upsampling_mask(sem_seg_gt)
             else:
-                upsampling_mask = self.generate_subsequent_oracle_upsampling_mask(targets, features_pos, l_idx)
+                upsampling_mask = self.generate_subsequent_oracle_upsampling_mask(sem_seg_gt, features_pos, l_idx)
 
             dm = {}
             dm["disagreement_mask_{}".format(l_idx)] = upsampling_mask
