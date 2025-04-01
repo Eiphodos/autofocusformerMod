@@ -216,7 +216,7 @@ class MaskFinerOracle(nn.Module):
 
         for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
-            print("Original upsampling mask shape for layer {} is {}".format(upsampling_mask.shape, l_idx))
+            print("Original upsampling mask shape for layer {} is {}".format(l_idx, upsampling_mask.shape))
             if l_idx == 0:
                 upsampling_mask = self.generate_initial_oracle_upsampling_mask(sem_seg_gt)
             else:
@@ -536,12 +536,12 @@ class MaskFinerOracle(nn.Module):
             targets_batch = targets[batch].squeeze()
             print("Subsequent oracle target shape: {}".format(targets_batch.shape))
             for p in pos[batch]:
-                #print("pos is {}".format(print(p)))
+                #print("pos is {}".format(p))
                 if p[0] != level:
                     disagreement = 0
                 else:
                     p_org = p * self.mask_predictors[level].backbone.min_patch_size
-                    #print("pos org is {}".format(print(p_org)))
+                    #print("pos org is {}".format(p_org))
                     patch = targets_batch[p_org[1]:p_org[1]+patch_size, p_org[0]:p_org[0]+patch_size]
                     unique_classes, unique_counts = torch.unique(patch, return_counts=True)
                     unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts))).to(unique_counts.device)])
