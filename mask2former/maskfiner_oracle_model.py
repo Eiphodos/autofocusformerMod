@@ -531,7 +531,7 @@ class MaskFinerOracle(nn.Module):
             targets_patched = rearrange(targets_batch, '(hp ph) (wp pw) -> (hp wp) (ph pw)', ph=patch_size,
                                         pw=patch_size, hp=H // patch_size, wp=W // patch_size)
             #print("Initial patched target shape: {}".format(targets_patched.shape))
-            targets_shifted = (targets_patched.byte() + 1).float()
+            targets_shifted = (targets_patched.byte() + 1).long()
             histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=151).sum(dim=1)
             histogram = histogram[:, 1:]
             print("Initial histogram shape: {}".format(targets_batch.shape))
@@ -563,7 +563,7 @@ class MaskFinerOracle(nn.Module):
             targets_patched = targets_batch[y_pos, x_pos]
             targets_patched = rearrange(targets_patched, '(n p) -> n p', n=n_scale)
             print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
-            targets_shifted = (targets_patched.byte() + 1).float()
+            targets_shifted = (targets_patched.byte() + 1).long()
             histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=151).sum(dim=1)
             histogram = histogram[:, 1:]
             print("Subsequent histogram shape: {}".format(histogram.shape))
