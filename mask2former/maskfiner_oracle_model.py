@@ -565,10 +565,12 @@ class MaskFinerOracle(nn.Module):
             targets_shifted = (targets_patched.byte() + 1).long()
             histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=151).sum(dim=1)
             histogram = histogram[:, 1:]
+            histogram = torch.div(histogram, histogram.sum(dim=1).unsqueeze(1))
             #print("Subsequent histogram shape: {}".format(histogram.shape))
             disagreement = 1 - self.gini(histogram.float())
             #print("Subsequent disagreement shape: {}".format(disagreement.shape))
             disagreement[pos[batch][:, 0] != level] = 0
+            disagreement[(targets_shifted == 0).all(dim=1)] = 0
             disagreement_map.append(disagreement)
         disagreement_map_tensor = torch.stack(disagreement_map)
 
