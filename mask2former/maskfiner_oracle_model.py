@@ -511,7 +511,7 @@ class MaskFinerOracle(nn.Module):
             disagreement_map_batch = []
             targets_batch = targets[batch].squeeze()
             print("Initial oracle target shape: {}".format(targets_batch.shape))
-            H, W = targets_batch.shape()
+            H, W = targets_batch.shape
             targets_patched = rearrange(targets_batch, '(hp ph) (wp pw) -> (hp wp) (ph pw)', ph=patch_size,
                                         pw=patch_size, hp=H // patch_size, wp=W // patch_size)
             print("Initial patched target shape: {}".format(targets_patched.shape))
@@ -527,7 +527,7 @@ class MaskFinerOracle(nn.Module):
         return disagreement_map_tensor
 
     def generate_subsequent_oracle_upsampling_mask(self, targets, pos, level):
-        B,N,C = pos.shape()
+        B,N,C = pos.shape
         patch_size = self.mask_predictors[level].backbone.patch_size
         disagreement_map = []
         for batch in range(B):
