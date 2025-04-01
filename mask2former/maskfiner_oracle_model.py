@@ -509,7 +509,7 @@ class MaskFinerOracle(nn.Module):
         disagreement_map = []
         for batch in range(len(targets)):
             disagreement_map_batch = []
-            targets_batch = targets[batch]["sem_seg"].squeeze()
+            targets_batch = targets[batch].squeeze()
             print("Initial oracle target shape: {}".format(targets_batch.shape))
             H, W = targets_batch.shape()
             targets_patched = rearrange(targets_batch, '(hp ph) (wp pw) -> (hp wp) (ph pw)', ph=patch_size,
@@ -532,7 +532,7 @@ class MaskFinerOracle(nn.Module):
         disagreement_map = []
         for batch in range(B):
             disagreement_map_batch = []
-            targets_batch = targets[batch]["sem_seg"].squeeze()
+            targets_batch = targets[batch].squeeze()
             print("Subsequent oracle target shape: {}".format(targets_batch.shape))
             for p in pos[batch]:
                 if p[0] != level:
