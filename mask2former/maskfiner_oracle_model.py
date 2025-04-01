@@ -520,7 +520,7 @@ class MaskFinerOracle(nn.Module):
                 unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts))).to(unique_counts.device)], dim=0)
                 disagreement = 1 - self.gini(unique_counts_all_classes.float())
                 disagreement_map_batch.append(disagreement)
-            disagreement_map_batch_tensor = torch.cat(disagreement_map_batch, dim=0)
+            disagreement_map_batch_tensor = torch.stack(disagreement_map_batch)
             disagreement_map.append(disagreement_map_batch_tensor)
         disagreement_map_tensor = torch.stack(disagreement_map)
         print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
@@ -544,7 +544,7 @@ class MaskFinerOracle(nn.Module):
                     unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts))).to(unique_counts.device)])
                     disagreement = 1 - self.gini(unique_counts_all_classes.float())
                 disagreement_map_batch.append(disagreement)
-            disagreement_map_batch_tensor = torch.cat(disagreement_map_batch, dim=0)
+            disagreement_map_batch_tensor = torch.stack(disagreement_map_batch)
             disagreement_map.append(disagreement_map_batch_tensor)
         disagreement_map_tensor = torch.stack(disagreement_map)
 
