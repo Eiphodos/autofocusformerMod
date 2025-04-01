@@ -610,6 +610,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             disagreement_mask_b = torch.zeros(n, len(cls_unique)).to(outputs_mask.device)
             for i, c in enumerate(cls_unique):
                 batch_cls_mask = outputs_mask[b, cls_i[b] == c].sum(dim=0)
+                batch_cls_mask = nn.functional.sigmoid(batch_cls_mask)
                 disagreement_mask_b[:, i] = batch_cls_mask
             disagreement_mask[b, :] = self.gini(disagreement_mask_b)
 
