@@ -510,10 +510,12 @@ class MaskFinerOracle(nn.Module):
         disagreement_map = []
         for batch in range(len(targets)):
             disagreement_map_batch = []
-            targets_batch = targets[batch].squeeze()
+            targets_batch = targets[batch]["sem_seg"].squeeze()
+            print("Initial oracle target shape: {}".format(targets_batch.shape))
             H, W = targets_batch.shape()
             targets_patched = rearrange(targets_batch, '(hp ph) (wp pw) -> (hp wp) (ph pw)', ph=patch_size,
                                         pw=patch_size, hp=H // patch_size, wp=W // patch_size)
+            print("Initial patched target shape: {}".format(targets_patched.shape))
             for patch in range(targets_patched.shape[0]):
                 unique_classes, unique_counts = torch.unique(targets_patched[patch], return_counts=True)
                 unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts)))])
@@ -522,7 +524,7 @@ class MaskFinerOracle(nn.Module):
             disagreement_map_batch_tensor = torch.cat(disagreement_map_batch, dim=0)
             disagreement_map.append(disagreement_map_batch_tensor)
         disagreement_map_tensor = torch.stack(disagreement_map)
-
+        print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map_tensor
 
     def generate_subsequent_oracle_upsampling_mask(self, targets, pos, level):
@@ -531,7 +533,8 @@ class MaskFinerOracle(nn.Module):
         disagreement_map = []
         for batch in range(B):
             disagreement_map_batch = []
-            targets_batch = targets[batch].squeeze()
+            targets_batch = targets[batch]["sem_seg"].squeeze()
+            print("Subsequent oracle target shape: {}".format(targets_batch.shape))
             for p in pos[batch]:
                 if p[0] != level:
                     disagreement = 0
@@ -545,6 +548,8 @@ class MaskFinerOracle(nn.Module):
             disagreement_map_batch_tensor = torch.cat(disagreement_map_batch, dim=0)
             disagreement_map.append(disagreement_map_batch_tensor)
         disagreement_map_tensor = torch.stack(disagreement_map)
+
+        print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map_tensor
 
     def gini(self, class_counts):
