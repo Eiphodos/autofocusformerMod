@@ -542,7 +542,7 @@ class MultiScaleMaskFinerTransformerDecoder(nn.Module):
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
 
-        disagreement_mask = self.create_disagreement_mask(pred_mask)
+        disagreement_mask = self.create_disagreement_mask(pred_mask, outputs_class)
         #disagreement_mask = self.zero_edges(disagreement_mask, disagreement_pos_scaled_no_fix, finest_inp_feat_shape[0], finest_inp_feat_shape[1])
 
         assert len(predictions_class) == self.num_layers + 1
