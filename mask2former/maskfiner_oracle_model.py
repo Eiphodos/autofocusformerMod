@@ -518,6 +518,7 @@ class MaskFinerOracle(nn.Module):
             print("Initial patched target shape: {}".format(targets_patched.shape))
             for patch in range(targets_patched.shape[0]):
                 unique_classes, unique_counts = torch.unique(targets_patched[patch], return_counts=True)
+                print("Number of unique classes in initial patches: {}".format(unique_classes.shape))
                 unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts))).to(unique_counts.device)], dim=0)
                 disagreement = 1 - self.gini(unique_counts_all_classes.float())
                 disagreement_map_batch.append(disagreement)
@@ -531,6 +532,7 @@ class MaskFinerOracle(nn.Module):
         B,N,C = pos.shape
         patch_size = self.mask_predictors[level].backbone.patch_size
         disagreement_map = []
+        #pos_level = self.get_pos_at_scale(pos, level)
         for batch in range(B):
             disagreement_map_batch = []
             targets_batch = targets[batch].squeeze()
@@ -544,7 +546,7 @@ class MaskFinerOracle(nn.Module):
                     #print("pos org is {}".format(p_org))
                     patch = targets_batch[p_org[2]:p_org[2]+patch_size, p_org[1]:p_org[1]+patch_size]
                     unique_classes, unique_counts = torch.unique(patch, return_counts=True)
-                    unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(150 - len(unique_counts))).to(unique_counts.device)])
+                    unique_counts_all_classes = torch.cat([unique_counts, torch.tensor([0]*(10 - len(unique_counts))).to(unique_counts.device)])
                     disagreement = 1 - self.gini(unique_counts_all_classes.float())
                 disagreement_map_batch.append(disagreement)
             disagreement_map_batch_tensor = torch.stack(disagreement_map_batch)
@@ -559,3 +561,11 @@ class MaskFinerOracle(nn.Module):
         rmad = mad / class_counts.mean()
         g = 0.5 * rmad
         return g
+
+    def get_pos_at_scale(self, pos, scale):
+        B, _, _ = pos.shape
+        b_scale_idx, n_scale_idx = torch.where(pos[:, :, 0] == scale)
+        coords_at_curr_scale = pos[b_scale_idx, n_scale_idx, :]
+        coords_at_curr_scale = rearrange(coords_at_curr_scale, '(b n) p -> b n p', b=B).contiguous()
+
+        return coords_at_curr_scale
