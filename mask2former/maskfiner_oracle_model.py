@@ -528,6 +528,7 @@ class MaskFinerOracle(nn.Module):
             targets_batch = targets[batch].squeeze()
             #print("Initial oracle target shape: {}".format(targets_batch.shape))
             H, W = targets_batch.shape
+            targets_batch = self.fix_borders(targets_batch)
             targets_patched = rearrange(targets_batch, '(hp ph) (wp pw) -> (hp wp) (ph pw)', ph=patch_size,
                                         pw=patch_size, hp=H // patch_size, wp=W // patch_size)
             #print("Initial patched target shape: {}".format(targets_patched.shape))
@@ -552,6 +553,7 @@ class MaskFinerOracle(nn.Module):
         #print("Subsequent pos shape: {}".format(pos.shape))
         for batch in range(B):
             targets_batch = targets[batch].squeeze()
+            targets_batch = self.fix_borders(targets_batch)
             #print("Subsequent oracle target shape: {}".format(targets_batch.shape))
             pos_batch = pos[batch][:,1:]
             p_org = (pos_batch * self.mask_predictors[level].backbone.min_patch_size).long()
@@ -592,3 +594,12 @@ class MaskFinerOracle(nn.Module):
         coords_at_curr_scale = rearrange(coords_at_curr_scale, '(b n) p -> b n p', b=B).contiguous()
 
         return coords_at_curr_scale
+
+    def fix_borders(self, targets, border=5, pad_val=254):
+        H, W = targets.shape
+        targets[0:border, :][targets[0:border, :] == 0] = pad_val
+        targets[H - border:, :][targets[H - border:, :] == 0] = pad_val
+        targets[:, 0:border][targets[:, 0:border] == 0] = pad_val
+        targets[:, W - border:][targets[:, W - border:] == 0] = pad_val
+
+        return targets
