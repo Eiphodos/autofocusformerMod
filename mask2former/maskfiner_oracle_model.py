@@ -336,7 +336,7 @@ class MaskFinerOracle(nn.Module):
             # pad gt
             #print("target shape for preparation is: {}".format(targets_per_image.shape))
             padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype, device=targets_per_image.device)
-            padded_masks = padded_masks + 255
+            padded_masks = padded_masks + 254
             padded_masks[: targets_per_image.shape[0], : targets_per_image.shape[1]] = targets_per_image
             new_targets.append(padded_masks)
             #print("padded shape is {}".format(padded_masks.shape))
@@ -531,11 +531,13 @@ class MaskFinerOracle(nn.Module):
             targets_patched = rearrange(targets_batch, '(hp ph) (wp pw) -> (hp wp) (ph pw)', ph=patch_size,
                                         pw=patch_size, hp=H // patch_size, wp=W // patch_size)
             #print("Initial patched target shape: {}".format(targets_patched.shape))
-            targets_shifted = (targets_patched.byte() + 1).long()
-            histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=151).sum(dim=1)
+            targets_shifted = (targets_patched.byte() + 2).long()
+            histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=152).sum(dim=1)
             histogram = histogram[:, 1:]
+            histogram = torch.div(histogram, histogram.sum(dim=1).unsqueeze(1))
             #print("Initial histogram shape: {}".format(targets_batch.shape))
             disagreement = 1 - self.gini(histogram.float())
+            disagreement[(targets_shifted == 0).all(dim=1)] = 0
             #print("Initial disagreement shape: {}".format(disagreement.shape))
             disagreement_map.append(disagreement)
         disagreement_map_tensor = torch.stack(disagreement_map)
@@ -562,8 +564,8 @@ class MaskFinerOracle(nn.Module):
             targets_patched = targets_batch[y_pos, x_pos]
             targets_patched = rearrange(targets_patched, '(n p) -> n p', n=N)
             #print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
-            targets_shifted = (targets_patched.byte() + 1).long()
-            histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=151).sum(dim=1)
+            targets_shifted = (targets_patched.byte() + 2).long()
+            histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=152).sum(dim=1)
             histogram = histogram[:, 1:]
             histogram = torch.div(histogram, histogram.sum(dim=1).unsqueeze(1))
             #print("Subsequent histogram shape: {}".format(histogram.shape))
