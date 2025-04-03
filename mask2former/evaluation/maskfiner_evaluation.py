@@ -74,7 +74,7 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
         for k, v in disagreement_masks_only_dict.items():
             ml_out = outp[k]
             scale = k[-1]
-            plt.imsave(os.path.join(inference_out_dir, fn + '_disagreement_mask_{}.png'.format(scale)), np.asarray(ml_out), cmap='afmhot')
+            plt.imsave(os.path.join(inference_out_dir, fn + '_' + k + '.png'), np.asarray(ml_out), cmap='afmhot')
 
 
     def save_input_image(self, image_tensor, fp):

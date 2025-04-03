@@ -154,6 +154,7 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MASK_FINER.CLASS_WEIGHT = 1.0
     cfg.MODEL.MASK_FINER.DICE_WEIGHT = 1.0
     cfg.MODEL.MASK_FINER.MASK_WEIGHT = 20.0
+    cfg.MODEL.MASK_FINER.UPSAMPLING_WEIGHT = 10
 
     # transformer config
     cfg.MODEL.MASK_FINER.NHEADS = [8, 8, 8, 8]
@@ -197,6 +198,9 @@ def add_maskformer2_config(cfg):
     # Importance sampling parameter for PointRend point sampling during training. Parametr `beta` in
     # the original paper.
     cfg.MODEL.MASK_FINER.IMPORTANCE_SAMPLE_RATIO = 0.75
+
+    # Oracle teacher config
+    cfg.MODEL.MASK_FINER.ORACLE_TEACHER_RATIO=0.5
 
     # NOTE: maskformer2 extra configs
     # transformer module
