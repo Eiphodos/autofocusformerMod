@@ -557,7 +557,7 @@ class MaskFinerOracle(nn.Module):
                                         pw=patch_size, hp=H // patch_size, wp=W // patch_size)
             #print("Initial patched target shape: {}".format(targets_patched.shape))
             targets_shifted = (targets_patched.byte() + 2).long()
-            disagreement = self.count_edge_pixels_per_patch(self, targets_shifted)
+            disagreement = self.count_edge_pixels_per_patch(targets_shifted)
             disagreement_map.append(disagreement)
         disagreement_map_tensor = torch.stack(disagreement_map)
         #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
@@ -622,7 +622,7 @@ class MaskFinerOracle(nn.Module):
             targets_patched = rearrange(targets_patched, '(n ph, pw) -> n ph pw', n=N, ph=patch_size, pw=patch_size)
             #print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
             targets_shifted = (targets_patched.byte() + 2).long()
-            disagreement = self.count_edge_pixels_per_patch(self, targets_shifted)
+            disagreement = self.count_edge_pixels_per_patch(targets_shifted)
             disagreement_map.append(disagreement)
         disagreement_map_tensor = torch.stack(disagreement_map)
 
