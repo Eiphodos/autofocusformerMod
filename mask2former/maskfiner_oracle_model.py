@@ -213,15 +213,15 @@ class MaskFinerOracle(nn.Module):
         outputs['aux_outputs'] = []
 
         sem_seg_gt = [x["sem_seg"].to(self.device) for x in batched_inputs]
-        sem_seg_gt = self.prepare_oracle_targets(sem_seg_gt, images)
+        sem_seg_gt, target_pad = self.prepare_oracle_targets(sem_seg_gt, images)
 
         for l_idx in range(len(self.mask_predictors)):
             outs, features, features_pos, upsampling_mask = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
             #print("Original upsampling mask shape for layer {} is {}".format(l_idx, upsampling_mask.shape))
             if l_idx == 0:
-                upsampling_mask = self.generate_initial_oracle_upsampling_mask_edge(sem_seg_gt)
+                upsampling_mask = self.generate_initial_oracle_upsampling_mask_edge(sem_seg_gt, target_pad)
             else:
-                upsampling_mask = self.generate_subsequent_oracle_upsampling_mask_edge(sem_seg_gt, features_pos, l_idx)
+                upsampling_mask = self.generate_subsequent_oracle_upsampling_mask_edge(sem_seg_gt, features_pos, l_idx, target_pad)
 
             dm = {}
             dm["disagreement_mask_{}".format(l_idx)] = upsampling_mask
@@ -331,8 +331,12 @@ class MaskFinerOracle(nn.Module):
     def prepare_oracle_targets(self, targets, images):
         h_pad, w_pad = images.tensor.shape[-2:]
         new_targets = []
+        pad_height_width = []
         #print("image shape for preparation is: {}".format(images.tensor.shape))
         for targets_per_image in targets:
+            h_pad_n = h_pad - targets_per_image.shape[0]
+            w_pad_n = w_pad - targets_per_image.shape[1]
+            pad_height_width.append((h_pad_n, w_pad_n))
             # pad gt
             #print("target shape for preparation is: {}".format(targets_per_image.shape))
             padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype, device=targets_per_image.device)
@@ -340,7 +344,7 @@ class MaskFinerOracle(nn.Module):
             padded_masks[: targets_per_image.shape[0], : targets_per_image.shape[1]] = targets_per_image
             new_targets.append(padded_masks)
             #print("padded shape is {}".format(padded_masks.shape))
-        return new_targets
+        return new_targets, pad_height_width
 
     def semantic_inference(self, mask_cls, mask_pred):
         mask_cls = F.softmax(mask_cls, dim=-1)[..., :-1]
@@ -545,15 +549,14 @@ class MaskFinerOracle(nn.Module):
         #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map_tensor
 
-    def generate_initial_oracle_upsampling_mask_edge(self, targets):
+    def generate_initial_oracle_upsampling_mask_edge(self, targets, targets_pad):
         patch_size = self.mask_predictors[0].backbone.patch_size
         disagreement_map = []
         for batch in range(len(targets)):
             targets_batch = targets[batch].squeeze()
-            #print("Initial oracle target shape: {}".format(targets_batch.shape))
-            H, W = targets_batch.shape
             targets_shifted = (targets_batch.byte() + 2).long()
-            border_mask = self.get_border_ignore_mask(targets_batch, border_size=10, class_id=1)
+            pad_h, pad_w = targets_pad[batch]
+            border_mask = self.get_ignore_mask(targets_shifted, pad_h, pad_w)
             edge_mask = self.compute_edge_mask_with_ignores(targets_shifted, border_mask)
             disagreement = self.count_edges_per_patch_masked(edge_mask, patch_size=patch_size)
             disagreement_map.append(disagreement)
@@ -598,7 +601,7 @@ class MaskFinerOracle(nn.Module):
         return disagreement_map_tensor
 
 
-    def generate_subsequent_oracle_upsampling_mask_edge(self, targets, pos, level):
+    def generate_subsequent_oracle_upsampling_mask_edge(self, targets, pos, level, targets_pad):
         B,N,C = pos.shape
         patch_size = self.mask_predictors[level].backbone.patch_size
         disagreement_map = []
@@ -606,8 +609,11 @@ class MaskFinerOracle(nn.Module):
         #print("Subsequent pos shape: {}".format(pos.shape))
         for batch in range(B):
             targets_batch = targets[batch].squeeze()
-            targets_batch = self.fix_borders(targets_batch)
-            #print("Subsequent oracle target shape: {}".format(targets_batch.shape))
+            targets_shifted = (targets_batch.byte() + 2).long()
+            pad_h, pad_w = targets_pad[batch]
+            border_mask = self.get_ignore_mask(targets_shifted, pad_h, pad_w)
+            edge_mask = self.compute_edge_mask_with_ignores(targets_shifted, border_mask)
+
             pos_batch = pos[batch][:,1:]
             p_org = (pos_batch * self.mask_predictors[level].backbone.min_patch_size).long()
             patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
@@ -616,11 +622,12 @@ class MaskFinerOracle(nn.Module):
             pos_patches = pos_patches.view(-1, 2)
             x_pos = pos_patches[..., 0].long()
             y_pos = pos_patches[..., 1].long()
-            targets_patched = targets_batch[y_pos, x_pos]
-            targets_patched = rearrange(targets_patched, '(n ph pw) -> n ph pw', n=N, ph=patch_size, pw=patch_size)
+
+            edge_mask_patched = edge_mask[y_pos, x_pos]
+            edge_mask_patched = rearrange(edge_mask_patched, '(n ph pw) -> n ph pw', n=N, ph=patch_size, pw=patch_size)
             #print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
-            targets_shifted = (targets_patched.byte() + 2).long()
-            disagreement = self.count_edge_pixels_per_patch(targets_shifted)
+
+            disagreement = edge_mask_patched.sum(dim=(1, 2))
             disagreement_map.append(disagreement)
         disagreement_map_tensor = torch.stack(disagreement_map)
 
@@ -654,41 +661,47 @@ class MaskFinerOracle(nn.Module):
         patches = patches.reshape(-1, P, P)
         return patches.sum(dim=(1, 2))
 
-    def get_border_ignore_mask(self, label_map, border_size=10, class_id=0):
+    def get_ignore_mask(self, label_map, pad_h, pad_w, border_size=5):
         H, W = label_map.shape
-        mask_ignore = (label_map == class_id)
+        usable_h = H - pad_h
+        usable_w = W - pad_w
 
+        ignore_mask = (label_map == 0)
         border_mask = torch.zeros_like(label_map, dtype=torch.bool)
-        border_mask[:border_size, :] = True
-        border_mask[-border_size:, :] = True
-        border_mask[:, :border_size] = True
-        border_mask[:, -border_size:] = True
+        border_mask[:border_size, :usable_w] = True
+        border_mask[usable_h - border_size:usable_h, :usable_w] = True
+        border_mask[:usable_h, :border_size] = True
+        border_mask[:usable_h, usable_w - border_size:usable_w] = True
 
-        # Class 0 pixels within B pixels of the border
-        return mask_ignore & border_mask
+        class1_mask = (label_map == 1)
+        ignore_mask |= class1_mask & border_mask
+        return ignore_mask
 
-    def compute_edge_mask_with_ignores(self ,label_map, border_class1_mask):
+    def compute_edge_mask_with_ignores(self, label_map, ignore_mask):
         H, W = label_map.shape
         edge_mask = torch.zeros_like(label_map, dtype=torch.bool)
 
-        # Check neighbors and apply ignore rules
-        def should_keep_edge(a, b, b_mask):
-            # keep edge only if a != b AND b is not class 0 AND (b != class 1 near border)
-            not_class_0 = b != 0
-            not_border_class_1 = ~((b == 1) & b_mask)
-            return (a != b) & not_class_0 & not_border_class_1
+        # Top neighbor (i, j) vs (i-1, j)
+        valid = (~ignore_mask[1:, :]) & (~ignore_mask[:-1, :])
+        diff = label_map[1:, :] != label_map[:-1, :]
+        edge_mask[1:, :] |= valid & diff
 
-        # Top neighbor (b = pixel above)
-        edge_mask[1:, :] |= should_keep_edge(label_map[1:, :], label_map[:-1, :], border_class1_mask[:-1, :])
         # Bottom neighbor
-        edge_mask[:-1, :] |= should_keep_edge(label_map[:-1, :], label_map[1:, :], border_class1_mask[1:, :])
+        valid = (~ignore_mask[:-1, :]) & (~ignore_mask[1:, :])
+        diff = label_map[:-1, :] != label_map[1:, :]
+        edge_mask[:-1, :] |= valid & diff
+
         # Left neighbor
-        edge_mask[:, 1:] |= should_keep_edge(label_map[:, 1:], label_map[:, :-1], border_class1_mask[:, :-1])
+        valid = (~ignore_mask[:, 1:]) & (~ignore_mask[:, :-1])
+        diff = label_map[:, 1:] != label_map[:, :-1]
+        edge_mask[:, 1:] |= valid & diff
+
         # Right neighbor
-        edge_mask[:, :-1] |= should_keep_edge(label_map[:, :-1], label_map[:, 1:], border_class1_mask[:, 1:])
+        valid = (~ignore_mask[:, :-1]) & (~ignore_mask[:, 1:])
+        diff = label_map[:, :-1] != label_map[:, 1:]
+        edge_mask[:, :-1] |= valid & diff
 
         return edge_mask
-
 
     def gini(self, class_counts):
         mad = torch.abs(class_counts.unsqueeze(1) - class_counts.unsqueeze(2)).mean(dim=(1, 2))
