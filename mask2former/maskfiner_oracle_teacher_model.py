@@ -260,7 +260,7 @@ class MaskFinerOracleTeacher(nn.Module):
                 disagreement_masks_pred.append(dm_pred)
                 dm_oracle["disagreement_mask_oracle_{}".format(l_idx)] = upsampling_mask_oracle
                 dm_oracle["disagreement_mask_oracle_pos_{}".format(l_idx)] = features_pos
-                disagreement_masks_pred.append(dm_oracle)
+                disagreement_masks_oracle.append(dm_oracle)
 
                 outputs['upsampling_outputs'].append(outs["upsampling_mask_{}".format(l_idx)])
 
