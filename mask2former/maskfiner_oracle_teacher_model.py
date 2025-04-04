@@ -235,9 +235,9 @@ class MaskFinerOracleTeacher(nn.Module):
         upsampling_targets = []
 
         for l_idx in range(len(self.mask_predictors)):
-            outs, features, features_pos  = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
+            outs, features, features_pos = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
             if l_idx < len(self.mask_predictors) - 1:
-                upsampling_mask_pred = outs["upsampling_mask_".format(l_idx)]
+                upsampling_mask_pred = outs["upsampling_mask_{}".format(l_idx)]
                 #print("Original upsampling mask shape for layer {} is {}".format(l_idx, upsampling_mask.shape))
                 if l_idx == 0:
                     upsampling_mask_oracle = self.generate_initial_oracle_upsampling_mask(sem_seg_gt)
