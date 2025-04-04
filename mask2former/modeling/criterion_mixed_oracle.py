@@ -97,7 +97,7 @@ def rmse_loss(
         Loss tensor
     """
     loss = F.mse_loss(inputs, targets)
-    loss = loss + eps
+    loss = torch.add(loss, eps)
     loss = torch.sqrt(loss)
     return loss
 
@@ -105,6 +105,17 @@ def rmse_loss(
 rmse_loss_jit = torch.jit.script(
     rmse_loss
 )  # type: torch.jit.ScriptModule
+
+
+class RMSELoss(nn.Module):
+    def __init__(self, eps=1e-6):
+        super().__init__()
+        self.mse = nn.MSELoss()
+        self.eps = eps
+
+    def forward(self, yhat, y):
+        loss = torch.sqrt(self.mse(yhat, y) + self.eps)
+        return loss
 
 
 def calculate_uncertainty(logits):
@@ -310,7 +321,7 @@ class SetCriterionMixOracle(nn.Module):
         if "upsampling_outputs" in outputs:
             for i, (upsampling_output, upsampling_target) in enumerate(zip(outputs["upsampling_outputs"], upsampling_targets)):
                 #print("Computing upsampling mse loss between {} and {}".format(upsampling_output.shape, upsampling_target.shape))
-                up_loss = rmse_loss(upsampling_output, upsampling_target, 1e-6)
+                up_loss = rmse_loss_jit(upsampling_output, upsampling_target, 1e-6)
                 up_l_dict = {"loss_upsampling_{}".format(i): up_loss}
                 losses.update(up_l_dict)
 
