@@ -716,12 +716,3 @@ class MaskFinerOracle(nn.Module):
         coords_at_curr_scale = rearrange(coords_at_curr_scale, '(b n) p -> b n p', b=B).contiguous()
 
         return coords_at_curr_scale
-
-    def fix_borders(self, targets, border=5, pad_val=254):
-        H, W = targets.shape
-        targets[0:border, :][targets[0:border, :] == 0] = pad_val
-        targets[H - border:, :][targets[H - border:, :] == 0] = pad_val
-        targets[:, 0:border][targets[:, 0:border] == 0] = pad_val
-        targets[:, W - border:][targets[:, W - border:] == 0] = pad_val
-
-        return targets

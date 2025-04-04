@@ -200,7 +200,7 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MASK_FINER.IMPORTANCE_SAMPLE_RATIO = 0.75
 
     # Oracle teacher config
-    cfg.MODEL.MASK_FINER.ORACLE_TEACHER_RATIO=0.5
+    cfg.MODEL.MASK_FINER.ORACLE_TEACHER_RATIO = 0.5
 
     # NOTE: maskformer2 extra configs
     # transformer module

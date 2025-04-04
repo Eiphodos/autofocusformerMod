@@ -64,6 +64,26 @@ sigmoid_ce_loss_jit = torch.jit.script(
 )  # type: torch.jit.ScriptModule
 
 
+def mse_loss(
+        inputs: torch.Tensor,
+        targets: torch.Tensor):
+    """
+    Args:
+        inputs: A float tensor of arbitrary shape.
+                The predictions for each example.
+        targets: A float tensor with the same shape as inputs.
+    Returns:
+        Loss tensor
+    """
+    loss = F.mse_loss(inputs, targets)
+    return loss
+
+
+mse_loss_jit = torch.jit.script(
+    mse_loss
+)  # type: torch.jit.ScriptModule
+
+
 def calculate_uncertainty(logits):
     """
     We estimate uncerainty as L1 distance between 0.0 and the logit prediction in 'logits' for the
@@ -266,7 +286,10 @@ class SetCriterionMixOracle(nn.Module):
                     losses.update(l_dict)
         if "upsampling_outputs" in outputs:
             for i, upsampling_outputs in enumerate(outputs["upsampling_outputs"]):
-                l_dict = self.loss_upsampling(upsampling_outputs, )
+                print("Computing upsampling mse loss between {} and {}".format(upsampling_outputs.shape, upsampling_targets.shape))
+                up_loss = mse_loss_jit(upsampling_outputs, upsampling_targets)
+                up_l_dict = {"loss_upsampling_{}".format(i): up_loss}
+                losses.update(up_l_dict)
 
         if temperature is not None:
             l_dict = {'loss_l1': temperature}

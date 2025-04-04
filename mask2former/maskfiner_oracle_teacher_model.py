@@ -137,13 +137,13 @@ class MaskFinerOracleTeacher(nn.Module):
                 aux_weight_dict.update({k + f"_{i}": v for k, v in weight_dict.items()})
             weight_dict.update(aux_weight_dict)
 
-            up_layers = sum(cfg.MODEL.MASK_FINER.DEC_LAYERS[:-1]) - len(cfg.MODEL.MASK_FINER.DEC_LAYERS[:-1])
+            up_layers = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES - 1
             up_dict = {}
             for i in range(up_layers):
-                up_dict.update({"upsampling_weight_{}".format(i): upsampling_weight})
+                up_dict.update({"loss_upsampling_{}".format(i): upsampling_weight})
             weight_dict.update(up_dict)
         else:
-            up_dict = {"upsampling_weight": upsampling_weight}
+            up_dict = {"loss_upsampling": upsampling_weight}
             weight_dict.update(up_dict)
 
         losses = ["labels", "masks"]
@@ -233,37 +233,39 @@ class MaskFinerOracleTeacher(nn.Module):
         upsampling_targets = []
 
         for l_idx in range(len(self.mask_predictors)):
-            outs, features, features_pos, upsampling_mask_pred = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
-            #print("Original upsampling mask shape for layer {} is {}".format(l_idx, upsampling_mask.shape))
-            if l_idx == 0:
-                upsampling_mask_oracle = self.generate_initial_oracle_upsampling_mask(sem_seg_gt)
-            else:
-                upsampling_mask_oracle = self.generate_subsequent_oracle_upsampling_mask(sem_seg_gt, features_pos,
-                                                                                         l_idx)
-            if self.training and random.random() < self.oracle_teacher_ratio:
-                upsampling_mask = upsampling_mask_oracle
-            else:
-                upsampling_mask = upsampling_mask_pred
+            outs, features, features_pos  = self.mask_predictors[l_idx](images.tensor, l_idx, features, features_pos, upsampling_mask)
+            if l_idx < len(self.mask_predictors) - 1:
+                upsampling_mask_pred = outs["upsampling_mask_".format(l_idx)]
+                #print("Original upsampling mask shape for layer {} is {}".format(l_idx, upsampling_mask.shape))
+                if l_idx == 0:
+                    upsampling_mask_oracle = self.generate_initial_oracle_upsampling_mask(sem_seg_gt)
+                else:
+                    upsampling_mask_oracle = self.generate_subsequent_oracle_upsampling_mask(sem_seg_gt, features_pos,
+                                                                                             l_idx)
+                if self.training and random.random() < self.oracle_teacher_ratio:
+                    upsampling_mask = upsampling_mask_oracle
+                else:
+                    upsampling_mask = upsampling_mask_pred
 
-            upsampling_targets.append(upsampling_mask_oracle)
+                upsampling_targets.append(upsampling_mask_oracle)
 
-            dm_pred = {}
-            dm_pred["disagreement_mask_pred_{}".format(l_idx)] = upsampling_mask_pred
-            #B, _, _ = features_pos.shape
-            #b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
-            #dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
-            #dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
-            dm_pred["disagreement_mask_pred_pos_{}".format(l_idx)] = features_pos
-            disagreement_masks_pred.append(dm_pred)
+                dm_pred = {}
+                dm_pred["disagreement_mask_pred_{}".format(l_idx)] = upsampling_mask_pred
+                #B, _, _ = features_pos.shape
+                #b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
+                #dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
+                #dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
+                dm_pred["disagreement_mask_pred_pos_{}".format(l_idx)] = features_pos
+                disagreement_masks_pred.append(dm_pred)
 
-            dm_oracle = {}
-            dm_oracle["disagreement_mask_oracle_{}".format(l_idx)] = upsampling_mask_oracle
-            #B, _, _ = features_pos.shape
-            #b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
-            #dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
-            #dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
-            dm_oracle["disagreement_mask_oracle_pos_{}".format(l_idx)] = features_pos
-            disagreement_masks_pred.append(dm_oracle)
+                dm_oracle = {}
+                dm_oracle["disagreement_mask_oracle_{}".format(l_idx)] = upsampling_mask_oracle
+                #B, _, _ = features_pos.shape
+                #b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
+                #dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
+                #dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
+                dm_oracle["disagreement_mask_oracle_pos_{}".format(l_idx)] = features_pos
+                disagreement_masks_pred.append(dm_oracle)
 
             outputs['aux_outputs'] = outputs['aux_outputs'] + outs['aux_outputs']
             outputs['upsampling_outputs'] = outputs['upsampling_outputs'] + outs['upsampling_outputs']
@@ -562,8 +564,7 @@ class MaskFinerOracleTeacher(nn.Module):
 
         return dis_mask_at_scale, dis_pos_at_scale
 
-
-    def generate_initial_oracle_upsampling_mask(self, targets):
+    def generate_initial_oracle_upsampling_mask_gini(self, targets):
         patch_size = self.mask_predictors[0].backbone.patch_size
         disagreement_map = []
         for batch in range(len(targets)):
@@ -587,7 +588,23 @@ class MaskFinerOracleTeacher(nn.Module):
         #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map_tensor
 
-    def generate_subsequent_oracle_upsampling_mask(self, targets, pos, level):
+    def generate_initial_oracle_upsampling_mask_edge(self, targets, targets_pad):
+        patch_size = self.mask_predictors[0].backbone.patch_size
+        disagreement_map = []
+        for batch in range(len(targets)):
+            targets_batch = targets[batch].squeeze()
+            targets_shifted = (targets_batch.byte() + 2).long()
+            pad_h, pad_w = targets_pad[batch]
+            border_mask = self.get_ignore_mask(targets_shifted, pad_h, pad_w)
+            edge_mask = self.compute_edge_mask_with_ignores(targets_shifted, border_mask)
+            disagreement = self.count_edges_per_patch_masked(edge_mask, patch_size=patch_size)
+            disagreement_map.append(disagreement)
+        disagreement_map = torch.stack(disagreement_map)
+        disagreement_map = (disagreement_map - disagreement_map.mean()) / disagreement_map.var().sqrt()
+        #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
+        return disagreement_map
+
+    def generate_subsequent_oracle_upsampling_mask_gini(self, targets, pos, level):
         B,N,C = pos.shape
         patch_size = self.mask_predictors[level].backbone.patch_size
         disagreement_map = []
@@ -622,6 +639,108 @@ class MaskFinerOracleTeacher(nn.Module):
 
         #print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map_tensor
+
+    def generate_subsequent_oracle_upsampling_mask_edge(self, targets, pos, level, targets_pad):
+        B,N,C = pos.shape
+        patch_size = self.mask_predictors[level].backbone.patch_size
+        disagreement_map = []
+        #pos_level = self.get_pos_at_scale(pos, level)
+        #print("Subsequent pos shape: {}".format(pos.shape))
+        for batch in range(B):
+            targets_batch = targets[batch].squeeze()
+            targets_shifted = (targets_batch.byte() + 2).long()
+            pad_h, pad_w = targets_pad[batch]
+            border_mask = self.get_ignore_mask(targets_shifted, pad_h, pad_w)
+            edge_mask = self.compute_edge_mask_with_ignores(targets_shifted, border_mask)
+
+            pos_batch = pos[batch][:,1:]
+            p_org = (pos_batch * self.mask_predictors[level].backbone.min_patch_size).long()
+            patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
+            patch_coords = patch_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(pos.device)
+            pos_patches = p_org.unsqueeze(1) + patch_coords.unsqueeze(0)
+            pos_patches = pos_patches.view(-1, 2)
+            x_pos = pos_patches[..., 0].long()
+            y_pos = pos_patches[..., 1].long()
+
+            edge_mask_patched = edge_mask[y_pos, x_pos]
+            edge_mask_patched = rearrange(edge_mask_patched, '(n ph pw) -> n ph pw', n=N, ph=patch_size, pw=patch_size)
+            #print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
+
+            disagreement = edge_mask_patched.sum(dim=(1, 2))
+            disagreement_map.append(disagreement)
+        disagreement_map = torch.stack(disagreement_map)
+        disagreement_map = (disagreement_map - disagreement_map.mean()) / disagreement_map.var().sqrt()
+
+        #print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
+        return disagreement_map
+
+
+    def count_edge_pixels_per_patch(self, patches):
+        B, PH, PW = patches.shape
+        # Ignores edges on borders of the image.
+        edge_top = patches[:, 1:, :] != patches[:, :-1, :]
+        edge_bottom = edge_top
+        edge_left = patches[:, :, 1:] != patches[:, :, :-1]
+        edge_right = edge_left
+
+        edge_mask = torch.zeros_like(patches, dtype=torch.bool)
+        edge_mask[:, 1:, :] |= edge_top
+        edge_mask[:, :-1, :] |= edge_bottom
+        edge_mask[:, :, 1:] |= edge_left
+        edge_mask[:, :, :-1] |= edge_right
+
+        edge_pixel_counts = edge_mask.view(B, -1).sum(dim=1)
+
+        return edge_pixel_counts
+
+    def count_edges_per_patch_masked(self, edge_mask, patch_size):
+        H, W = edge_mask.shape
+        P = patch_size
+        patches = edge_mask.view(H // P, P, W // P, P).permute(0, 2, 1, 3)
+        patches = patches.reshape(-1, P, P)
+        return patches.sum(dim=(1, 2))
+
+    def get_ignore_mask(self, label_map, pad_h, pad_w, border_size=5):
+        H, W = label_map.shape
+        usable_h = H - pad_h
+        usable_w = W - pad_w
+
+        ignore_mask = (label_map == 0)
+        border_mask = torch.zeros_like(label_map, dtype=torch.bool)
+        border_mask[:border_size, :usable_w] = True
+        border_mask[usable_h - border_size:usable_h, :usable_w] = True
+        border_mask[:usable_h, :border_size] = True
+        border_mask[:usable_h, usable_w - border_size:usable_w] = True
+
+        class1_mask = (label_map == 1)
+        ignore_mask |= class1_mask & border_mask
+        return ignore_mask
+
+    def compute_edge_mask_with_ignores(self, label_map, ignore_mask):
+        H, W = label_map.shape
+        edge_mask = torch.zeros_like(label_map, dtype=torch.bool)
+
+        # Top neighbor (i, j) vs (i-1, j)
+        valid = (~ignore_mask[1:, :]) & (~ignore_mask[:-1, :])
+        diff = label_map[1:, :] != label_map[:-1, :]
+        edge_mask[1:, :] |= valid & diff
+
+        # Bottom neighbor
+        valid = (~ignore_mask[:-1, :]) & (~ignore_mask[1:, :])
+        diff = label_map[:-1, :] != label_map[1:, :]
+        edge_mask[:-1, :] |= valid & diff
+
+        # Left neighbor
+        valid = (~ignore_mask[:, 1:]) & (~ignore_mask[:, :-1])
+        diff = label_map[:, 1:] != label_map[:, :-1]
+        edge_mask[:, 1:] |= valid & diff
+
+        # Right neighbor
+        valid = (~ignore_mask[:, :-1]) & (~ignore_mask[:, 1:])
+        diff = label_map[:, :-1] != label_map[:, 1:]
+        edge_mask[:, :-1] |= valid & diff
+
+        return edge_mask
 
     def gini(self, class_counts):
         mad = torch.abs(class_counts.unsqueeze(1) - class_counts.unsqueeze(2)).mean(dim=(1, 2))

@@ -14,4 +14,5 @@ from .pixel_decoder.msdeformattn_pc_maskfiner import MSDeformAttnPixelDecoderMas
 from .pixel_decoder.msdeformattn_pc import MSDeformAttnPixelDecoder
 from .pixel_decoder.msdeformattn_up_pc import MSDeformAttnPixelDecoderUp
 from .meta_arch.mask_predictor import MaskPredictor
+from .meta_arch.mask_predictor_oracle_teacher import MaskPredictorOracleTeacher
 from .meta_arch.mask_former_head import MaskFormerHead
