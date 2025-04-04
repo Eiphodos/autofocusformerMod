@@ -285,9 +285,9 @@ class SetCriterionMixOracle(nn.Module):
                     l_dict = {k + f"_{i}": v for k, v in l_dict.items()}
                     losses.update(l_dict)
         if "upsampling_outputs" in outputs:
-            for i, upsampling_outputs in enumerate(outputs["upsampling_outputs"]):
-                print("Computing upsampling mse loss between {} and {}".format(upsampling_outputs.shape, upsampling_targets.shape))
-                up_loss = mse_loss_jit(upsampling_outputs, upsampling_targets)
+            for i, (upsampling_output, upsampling_target) in enumerate(zip(outputs["upsampling_outputs"], upsampling_targets)):
+                print("Computing upsampling mse loss between {} and {}".format(upsampling_output.shape, upsampling_target.shape))
+                up_loss = mse_loss_jit(upsampling_output, upsampling_target)
                 up_l_dict = {"loss_upsampling_{}".format(i): up_loss}
                 losses.update(up_l_dict)
 
