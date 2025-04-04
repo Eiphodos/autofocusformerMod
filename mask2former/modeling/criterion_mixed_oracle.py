@@ -84,6 +84,26 @@ mse_loss_jit = torch.jit.script(
 )  # type: torch.jit.ScriptModule
 
 
+def rmse_loss(
+        inputs: torch.Tensor,
+        targets: torch.Tensor):
+    """
+    Args:
+        inputs: A float tensor of arbitrary shape.
+                The predictions for each example.
+        targets: A float tensor with the same shape as inputs.
+    Returns:
+        Loss tensor
+    """
+    loss = torch.sqrt(F.mse_loss(inputs, targets) + 1e-6)
+    return loss
+
+
+rmse_loss_jit = torch.jit.script(
+    rmse_loss
+)  # type: torch.jit.ScriptModule
+
+
 def calculate_uncertainty(logits):
     """
     We estimate uncerainty as L1 distance between 0.0 and the logit prediction in 'logits' for the
@@ -287,7 +307,7 @@ class SetCriterionMixOracle(nn.Module):
         if "upsampling_outputs" in outputs:
             for i, (upsampling_output, upsampling_target) in enumerate(zip(outputs["upsampling_outputs"], upsampling_targets)):
                 #print("Computing upsampling mse loss between {} and {}".format(upsampling_output.shape, upsampling_target.shape))
-                up_loss = mse_loss_jit(upsampling_output, upsampling_target)
+                up_loss = rmse_loss_jit(upsampling_output, upsampling_target)
                 up_l_dict = {"loss_upsampling_{}".format(i): up_loss}
                 losses.update(up_l_dict)
 
