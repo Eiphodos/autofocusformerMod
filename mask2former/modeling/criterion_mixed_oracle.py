@@ -84,6 +84,26 @@ mse_loss_jit = torch.jit.script(
 )  # type: torch.jit.ScriptModule
 
 
+def mae_loss(
+        inputs: torch.Tensor,
+        targets: torch.Tensor):
+    """
+    Args:
+        inputs: A float tensor of arbitrary shape.
+                The predictions for each example.
+        targets: A float tensor with the same shape as inputs.
+    Returns:
+        Loss tensor
+    """
+    loss = F.l1_loss(inputs, targets)
+    return loss
+
+
+mae_loss_jit = torch.jit.script(
+    mae_loss
+)  # type: torch.jit.ScriptModule
+
+
 def rmse_loss(
         inputs: torch.Tensor,
         targets: torch.Tensor,
@@ -166,8 +186,6 @@ class SetCriterionMixOracle(nn.Module):
         self.num_points = num_points
         self.oversample_ratio = oversample_ratio
         self.importance_sample_ratio = importance_sample_ratio
-
-        self.rmse_loss_fn = RMSELoss()
 
     def loss_labels(self, outputs, targets, indices, num_masks, print_logits):
         """Classification loss (NLL)
@@ -323,7 +341,7 @@ class SetCriterionMixOracle(nn.Module):
         if "upsampling_outputs" in outputs:
             for i, (upsampling_output, upsampling_target) in enumerate(zip(outputs["upsampling_outputs"], upsampling_targets)):
                 #print("Computing upsampling mse loss between {} and {}".format(upsampling_output.shape, upsampling_target.shape))
-                up_loss = self.rmse_loss_fn(upsampling_output, upsampling_target)
+                up_loss = mae_loss_jit(upsampling_output, upsampling_target)
                 up_l_dict = {"loss_upsampling_{}".format(i): up_loss}
                 losses.update(up_l_dict)
 
