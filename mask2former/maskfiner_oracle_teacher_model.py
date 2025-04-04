@@ -246,11 +246,10 @@ class MaskFinerOracleTeacher(nn.Module):
                                                                                              l_idx, target_pad)
                 if self.training and random.random() < self.oracle_teacher_ratio:
                     upsampling_mask = upsampling_mask_oracle
-                    print("Upsampling mask in layer {} chosen from oracle, shape is {}".format(l_idx, upsampling_mask.shape))
+                    #print("Upsampling mask in layer {} chosen from oracle, shape is {}".format(l_idx, upsampling_mask.shape))
                 else:
                     upsampling_mask = upsampling_mask_pred
-                    print("Upsampling mask in layer {} chosen from pred, shape is {}".format(l_idx,
-                                                                                               upsampling_mask.shape))
+                    #print("Upsampling mask in layer {} chosen from pred, shape is {}".format(l_idx, upsampling_mask.shape))
 
                 upsampling_targets.append(upsampling_mask_oracle)
 
