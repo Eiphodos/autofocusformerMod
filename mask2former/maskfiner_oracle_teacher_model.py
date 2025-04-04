@@ -230,7 +230,7 @@ class MaskFinerOracleTeacher(nn.Module):
         outputs['upsampling_outputs'] = []
 
         sem_seg_gt = [x["sem_seg"].to(self.device) for x in batched_inputs]
-        sem_seg_gt = self.prepare_oracle_targets(sem_seg_gt, images)
+        sem_seg_gt, target_pad = self.prepare_oracle_targets(sem_seg_gt, images)
 
         upsampling_targets = []
 
@@ -240,10 +240,10 @@ class MaskFinerOracleTeacher(nn.Module):
                 upsampling_mask_pred = outs["upsampling_mask_{}".format(l_idx)]
                 #print("Original upsampling mask shape for layer {} is {}".format(l_idx, upsampling_mask.shape))
                 if l_idx == 0:
-                    upsampling_mask_oracle = self.generate_initial_oracle_upsampling_mask_edge(sem_seg_gt)
+                    upsampling_mask_oracle = self.generate_initial_oracle_upsampling_mask_edge(sem_seg_gt, target_pad)
                 else:
                     upsampling_mask_oracle = self.generate_subsequent_oracle_upsampling_mask_edge(sem_seg_gt, features_pos,
-                                                                                             l_idx)
+                                                                                             l_idx, target_pad)
                 if self.training and random.random() < self.oracle_teacher_ratio:
                     upsampling_mask = upsampling_mask_oracle
                 else:
@@ -377,8 +377,12 @@ class MaskFinerOracleTeacher(nn.Module):
     def prepare_oracle_targets(self, targets, images):
         h_pad, w_pad = images.tensor.shape[-2:]
         new_targets = []
+        pad_height_width = []
         #print("image shape for preparation is: {}".format(images.tensor.shape))
         for targets_per_image in targets:
+            h_pad_n = h_pad - targets_per_image.shape[0]
+            w_pad_n = w_pad - targets_per_image.shape[1]
+            pad_height_width.append((h_pad_n, w_pad_n))
             # pad gt
             #print("target shape for preparation is: {}".format(targets_per_image.shape))
             padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype, device=targets_per_image.device)
@@ -386,7 +390,7 @@ class MaskFinerOracleTeacher(nn.Module):
             padded_masks[: targets_per_image.shape[0], : targets_per_image.shape[1]] = targets_per_image
             new_targets.append(padded_masks)
             #print("padded shape is {}".format(padded_masks.shape))
-        return new_targets
+        return new_targets, pad_height_width
 
     def semantic_inference(self, mask_cls, mask_pred):
         mask_cls = F.softmax(mask_cls, dim=-1)[..., :-1]
