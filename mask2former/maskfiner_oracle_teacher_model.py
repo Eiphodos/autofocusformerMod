@@ -252,25 +252,17 @@ class MaskFinerOracleTeacher(nn.Module):
                 upsampling_targets.append(upsampling_mask_oracle)
 
                 dm_pred = {}
+                dm_oracle = {}
                 dm_pred["disagreement_mask_pred_{}".format(l_idx)] = upsampling_mask_pred
-                #B, _, _ = features_pos.shape
-                #b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
-                #dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
-                #dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
                 dm_pred["disagreement_mask_pred_pos_{}".format(l_idx)] = features_pos
                 disagreement_masks_pred.append(dm_pred)
-
-                dm_oracle = {}
                 dm_oracle["disagreement_mask_oracle_{}".format(l_idx)] = upsampling_mask_oracle
-                #B, _, _ = features_pos.shape
-                #b_scale_idx, n_scale_idx = torch.where(features_pos[:, :, 0] == l_idx)
-                #dm_pos = features_pos[b_scale_idx, n_scale_idx, :]
-                #dm_pos = rearrange(dm_pos, '(b n) p -> b n p', b=B).contiguous()
                 dm_oracle["disagreement_mask_oracle_pos_{}".format(l_idx)] = features_pos
                 disagreement_masks_pred.append(dm_oracle)
 
+                outputs['upsampling_outputs'].append(outs["upsampling_mask_{}".format(l_idx)])
+
             outputs['aux_outputs'] = outputs['aux_outputs'] + outs['aux_outputs']
-            outputs['upsampling_outputs'] = outputs['upsampling_outputs'] + outs['upsampling_outputs']
         outputs['pred_logits'] = outs['pred_logits']
         outputs['pred_masks'] = outs['pred_masks']
 
