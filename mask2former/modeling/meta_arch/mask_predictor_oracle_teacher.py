@@ -112,6 +112,6 @@ class MaskPredictorOracleTeacher(nn.Module):
         all_feat = torch.cat(multi_scale_features, dim=1)
 
         if not self.final_layer:
-            predictions["upsampling_mask_{}".format(scale)] = self.upsample_out(all_feat)
+            predictions["upsampling_mask_{}".format(scale)] = self.upsample_out(all_feat).squeeze(-1)
 
         return predictions, all_feat, pos_scale
