@@ -167,6 +167,8 @@ class SetCriterionMixOracle(nn.Module):
         self.oversample_ratio = oversample_ratio
         self.importance_sample_ratio = importance_sample_ratio
 
+        self.rmse_loss_fn = RMSELoss()
+
     def loss_labels(self, outputs, targets, indices, num_masks, print_logits):
         """Classification loss (NLL)
         targets dicts must contain the key "labels" containing a tensor of dim [nb_target_boxes]
@@ -321,7 +323,7 @@ class SetCriterionMixOracle(nn.Module):
         if "upsampling_outputs" in outputs:
             for i, (upsampling_output, upsampling_target) in enumerate(zip(outputs["upsampling_outputs"], upsampling_targets)):
                 #print("Computing upsampling mse loss between {} and {}".format(upsampling_output.shape, upsampling_target.shape))
-                up_loss = rmse_loss_jit(upsampling_output, upsampling_target, 1e-6)
+                up_loss = self.rmse_loss_fn(upsampling_output, upsampling_target)
                 up_l_dict = {"loss_upsampling_{}".format(i): up_loss}
                 losses.update(up_l_dict)
 
