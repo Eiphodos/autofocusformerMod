@@ -240,9 +240,9 @@ class MaskFinerOracleTeacher(nn.Module):
                 upsampling_mask_pred = outs["upsampling_mask_{}".format(l_idx)]
                 #print("Original upsampling mask shape for layer {} is {}".format(l_idx, upsampling_mask.shape))
                 if l_idx == 0:
-                    upsampling_mask_oracle = self.generate_initial_oracle_upsampling_mask(sem_seg_gt)
+                    upsampling_mask_oracle = self.generate_initial_oracle_upsampling_mask_edge(sem_seg_gt)
                 else:
-                    upsampling_mask_oracle = self.generate_subsequent_oracle_upsampling_mask(sem_seg_gt, features_pos,
+                    upsampling_mask_oracle = self.generate_subsequent_oracle_upsampling_mask_edge(sem_seg_gt, features_pos,
                                                                                              l_idx)
                 if self.training and random.random() < self.oracle_teacher_ratio:
                     upsampling_mask = upsampling_mask_oracle
