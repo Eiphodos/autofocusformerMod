@@ -18,6 +18,7 @@ MODEL:
     CLUSTER_SIZE: [8, 8, 8, 8]
     NBHD_SIZE: [48,48,48,48]
     OUT_FEATURES: ["res2", "res3", "res4", "res5"]
+    KEEP_OLD_SCALE: True
   WEIGHTS: "aff_mini.pkl"
   PIXEL_MEAN: [123.675, 116.280, 103.530]
   PIXEL_STD: [58.395, 57.120, 57.375]
