@@ -87,7 +87,7 @@ mse_loss_jit = torch.jit.script(
 def rmse_loss(
         inputs: torch.Tensor,
         targets: torch.Tensor,
-        eps: float = 1e-6):
+        eps: float):
     """
     Args:
         inputs: A float tensor of arbitrary shape.
@@ -96,7 +96,9 @@ def rmse_loss(
     Returns:
         Loss tensor
     """
-    loss = torch.sqrt(F.mse_loss(inputs, targets) + eps)
+    loss = F.mse_loss(inputs, targets)
+    loss = loss + eps
+    loss = torch.sqrt(loss)
     return loss
 
 
