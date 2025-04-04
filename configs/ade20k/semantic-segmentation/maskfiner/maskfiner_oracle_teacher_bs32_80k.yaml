@@ -26,6 +26,7 @@ MODEL:
     NAME: "MaskPredictorOracleTeacher"
     CONVS_DIM: [512,256,128,128]
     TRANSFORMER_ENC_LAYERS: [1, 2, 4, 6]
+    NHEADS: [16, 8, 8, 8]
   MASK_FINER:
     TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoderOracleTeacher"
     DECODER_LEVELS: [1, 2, 3, 4]
