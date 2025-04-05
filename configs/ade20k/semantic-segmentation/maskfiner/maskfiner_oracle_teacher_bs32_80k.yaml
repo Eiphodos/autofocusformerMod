@@ -23,6 +23,7 @@ MODEL:
   PIXEL_MEAN: [123.675, 116.280, 103.530]
   PIXEL_STD: [58.395, 57.120, 57.375]
   MR_SEM_SEG_HEAD:
+    PIXEL_DECODER_NAME: "MSDeformAttnPixelDecoderMaskFinerOracleTeacher"
     NAME: "MaskPredictorOracleTeacher"
     CONVS_DIM: [512,256,128,128]
     TRANSFORMER_ENC_LAYERS: [1, 2, 4, 6]
