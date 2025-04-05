@@ -600,7 +600,7 @@ class MaskFinerOracleTeacher(nn.Module):
             disagreement = self.count_edges_per_patch_masked(edge_mask, patch_size=patch_size)
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean()) / disagreement_map.var().sqrt()
+        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / disagreement_map.var(dim=1, keepdim=True).sqrt()
         #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map
 
@@ -669,7 +669,7 @@ class MaskFinerOracleTeacher(nn.Module):
             disagreement = edge_mask_patched.sum(dim=(1, 2))
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean()) / disagreement_map.var().sqrt()
+        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / disagreement_map.var(dim=1, keepdim=True).sqrt()
 
         #print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map
