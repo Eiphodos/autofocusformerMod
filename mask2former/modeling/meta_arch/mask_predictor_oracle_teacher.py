@@ -63,7 +63,7 @@ class MaskPredictorOracleTeacher(nn.Module):
         self,
         backbone: Backbone,
         pixel_decoder: nn.Module,
-        mask_decoder: nn.Module,
+        mask_decoder,
         num_classes: int,
         loss_weight: float = 1.0,
         ignore_value: int = -1,
@@ -83,11 +83,15 @@ class MaskPredictorOracleTeacher(nn.Module):
 
     @classmethod
     def from_config(cls, cfg, layer_index):
+        final_layer = (layer_index == (cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES - 1))
         backbone = build_backbone_indexed(cfg, layer_index)
         bb_output_shape = backbone.output_shape()
         pixel_decoder = build_pixel_decoder(cfg, layer_index, bb_output_shape)
-        mask_decoder_input_dim = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index]
-        mask_decoder = build_transformer_decoder(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
+        if final_layer:
+            mask_decoder_input_dim = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index]
+            mask_decoder = build_transformer_decoder(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
+        else:
+            mask_decoder = None
         return {
             "backbone": backbone,
             "pixel_decoder": pixel_decoder,
@@ -96,7 +100,7 @@ class MaskPredictorOracleTeacher(nn.Module):
             "ignore_value": cfg.MODEL.MR_SEM_SEG_HEAD.IGNORE_VALUE,
             "num_classes": cfg.MODEL.MR_SEM_SEG_HEAD.NUM_CLASSES,
             "hidden_dim": cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index],
-            "final_layer": layer_index == (cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES - 1)
+            "final_layer": final_layer
         }
 
     def forward(self, im, scale, features, features_pos, upsampling_mask):
@@ -105,7 +109,10 @@ class MaskPredictorOracleTeacher(nn.Module):
     def layers(self, im, scale, features, features_pos, upsampling_mask):
         features = self.backbone(im, scale, features, features_pos, upsampling_mask)
         mask_features, mf_pos, multi_scale_features, multi_scale_poss, ms_scale, finest_input_shape, input_shapes = self.pixel_decoder.forward_features(features)
-        predictions = self.mask_decoder(multi_scale_features, multi_scale_poss, mask_features, mf_pos, finest_input_shape, input_shapes)
+        if self.final_layer:
+            predictions = self.mask_decoder(multi_scale_features, multi_scale_poss, mask_features, mf_pos, finest_input_shape, input_shapes)
+        else:
+            predictions = {"aux_outputs": []}
         all_pos = torch.cat(multi_scale_poss, dim=1)
         all_scale = torch.cat(ms_scale, dim=1)
         pos_scale = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
