@@ -361,7 +361,8 @@ class MSDeformAttnPixelDecoderMaskFinerOracleTeacher(nn.Module):
         shepard_power: float,
         shepard_power_learnable: bool,
         maskformer_num_feature_levels: int,
-        final_layer: bool
+        final_layer: bool,
+        mask_decoder_all_levels: bool
     ):
         """
         NOTE: this interface is experimental.
@@ -396,6 +397,7 @@ class MSDeformAttnPixelDecoderMaskFinerOracleTeacher(nn.Module):
         self.transformer_feature_strides = [v.stride for k, v in transformer_input_shape]  # to decide extra FPN layers
 
         self.final_layer = final_layer
+        self.mask_decoder_all_levels = mask_decoder_all_levels
 
         force_proj = True
         self.transformer_num_feature_levels = len(self.transformer_in_features)
@@ -510,6 +512,7 @@ class MSDeformAttnPixelDecoderMaskFinerOracleTeacher(nn.Module):
         ret['shepard_power_learnable'] = cfg.MODEL.MASK_FINER.SHEPARD_POWER_LEARNABLE
         ret['maskformer_num_feature_levels'] = cfg.MODEL.MASK_FINER.DECODER_LEVELS[layer_index]
         ret['final_layer'] = (layer_index == (cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES - 1))
+        ret['mask_decoder_all_levels'] = cfg.MODEL.MASK_FINER.MASK_DECODER_ALL_LEVELS
         return ret
 
     @autocast(enabled=False)
@@ -616,9 +619,10 @@ class MSDeformAttnPixelDecoderMaskFinerOracleTeacher(nn.Module):
         mf = torch.cat(out, dim=1)
         mf_pos = torch.cat(fixed_poss, dim=1)
 
-        if self.final_layer:
+        if self.final_layer or self.mask_decoder_all_levels:
             mask_feat = self.mask_features(mf)
         else:
             mask_feat = None
+
 
         return mask_feat, mf_pos, out, poss, scaless, min_spatial_shape, spatial_shapes

@@ -201,6 +201,7 @@ def add_maskformer2_config(cfg):
 
     # Oracle teacher config
     cfg.MODEL.MASK_FINER.ORACLE_TEACHER_RATIO = 0.5
+    cfg.MODEL.MASK_FINER.MASK_DECODER_ALL_LEVELS = True
 
     # NOTE: maskformer2 extra configs
     # transformer module

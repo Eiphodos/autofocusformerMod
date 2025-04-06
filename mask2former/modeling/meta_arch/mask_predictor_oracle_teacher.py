@@ -68,7 +68,8 @@ class MaskPredictorOracleTeacher(nn.Module):
         loss_weight: float = 1.0,
         ignore_value: int = -1,
         hidden_dim: int = 256,
-        final_layer: bool = False):
+        final_layer: bool = False,
+        mask_decoder_all_levels: bool = True):
         super().__init__()
         self.backbone = backbone
         self.pixel_decoder = pixel_decoder
@@ -77,6 +78,7 @@ class MaskPredictorOracleTeacher(nn.Module):
         self.loss_weight = loss_weight
         self.num_classes = num_classes
         self.final_layer = final_layer
+        self.mask_decoder_all_levels = mask_decoder_all_levels
 
         if not self.final_layer:
             self.upsample_out = MLP(hidden_dim, hidden_dim, 1, num_layers=3)
@@ -84,10 +86,11 @@ class MaskPredictorOracleTeacher(nn.Module):
     @classmethod
     def from_config(cls, cfg, layer_index):
         final_layer = (layer_index == (cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES - 1))
+        mask_decoder_all_levels = cfg.MODEL.MASK_FINER.MASK_DECODER_ALL_LEVELS
         backbone = build_backbone_indexed(cfg, layer_index)
         bb_output_shape = backbone.output_shape()
         pixel_decoder = build_pixel_decoder(cfg, layer_index, bb_output_shape)
-        if final_layer:
+        if final_layer or mask_decoder_all_levels:
             mask_decoder_input_dim = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index]
             mask_decoder = build_transformer_decoder(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
         else:
@@ -100,7 +103,8 @@ class MaskPredictorOracleTeacher(nn.Module):
             "ignore_value": cfg.MODEL.MR_SEM_SEG_HEAD.IGNORE_VALUE,
             "num_classes": cfg.MODEL.MR_SEM_SEG_HEAD.NUM_CLASSES,
             "hidden_dim": cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index],
-            "final_layer": final_layer
+            "final_layer": final_layer,
+            "mask_decoder_all_levels": mask_decoder_all_levels
         }
 
     def forward(self, im, scale, features, features_pos, upsampling_mask):
@@ -109,7 +113,7 @@ class MaskPredictorOracleTeacher(nn.Module):
     def layers(self, im, scale, features, features_pos, upsampling_mask):
         features = self.backbone(im, scale, features, features_pos, upsampling_mask)
         mask_features, mf_pos, multi_scale_features, multi_scale_poss, ms_scale, finest_input_shape, input_shapes = self.pixel_decoder.forward_features(features)
-        if self.final_layer:
+        if self.final_layer or self.mask_decoder_all_levels:
             predictions = self.mask_decoder(multi_scale_features, multi_scale_poss, mask_features, mf_pos, finest_input_shape, input_shapes)
         else:
             predictions = {"aux_outputs": []}

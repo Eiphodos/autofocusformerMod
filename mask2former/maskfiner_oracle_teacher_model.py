@@ -133,7 +133,10 @@ class MaskFinerOracleTeacher(nn.Module):
         weight_dict = {"loss_ce": class_weight, "loss_mask": mask_weight, "loss_dice": dice_weight}
 
         if deep_supervision:
-            dec_layers = cfg.MODEL.MASK_FINER.DEC_LAYERS[-1] + 1 #cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES + sum(cfg.MODEL.MASK_FINER.DEC_LAYERS)
+            if cfg.MODEL.MASK_FINER.MASK_DECODER_ALL_LEVELS:
+                dec_layers = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES + sum(cfg.MODEL.MASK_FINER.DEC_LAYERS)
+            else:
+                dec_layers = cfg.MODEL.MASK_FINER.DEC_LAYERS[-1] + 1
             aux_weight_dict = {}
             for i in range(dec_layers - 1):
                 aux_weight_dict.update({k + f"_{i}": v for k, v in weight_dict.items()})
