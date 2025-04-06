@@ -442,7 +442,7 @@ class MSDeformAttnPixelDecoderMaskFinerOracleTeacher(nn.Module):
         N_steps = conv_dim // 2
         self.pe_layer = PositionEmbeddingSine(N_steps, normalize=True)
 
-        if final_layer:
+        if final_layer or mask_decoder_all_levels:
             self.mask_dim = mask_dim
             self.mask_features = nn.Linear(
                 conv_dim,
