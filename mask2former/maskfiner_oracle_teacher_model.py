@@ -552,7 +552,10 @@ class MaskFinerOracleTeacher(nn.Module):
         return dis_mask_at_scale, dis_pos_at_scale
 
     def get_top_disagreement_mask_and_pos(self, dis_mask, dis_mask_pos, level):
-        k_top = int(dis_mask.shape[0] * self.mask_predictors[level].backbone.upscale_ratio)
+        if level == len(self.mask_predictors) - 1:
+            k_top = int(dis_mask.shape[0] * self.mask_predictors[0].backbone.upscale_ratio)
+        else:
+            k_top = int(dis_mask.shape[0] * self.mask_predictors[level + 1].backbone.upscale_ratio)
         sorted_scores, sorted_indices = torch.sort(dis_mask, dim=0, descending=False)
         top_indices = sorted_indices[-k_top:]
         top_dis_mask = dis_mask.gather(dim=0, index=top_indices)
@@ -646,6 +649,7 @@ class MaskFinerOracleTeacher(nn.Module):
     def generate_subsequent_oracle_upsampling_mask_edge(self, targets, pos, level, targets_pad):
         B,N,C = pos.shape
         patch_size = self.mask_predictors[level].backbone.patch_size
+        initial_patch_size = self.mask_predictors[0].backbone.patch_size
         disagreement_map = []
         #pos_level = self.get_pos_at_scale(pos, level)
         #print("Subsequent pos shape: {}".format(pos.shape))
@@ -670,6 +674,7 @@ class MaskFinerOracleTeacher(nn.Module):
             #print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
 
             disagreement = edge_mask_patched.sum(dim=(1, 2))
+            disagreement = disagreement / 2**((level - pos[batch][:, 0]) * 2) # Rescaling targets based on patch size
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
         disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
