@@ -81,7 +81,7 @@ class MaskPredictorOracleTeacher(nn.Module):
         self.mask_decoder_all_levels = mask_decoder_all_levels
 
         if not self.final_layer:
-            self.upsample_out = MLP(hidden_dim, hidden_dim, 1, num_layers=3)
+            self.upsample_out = MLP(hidden_dim, hidden_dim*2, 1, num_layers=3)
 
     @classmethod
     def from_config(cls, cfg, layer_index):
