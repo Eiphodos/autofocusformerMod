@@ -151,10 +151,11 @@ class HungarianMatcherMix(nn.Module):
                 # Compute the focal loss between masks
                 # cost_mask = batch_sigmoid_ce_loss_jit(out_mask, tgt_mask)
                 cost_mask = batch_sigmoid_ce_loss(out_mask, tgt_mask)
-
+                cost_mask[cost_mask.isnan()] = 1e6
                 # Compute the dice loss betwen masks
                 # cost_dice = batch_dice_loss_jit(out_mask, tgt_mask)
                 cost_dice = batch_dice_loss(out_mask, tgt_mask)
+                cost_dice[cost_dice.isnan()] = 1e6
 
             # Final cost matrix
             C = (
