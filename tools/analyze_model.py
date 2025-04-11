@@ -144,7 +144,7 @@ def do_memory(cfg):
 
 
 
-    for idx, data in zip(tqdm.trange(args.num_inputs), data_loader):  # noqa
+    for idx, data in zip(tqdm.trange(1), data_loader):  # noqa
         with torch.profiler.profile(
             activities=[torch.profiler.ProfilerActivity.CPU,
                         torch.profiler.ProfilerActivity.CUDA],
@@ -154,7 +154,6 @@ def do_memory(cfg):
             with_modules=True
         ) as p:
             forward_memory_trade_pass(model, data)
-        break
 
     logger.info(p.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
 
@@ -192,7 +191,7 @@ $ ./analyze_model.py --num-inputs 100 --tasks flop \\
     )
     parser.add_argument(
         "--tasks",
-        choices=["flop", "activation", "parameter", "structure"],
+        choices=["flop", "activation", "parameter", "structure", "memory"],
         required=True,
         nargs="+",
     )
