@@ -170,6 +170,13 @@ class CNVNXT2(nn.Module):
 
     def forward(self, x, scale, features, features_pos, upsampling_mask):
         x = self.forward_features(x, scale, features, features_pos, upsampling_mask)
+        for k, v in x.items():
+            if type(v) == torch.Tensor:
+                print("Feature {} has shape {}".format(k, v.shape))
+                print("Feature {} has min {}".format(k, v.min()))
+                print("Feature {} has max {}".format(k, v.max()))
+            else:
+                print("Feature {} is {}".format(k, v))
         return x
 
 
