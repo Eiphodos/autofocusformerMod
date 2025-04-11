@@ -161,6 +161,7 @@ class CNVNXT2(nn.Module):
 
         outs = {}
         out_name = self._out_features[0]
+        outs[out_name] = x
         outs[out_name + "_pos"] = pos[:,:,1:]  # torch.div(pos_scale, 2 ** (self.n_scales - s - 1), rounding_mode='trunc')
         outs[out_name + "_spatial_shape"] = patched_im_size
         outs[out_name + "_scale"] = pos[:, :, 0]
@@ -170,13 +171,6 @@ class CNVNXT2(nn.Module):
 
     def forward(self, x, scale, features, features_pos, upsampling_mask):
         x = self.forward_features(x, scale, features, features_pos, upsampling_mask)
-        for k, v in x.items():
-            if type(v) == torch.Tensor:
-                print("Feature {} has shape {}".format(k, v.shape))
-                print("Feature {} has min {}".format(k, v.min()))
-                print("Feature {} has max {}".format(k, v.max()))
-            else:
-                print("Feature {} is {}".format(k, v))
         return x
 
 
