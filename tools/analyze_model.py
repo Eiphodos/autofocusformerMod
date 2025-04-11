@@ -2,6 +2,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Modified by Bowen Cheng from https://github.com/facebookresearch/detectron2/blob/main/tools/analyze_model.py
 
+import torch
 import logging
 import numpy as np
 from collections import Counter
@@ -20,6 +21,7 @@ from detectron2.utils.analysis import (
     parameter_count_table,
 )
 from detectron2.utils.logger import setup_logger
+from detectron2.export import TracingAdapter
 
 # fmt: off
 import os
@@ -116,6 +118,46 @@ def do_activation(cfg):
             np.mean(total_activations), np.std(total_activations)
         )
     )
+
+def forward_memory_trade_pass(model, inputs):
+    assert len(inputs) == 1, "Please use batch size=1"
+    #tensor_input = inputs[0]["image"]
+    #inputs = [{"image": tensor_input}]
+    #if isinstance(model, (torch.nn.parallel.distributed.DistributedDataParallel, torch.nn.DataParallel)):
+    #    model = model.module
+    #wrapped_model = TracingAdapter(model, inputs)
+    #wrapped_model.eval()
+
+    out = model(inputs)
+
+def do_memory(cfg):
+    if isinstance(cfg, CfgNode):
+        data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0])
+        model = build_model(cfg)
+        DetectionCheckpointer(model).load(cfg.MODEL.WEIGHTS)
+    else:
+        data_loader = instantiate(cfg.dataloader.test)
+        model = instantiate(cfg.model)
+        model.to(cfg.train.device)
+        DetectionCheckpointer(model).load(cfg.train.init_checkpoint)
+    model.eval()
+
+
+
+    for idx, data in zip(tqdm.trange(args.num_inputs), data_loader):  # noqa
+        with torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CPU,
+                        torch.profiler.ProfilerActivity.CUDA],
+            profile_memory=True,
+            record_shapes=True,
+            with_stack=True,
+            with_modules=True
+        ) as p:
+            forward_memory_trade_pass(model, data)
+        break
+
+    logger.info(p.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
+
 
 
 def do_parameter(cfg):
