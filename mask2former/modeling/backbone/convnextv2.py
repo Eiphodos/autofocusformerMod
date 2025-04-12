@@ -102,6 +102,43 @@ class Block(nn.Module):
         return x
 
 
+class OverlapPatchEmbedding(nn.Module):
+    def __init__(self, patch_size, embed_dim, channels):
+        super().__init__()
+
+        self.patch_size = patch_size
+
+        n_layers = int(torch.log2(torch.tensor([patch_size])).item())
+        conv_layers = []
+        emb_dims = [int(embed_dim // 2**(n_layers -1 - i)) for i in range(n_layers) ]
+        emb_dim_list = [channels] + emb_dims
+        for i in range(n_layers):
+            conv = DownSampleConvBlock(emb_dim_list[i], emb_dim_list[i + 1])
+            conv_layers.append(conv)
+        self.conv_layers = nn.Sequential(*conv_layers)
+        self.out_norm = LayerNorm(embed_dim, eps=1e-6, data_format="channels_first")
+
+    def forward(self, im):
+        x = self.conv_layers(im)
+        x = self.out_norm(x)
+        return x
+
+
+class DownSampleConvBlock(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.conv = nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1)
+        self.b_norm = nn.BatchNorm2d(out_dim)
+        self.relu = nn.LeakyReLU()
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.relu(x)
+        x = self.b_norm(x)
+
+        return x
+
+
 class CNVNXT2(nn.Module):
     """ ConvNeXt V2
 
@@ -127,10 +164,14 @@ class CNVNXT2(nn.Module):
         self.n_scales = n_scales
         self.upscale_ratio = upscale_ratio
         self.pe_layer = PositionEmbeddingSine(dim // 2, normalize=True)
+        '''
         self.stem = nn.Sequential(
             nn.Conv2d(in_chans, dim, kernel_size=self.patch_size, stride=self.patch_size),
             LayerNorm(dim, eps=1e-6, data_format="channels_first")
-        )
+        )  
+        '''
+        self.stem = OverlapPatchEmbedding(self.patch_size, dim, in_chans)
+
         self.stage = nn.Sequential(
             *[Block(dim=dim, drop_path=0.0) for j in range(depth)]
         )
