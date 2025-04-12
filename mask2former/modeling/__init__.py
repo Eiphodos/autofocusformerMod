@@ -11,6 +11,7 @@ from .backbone.mixres_vit import MixResViT
 from .backbone.convnextv2 import ConvNeXtV2
 
 from .pixel_decoder.msdeformattn_pc_maskfiner_oracle_teacher import MSDeformAttnPixelDecoderMaskFinerOracleTeacher
+from .pixel_decoder.proj_maskfiner_oracle_teacher import ProjMaskFinerOracleTeacher
 from .pixel_decoder.msdeformattn_pc_maskfiner_proj import MSDeformAttnPixelDecoderMaskFinerProj
 from .pixel_decoder.msdeformattn_pc_maskfiner import MSDeformAttnPixelDecoderMaskFiner
 from .pixel_decoder.msdeformattn_pc import MSDeformAttnPixelDecoder
