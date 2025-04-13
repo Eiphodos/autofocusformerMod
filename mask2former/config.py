@@ -217,7 +217,7 @@ def add_maskformer2_config(cfg):
 
     # pixel decoder
     cfg.MODEL.MR_SEM_SEG_HEAD.NORM = "GN"
-    cfg.MODEL.MR_SEM_SEG_HEAD.PIXEL_DECODER_NAME = "MSDeformAttnPixelDecoder"
+    cfg.MODEL.MR_SEM_SEG_HEAD.PIXEL_DECODER_NAME = ["MSDeformAttnPixelDecoderMaskFinerOracleTeacher", "MSDeformAttnPixelDecoderMaskFinerOracleTeacher", "MSDeformAttnPixelDecoderMaskFinerOracleTeacher", "MSDeformAttnPixelDecoderMaskFinerOracleTeacher"]
     cfg.MODEL.MR_SEM_SEG_HEAD.IN_FEATURES = ["res2", "res3", "res4", "res5"]
     cfg.MODEL.MR_SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES = ["res3", "res4", "res5"]
     cfg.MODEL.MR_SEM_SEG_HEAD.COMMON_STRIDE = 4
