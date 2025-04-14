@@ -503,11 +503,11 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         output = self.query_feat.weight.unsqueeze(1).repeat(1, b, 1)
         predictions_class = []
         predictions_mask = []
-        #mask_features = upsample_feature_shepard(finest_pos, mf_pos_scaled, mask_features)
-        #outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
-        outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+        mask_features = upsample_feature_shepard(finest_pos, mf_pos_scaled, mask_features)
+        outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+        #outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         #pos_indices = find_pos_indices_in_pos(finest_pos, mf_pos_scaled)
-        outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, outputs_mask.permute(0, 2, 1), power=5).permute(0, 2, 1)
+        #outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, outputs_mask.permute(0, 2, 1), power=5).permute(0, 2, 1)
         outputs_mask = point2img(outputs_mask, finest_pos)
         predictions_class.append(outputs_class)
         predictions_mask.append(outputs_mask)
@@ -537,8 +537,8 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
                 output
             )
 
-            outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
-            outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, outputs_mask.permute(0, 2, 1), power=5).permute(0, 2, 1)
+            outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+            #outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, outputs_mask.permute(0, 2, 1), power=5).permute(0, 2, 1)
             outputs_mask = point2img(outputs_mask, finest_pos)
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
