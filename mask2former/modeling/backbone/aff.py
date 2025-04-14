@@ -667,14 +667,14 @@ class AFF(nn.Module):
         pos, x, h, w = self.patch_embed(x)  # b x n x c, b x n x d
         x = self.pos_drop(x)
         spatial_shape = (h, w)
-        print("PatchEmbedding constructed pos with shape: {}, min: {} and max: {}".format(pos.shape, pos.min(), pos.max()))
+        #print("PatchEmbedding constructed pos with shape: {}, min: {} and max: {}".format(pos.shape, pos.min(), pos.max()))
 
         outs = {}
         for i_layer in range(self.num_layers):
             layer = self.layers[i_layer]
             pos_out, x_out, pos, x = layer(pos, x, h=h, w=w, on_grid=i_layer == 0, stride=2**(i_layer+1))
 
-            print("Layer {} constructed pos with shape: {} and max: {}. And also pos_out with shape: {} and max: {}".format(i_layer, pos.shape, pos.max(), pos_out.shape, pos_out.max()))
+            #print("Layer {} constructed pos with shape: {} and max: {}. And also pos_out with shape: {} and max: {}".format(i_layer, pos.shape, pos.max(), pos_out.shape, pos_out.max()))
 
             if i_layer in self.out_indices:
                 norm_layer = getattr(self, f"norm{i_layer}")
