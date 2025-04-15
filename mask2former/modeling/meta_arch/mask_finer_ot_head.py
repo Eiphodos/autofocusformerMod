@@ -87,10 +87,10 @@ class MaskFinerOTHead(nn.Module):
             "input_shape": {
                 k: v for k, v in input_shape.items() if k in cfg.MODEL.SEM_SEG_HEAD.IN_FEATURES
             },
-            "ignore_value": cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
-            "num_classes": cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
+            "loss_weight": cfg.MODEL.MR_SEM_SEG_HEAD.LOSS_WEIGHT,
+            "ignore_value": cfg.MODEL.MR_SEM_SEG_HEAD.IGNORE_VALUE,
+            "num_classes": cfg.MODEL.MR_SEM_SEG_HEAD.NUM_CLASSES,
             "pixel_decoder": build_pixel_decoder(cfg, final_indx, input_shape),
-            "loss_weight": cfg.MODEL.SEM_SEG_HEAD.LOSS_WEIGHT,
             "transformer_predictor": build_transformer_decoder(cfg, final_indx, mask_decoder_input_dim, mask_classification=True),
         }
 
