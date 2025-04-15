@@ -39,7 +39,8 @@ class MaskFinerOracleTeacherBB(nn.Module):
     def __init__(
         self,
         *,
-        mask_predictors: nn.ModuleList,
+        backbone,
+        sem_seg_head,
         criterion: nn.Module,
         num_queries: int,
         object_mask_threshold: float,
@@ -81,7 +82,8 @@ class MaskFinerOracleTeacherBB(nn.Module):
             test_topk_per_image: int, instance segmentation parameter, keep topk instances per image
         """
         super().__init__()
-        self.mask_predictors = mask_predictors
+        self.backbone = backbone
+        self.sem_seg_head = sem_seg_head
         self.criterion = criterion
         self.num_queries = num_queries
         self.overlap_threshold = overlap_threshold
