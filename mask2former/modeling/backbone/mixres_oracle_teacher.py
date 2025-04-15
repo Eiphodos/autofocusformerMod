@@ -130,7 +130,7 @@ class MROTB(nn.Module):
 
 @BACKBONE_REGISTRY.register()
 class OracleTeacherBackbone(MROTB, Backbone):
-    def __init__(self, cfg):
+    def __init__(self, cfg, input_shape):
 
         all_backbones = []
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
