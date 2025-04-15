@@ -57,6 +57,8 @@ class MROTB(nn.Module):
             feat_projs.append(scale_projs)
         self.feat_proj = nn.ModuleList(feat_projs)
 
+        print("Successfully built OracleTeacherBackbone model!")
+
 
     def forward(self, im, sem_seg_gt, target_pad):
         upsampling_mask = None
@@ -131,7 +133,7 @@ class MROTB(nn.Module):
 @BACKBONE_REGISTRY.register()
 class OracleTeacherBackbone(MROTB, Backbone):
     def __init__(self, cfg, input_shape):
-
+        print("Building OracleTeacherBackbone model...")
         all_backbones = []
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         for i in range(n_scales):

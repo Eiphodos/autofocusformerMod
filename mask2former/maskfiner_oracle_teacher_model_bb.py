@@ -104,9 +104,11 @@ class MaskFinerOracleTeacherBB(nn.Module):
 
         if not self.semantic_on:
             assert self.sem_seg_postprocess_before_inference
+        print("Successfully built MaskFinerOracleTeacherBB model!")
 
     @classmethod
     def from_config(cls, cfg):
+        print("Building MaskFinerOracleTeacherBB model...")
         backbone = build_backbone(cfg)
         sem_seg_head = build_sem_seg_head(cfg, backbone.output_shape())
 

@@ -78,8 +78,11 @@ class MaskFinerOTHead(nn.Module):
 
         self.num_classes = num_classes
 
+        print("Successfully built MaskFinerOTHead model!")
+
     @classmethod
     def from_config(cls, cfg, input_shape: Dict[str, ShapeSpec]):
+        print("Building MaskFinerOTHead model...")
         final_indx = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES - 1
         mask_decoder_input_dim = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[-1]
 

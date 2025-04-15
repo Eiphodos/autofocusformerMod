@@ -265,6 +265,8 @@ class MRVIT(nn.Module):
         self.norm_out = nn.LayerNorm(d_model)
         self.apply(init_weights)
 
+        print("Successfully built MixResViT model!")
+
     @torch.jit.ignore
     def no_weight_decay(self):
         return {"pos_embed", "cls_token", "dist_token"}
@@ -302,6 +304,7 @@ class MRVIT(nn.Module):
 @BACKBONE_REGISTRY.register()
 class MixResViT(MRVIT, Backbone):
     def __init__(self, cfg, layer_index):
+        print("Building MixResViT model...")
         in_chans = 3
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]

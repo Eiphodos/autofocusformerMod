@@ -406,9 +406,12 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
             self.class_embed = nn.Linear(hidden_dim, num_classes + 1)
         self.mask_embed = MLP(hidden_dim, hidden_dim, mask_dim, 3)
 
+        print("Successfully built MultiScaleMaskFinerTransformerDecoderOracleTeacher model!")
+
 
     @classmethod
     def from_config(cls, cfg, layer_index, in_channels, mask_classification):
+        print("Building MultiScaleMaskFinerTransformerDecoderOracleTeacher model...")
         ret = {}
         ret["in_channels"] = in_channels
         ret["mask_classification"] = mask_classification

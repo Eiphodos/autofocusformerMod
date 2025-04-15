@@ -478,8 +478,11 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         self.lateral_convs = lateral_convs[::-1]
         self.output_convs = output_convs[::-1]
 
+        print("Successfully built MSDeformAttnPixelDecoderMaskFiner model!")
+
     @classmethod
     def from_config(cls, cfg, layer_index, input_shape):
+        print("Building MSDeformAttnPixelDecoderMaskFiner model...")
         pix_dec_in_features = cfg.MODEL.MR_SEM_SEG_HEAD.IN_FEATURES[-(layer_index + 1):]
         all_transformer_in_features = cfg.MODEL.MR_SEM_SEG_HEAD.DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES
         all_dtf_len = len(all_transformer_in_features)

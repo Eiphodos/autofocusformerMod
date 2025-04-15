@@ -576,6 +576,8 @@ class MRNB(nn.Module):
         self.norm_out = nn.LayerNorm(d_model)
         self.apply(init_weights)
 
+        print("Successfully built MixResNeighbour model!")
+
     @torch.jit.ignore
     def no_weight_decay(self):
         return {"pos_embed", "cls_token", "dist_token"}
@@ -811,7 +813,7 @@ class MRNB(nn.Module):
 @BACKBONE_REGISTRY.register()
 class MixResNeighbour(MRNB, Backbone):
     def __init__(self, cfg, layer_index):
-
+        print("Building MixResNeighbour model...")
         if layer_index == 0:
             in_chans = 3
         else:
