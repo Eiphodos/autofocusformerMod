@@ -389,7 +389,7 @@ class BasicLayer(nn.Module):
 
         # cache the clustering result for the first feature map since it is on grid
         self.pos, self.cluster_mean_pos, self.member_idx, self.cluster_mask, self.reorder = None, None, None, None, None
-        self.no_reorder = True
+        self.no_reorder = False
 
     def forward(self, pos, feat, h, w, on_grid):
         """

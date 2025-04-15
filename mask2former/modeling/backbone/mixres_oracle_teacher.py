@@ -79,10 +79,18 @@ class MROTB(nn.Module):
                 feat_ss = output[f + '_spatial_shape']
                 curr_scale = self.all_out_features_scales[f]
 
+                B, N, C = feat.shape
+
                 print("Output {} for scale {}: feat_shape: {}, pos_shape: {}, scale_shape: {}, spatial_shape: {}".format(f, scale, feat.shape, feat_pos.shape, feat_scale.shape, feat_ss))
 
 
                 if f + '_pos' in outs:
+                    pos_indices = self.find_pos_org_order(outs[f + '_pos'], feat_pos)
+                    b_ = torch.arange(B).unsqueeze(-1).expand(-1, N)
+                    feat = feat[b_, pos_indices]
+                    feat_pos = feat_pos[b_, pos_indices]
+                    feat_scale = feat_scale[b_, pos_indices]
+
                     print(outs[f + '_pos'][0, 0:10])
                     print(outs[f + '_pos'][0, -10:])
                     print(feat_pos[0, 0:10])
@@ -290,3 +298,9 @@ class OracleTeacherBackbone(MROTB, Backbone):
         patches = edge_mask.view(H // P, P, W // P, P).permute(0, 2, 1, 3)
         patches = patches.reshape(-1, P, P)
         return patches.sum(dim=(1, 2))
+
+    def find_pos_org_order(self, pos_org, pos_shuffled):
+        dists = torch.cdist(pos_org.float(), pos_shuffled.float(), p=1)  # Manhattan distance
+        pos_indices = torch.argmin(dists, dim=2)  # (B, N_)
+
+        return pos_indices
