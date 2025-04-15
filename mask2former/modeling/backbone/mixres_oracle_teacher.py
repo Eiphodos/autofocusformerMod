@@ -10,12 +10,8 @@ from torch import nn
 import torch.nn.functional as F
 
 from detectron2.config import configurable
-from detectron2.layers import ShapeSpec
-from detectron2.modeling import SEM_SEG_HEADS_REGISTRY, build_backbone
-from detectron2.modeling.backbone import Backbone
+from detectron2.modeling import BACKBONE_REGISTRY, Backbone, ShapeSpec, build_backbone
 
-from ..transformer_decoder.build_maskfiner_decoder import build_transformer_decoder
-from ..pixel_decoder.msdeformattn_pc_maskfiner import build_pixel_decoder
 from ..backbone.build import build_backbone_indexed
 
 
