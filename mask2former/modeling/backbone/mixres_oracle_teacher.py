@@ -81,7 +81,7 @@ class MROTB(nn.Module):
 
                 B, N, C = feat.shape
 
-                print("Output {} for scale {}: feat_shape: {}, pos_shape: {}, scale_shape: {}, spatial_shape: {}".format(f, scale, feat.shape, feat_pos.shape, feat_scale.shape, feat_ss))
+                #print("Output {} for scale {}: feat_shape: {}, pos_shape: {}, scale_shape: {}, spatial_shape: {}".format(f, scale, feat.shape, feat_pos.shape, feat_scale.shape, feat_ss))
 
 
                 if f + '_pos' in outs:
@@ -114,24 +114,25 @@ class MROTB(nn.Module):
                 outs['upsampling_mask_oracle_{}'.format(scale)] = upsampling_mask_oracle
                 outs['upsampling_mask_pos_{}'.format(scale)] = all_pos[0]
 
-            print("Training is {}".format(int(self.training)))
             if self.training and random.random() < self.oracle_teacher_ratio:
                 upsampling_mask = upsampling_mask_oracle
             else:
                 upsampling_mask = upsampling_mask_pred
 
-            print("Upsampling mask for scale {}: pred: {}, oracle: {}".format(scale, upsampling_mask_pred.shape, upsampling_mask_oracle.shape))
+            #print("Upsampling mask for scale {}: pred: {}, oracle: {}".format(scale, upsampling_mask_pred.shape, upsampling_mask_oracle.shape))
 
             all_pos = torch.cat(all_pos, dim=1)
             all_scale = torch.cat(all_scale, dim=1)
             features_pos = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
             features = torch.cat(all_feat, dim=1)
         outs['min_spatial_shape'] = output['min_spatial_shape']
+        '''
         for k, v in outs.items():
             if type(v) == torch.Tensor:
                 print("Outs {} has shape {} and has nan: {} ".format(k, v.shape, (v.isnan()).any()))
             else:
                 print("Outs {} is {}".format(k, v))
+        '''
         return outs
 
 
