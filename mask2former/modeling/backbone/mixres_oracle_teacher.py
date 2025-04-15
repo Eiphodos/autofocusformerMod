@@ -2,9 +2,11 @@
 
 import logging
 from typing import Dict
+import random
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from detectron2.config import configurable
 from detectron2.layers import ShapeSpec
@@ -16,94 +18,101 @@ from ..pixel_decoder.msdeformattn_pc_maskfiner import build_pixel_decoder
 from ..backbone.build import build_backbone_indexed
 
 
-@BACKBONE_REGISTRY.register()
-class OracleTeacherBackbone(nn.Module, Backbone)):
+class MLP(nn.Module):
+    """ Very simple multi-layer perceptron (also called FFN)"""
 
-    _version = 2
-
-    def _load_from_state_dict(
-        self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs
-    ):
-        version = local_metadata.get("version", None)
-        if version is None or version < 2:
-            # Do not warn if train from scratch
-            scratch = True
-            logger = logging.getLogger(__name__)
-            for k in list(state_dict.keys()):
-                newk = k
-                if newk != k:
-                    state_dict[newk] = state_dict[k]
-                    del state_dict[k]
-                    scratch = False
-
-            if not scratch:
-                logger.warning(
-                    f"Weight format of {self.__class__.__name__} have changed! "
-                    "Please upgrade your models. Applying automatic conversion now ..."
-                )
-
-
-    @configurable
-    def __init__(
-        self,
-        backbone: Backbone,
-        pixel_decoder: nn.Module,
-        mask_decoder: nn.Module,
-        num_classes: int,
-        loss_weight: float = 1.0,
-        ignore_value: int = -1):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers):
         super().__init__()
-        self.backbone = backbone
-        self.pixel_decoder = pixel_decoder
-        self.mask_decoder = mask_decoder
-        self.ignore_value = ignore_value
-        self.loss_weight = loss_weight
-        self.num_classes = num_classes
+        self.num_layers = num_layers
+        h = [hidden_dim] * (num_layers - 1)
+        self.layers = nn.ModuleList(nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim]))
 
-    @classmethod
-    def from_config(cls, cfg, layer_index):
-        backbone = build_backbone_indexed(cfg, layer_index)
-        bb_output_shape = backbone.output_shape()
-        pixel_decoder = build_pixel_decoder(cfg, layer_index, bb_output_shape)
-        mask_decoder_input_dim = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index]
-        mask_decoder = build_transformer_decoder(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
-        return {
-            "backbone": backbone,
-            "pixel_decoder": pixel_decoder,
-            "mask_decoder": mask_decoder,
-            "loss_weight": cfg.MODEL.MR_SEM_SEG_HEAD.LOSS_WEIGHT,
-            "ignore_value": cfg.MODEL.MR_SEM_SEG_HEAD.IGNORE_VALUE,
-            "num_classes": cfg.MODEL.MR_SEM_SEG_HEAD.NUM_CLASSES,
-        }
+    def forward(self, x):
+        for i, layer in enumerate(self.layers):
+            x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
+        return x
 
-    def forward(self, im, scale, features, features_pos, upsampling_mask):
-        return self.layers(im, scale, features, features_pos, upsampling_mask)
-    def layers(self, im, scale, features, features_pos, upsampling_mask):
-        features = self.backbone(im, scale, features, features_pos, upsampling_mask)
-        mask_features, mf_pos, multi_scale_features, multi_scale_poss, ms_scale, finest_input_shape, input_shapes = self.pixel_decoder.forward_features(features)
-        predictions, upsampling_mask = self.mask_decoder(multi_scale_features, multi_scale_poss, mask_features, mf_pos, finest_input_shape, input_shapes)
-        all_pos = torch.cat(multi_scale_poss, dim=1)
-        all_scale = torch.cat(ms_scale, dim=1)
-        pos_scale = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
-        all_feat = torch.cat(multi_scale_features, dim=1)
 
-        '''
-        all_pos = []
-        all_feat = []
-        all_scale = []
-        for out_feat in self.backbone._out_features:
-            feat = features[out_feat]
-            pos = features[out_feat + '_pos']
-            scale = features[out_feat + '_scale']
-            all_pos.append(pos)
-            all_feat.append(feat)
-            all_scale.append(scale)
-        all_pos = torch.cat(all_pos, dim=1)
-        all_scale = torch.cat(all_scale, dim=1)
-        pos_scale = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
-        all_feat = torch.cat(all_feat, dim=1)
-        '''
-        return predictions, all_feat, pos_scale, upsampling_mask
+class MROTB(nn.Module):
+    def __init__(self, backbones, backbone_dims, out_dim, oracle_teacher_ratio, all_out_features):
+        super().__init__()
+        self.backbones = nn.ModuleList(backbones)
+        self.out_dim = out_dim
+        self.backbone_dims = backbone_dims
+        self.oracle_teacher_ratio = oracle_teacher_ratio
+        self.all_out_features = all_out_features
+        self.all_out_features_scales = {k: len(all_out_features) - i - 1 for i, k in enumerate(all_out_features)}
+
+        upsamplers = []
+        for i in range(len(self.backbones) - 1):
+            upsample_out = MLP(backbone_dims[i], backbone_dims[i] * 2, 1, num_layers=3)
+            upsamplers.append(upsample_out)
+        self.upsamplers = nn.ModuleList(upsamplers)
+
+        feat_projs = []
+        for i in range(len(self.backbones)):
+            scale_projs = []
+            for j in range(len(self.backbones[i]._out_features) - 1):
+                f_proj = nn.Linear(backbone_dims[i], backbone_dims[j])
+                scale_projs.append(f_proj)
+            scale_projs = nn.ModuleList(scale_projs)
+            feat_projs.append(scale_projs)
+        self.feat_proj = nn.ModuleList(feat_projs)
+
+
+    def forward(self, im, sem_seg_gt, target_pad):
+        upsampling_mask = None
+        features = None
+        features_pos = None
+        outs = {}
+        for scale in range(len(self.backbones)):
+            output = self.backbones[scale](im, scale, features, features_pos, upsampling_mask)
+            all_out_features = self.backbones[scale]._out_features
+            all_feat = []
+            all_scale = []
+            all_pos = []
+            all_ss = []
+            for i, f in enumerate(all_out_features):
+                feat = output[f]
+                feat_pos = output[f + '_pos']
+                feat_scale = output[f + '_scale']
+                feat_ss = output[f + '_spatial_shape']
+                curr_scale = self.all_out_features_scales[f]
+
+                if f + '_pos' in outs:
+                    assert (outs[f + '_pos'] == feat_pos).all()
+                    outs[f] = outs[f] + self.feat_proj[scale][curr_scale](feat)
+                else:
+                    outs[f] = feat
+                    outs[f + '_pos'] = feat_pos
+                    outs[f + '_scale'] = feat_scale
+                    outs[f + '_spatial_shape'] = feat_ss
+
+                all_feat.append(feat)
+                all_pos.append(feat_pos)
+                all_scale.append(feat_scale)
+                all_ss.append(feat_ss)
+            if scale == 0:
+                upsampling_mask_oracle = self.generate_initial_oracle_upsampling_mask_edge(sem_seg_gt, target_pad)
+            else:
+                upsampling_mask_oracle = self.generate_subsequent_oracle_upsampling_mask_edge(sem_seg_gt, all_pos[0],
+                                                                                              scale, target_pad)
+            if scale < len(self.backbones) - 1:
+                upsampling_mask_pred = self.upsamplers[scale](all_feat[0])
+                outs['upsampling_mask_{}'.format(scale)] = upsampling_mask_pred
+
+            if self.training and random.random() < self.oracle_teacher_ratio:
+                upsampling_mask = upsampling_mask_oracle
+            else:
+                upsampling_mask = upsampling_mask_pred
+
+
+            all_pos = torch.cat(all_pos, dim=1)
+            all_scale = torch.cat(all_scale, dim=1)
+            features_pos = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
+            features = torch.cat(all_feat, dim=1)
+        outs['min_spatial_shape'] = output['min_spatial_shape']
+        return outs
 
 
 
@@ -112,71 +121,32 @@ class OracleTeacherBackbone(MROTB, Backbone):
     def __init__(self, cfg):
 
         all_backbones = []
-
-        for i in range(cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES):
+        n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
+        for i in range(n_scales):
             bb = build_backbone_indexed(cfg, i)
             all_backbones.append(bb)
-
-        if layer_index == 0:
-            in_chans = 3
-        else:
-            in_chans = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index - 1]
-        image_size = cfg.INPUT.CROP.SIZE
-        n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
-        keep_old_scale = cfg.MODEL.MR.KEEP_OLD_SCALE
-        add_image_data_to_all = cfg.MODEL.MR.ADD_IMAGE_DATA_TO_ALL
-        min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
-
-        patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
-        embed_dim = cfg.MODEL.MR.EMBED_DIM[layer_index]
-        depths = cfg.MODEL.MR.DEPTHS[layer_index]
-        num_heads = cfg.MODEL.MR.NUM_HEADS[layer_index]
-        drop_rate = cfg.MODEL.MR.DROP_RATE[layer_index]
-        drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE[layer_index]
-        attn_drop_rate = cfg.MODEL.MR.ATTN_DROP_RATE[layer_index]
-        split_ratio = cfg.MODEL.MR.SPLIT_RATIO[layer_index]
-        mlp_ratio = cfg.MODEL.MR.MLP_RATIO[layer_index]
-        cluster_size = cfg.MODEL.MR.CLUSTER_SIZE[layer_index]
-        nbhd_size = cfg.MODEL.MR.NBHD_SIZE[layer_index]
-        upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
-
-
-
+        out_dim = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[-1]
 
         super().__init__(
-            image_size=image_size,
-            patch_sizes=patch_sizes,
-            n_layers=depths,
-            d_model=embed_dim,
-            n_heads=num_heads,
-            dropout=drop_rate,
-            drop_path_rate=drop_path_rate,
-            attn_drop_rate=attn_drop_rate,
-            mlp_ratio=mlp_ratio,
-            split_ratio=split_ratio,
-            channels=in_chans,
-            cluster_size=cluster_size,
-            nbhd_size=nbhd_size,
-            n_scales=n_scales,
-            min_patch_size=min_patch_size,
-            upscale_ratio=upscale_ratio,
-            keep_old_scale=keep_old_scale,
-            scale=layer_index,
-            add_image_data_to_all=add_image_data_to_all
+            backbones=all_backbones,
+            backbone_dims=cfg.MODEL.MR.EMBED_DIM,
+            out_dim=out_dim,
+            oracle_teacher_ratio=cfg.MODEL.MASK_FINER.ORACLE_TEACHER_RATIO,
+            all_out_features=cfg.MODEL.MR.OUT_FEATURES
         )
 
-        self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
+        self._out_features = cfg.MODEL.MR.OUT_FEATURES
 
-        self._in_features_channels = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
+        self._in_features_channels = cfg.MODEL.MR.EMBED_DIM
 
         #self._out_feature_strides = { "res{}".format(layer_index+2): cfg.MODEL.MRNB.PATCH_SIZES[layer_index]}
-        self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MRML.PATCH_SIZES[i] for i in range(layer_index + 1)}
+        self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MRML.PATCH_SIZES[i] for i in range(n_scales)}
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
-        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in range(layer_index + 1)}
+        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[i] for i in range(n_scales)}
         #print("backbone channels: {}".format(self._out_feature_channels))
 
-    def forward(self, x, scale, features, features_pos, upsampling_mask):
+    def forward(self, x, sem_seg_gt, target_pad):
         """
         Args:
             x: Tensor of shape (B,C,H,W)
@@ -186,7 +156,7 @@ class OracleTeacherBackbone(MROTB, Backbone):
         assert (
             x.dim() == 4
         ), f"MRML takes an input of shape (N, C, H, W). Got {x.shape} instead!"
-        y = super().forward(x, scale, features, features_pos, upsampling_mask)
+        y = super().forward(x, sem_seg_gt, target_pad)
         return y
 
     def output_shape(self):
