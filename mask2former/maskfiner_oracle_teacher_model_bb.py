@@ -101,7 +101,6 @@ class MaskFinerOracleTeacherBB(nn.Module):
         self.instance_on = instance_on
         self.panoptic_on = panoptic_on
         self.test_topk_per_image = test_topk_per_image
-        self.oracle_teacher_ratio = oracle_teacher_ratio
 
         if not self.semantic_on:
             assert self.sem_seg_postprocess_before_inference
