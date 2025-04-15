@@ -10,7 +10,7 @@ from detectron2.layers import ShapeSpec
 from detectron2.modeling import SEM_SEG_HEADS_REGISTRY
 
 from ..transformer_decoder.build_maskfiner_decoder import build_transformer_decoder
-from ..pixel_decoder.msdeformattn_pc_maskfiner import build_pixel_decoder
+from ..pixel_decoder.build import build_pixel_decoder_indexed
 
 
 @SEM_SEG_HEADS_REGISTRY.register()
@@ -93,7 +93,7 @@ class MaskFinerOTHead(nn.Module):
             "loss_weight": cfg.MODEL.MR_SEM_SEG_HEAD.LOSS_WEIGHT,
             "ignore_value": cfg.MODEL.MR_SEM_SEG_HEAD.IGNORE_VALUE,
             "num_classes": cfg.MODEL.MR_SEM_SEG_HEAD.NUM_CLASSES,
-            "pixel_decoder": build_pixel_decoder(cfg, final_indx, input_shape),
+            "pixel_decoder": build_pixel_decoder_indexed(cfg, final_indx, input_shape),
             "transformer_predictor": build_transformer_decoder(cfg, final_indx, mask_decoder_input_dim, mask_classification=True),
         }
 
