@@ -102,5 +102,5 @@ class MaskFinerOTHead(nn.Module):
 
     def layers(self, features, mask=None):
         mask_features, mf_pos, multi_scale_features, multi_scale_poss, ms_scale, finest_input_shape, input_shapes = self.pixel_decoder.forward_features(features)
-        predictions = self.mask_decoder(multi_scale_features, multi_scale_poss, mask_features, mf_pos, finest_input_shape, input_shapes)
+        predictions = self.predictor(multi_scale_features, multi_scale_poss, mask_features, mf_pos, finest_input_shape, input_shapes)
         return predictions
