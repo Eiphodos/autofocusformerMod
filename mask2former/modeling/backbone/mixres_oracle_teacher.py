@@ -220,7 +220,7 @@ class OracleTeacherBackbone(MROTB, Backbone):
             border_mask = self.get_ignore_mask(targets_shifted, pad_h, pad_w)
             edge_mask = self.compute_edge_mask_with_ignores(targets_shifted, border_mask)
 
-            pos_batch = pos[batch][:,1:]
+            pos_batch = pos[batch]
             p_org = (pos_batch * self.backbones[0].min_patch_size).long()
             patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
             patch_coords = patch_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(pos.device)
