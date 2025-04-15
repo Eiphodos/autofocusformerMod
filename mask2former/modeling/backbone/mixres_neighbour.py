@@ -469,6 +469,8 @@ class BasicLayer(nn.Module):
                        cluster_mask=cluster_mask,
                        pe_idx=pe_idx,
                        global_attn=global_attn)
+        if pos_scale.dim() == 2:
+            pos_scale = pos_scale.unsqueeze(2)
         pos = torch.cat([pos_scale, pos], dim=2)
         return pos, feat
 
