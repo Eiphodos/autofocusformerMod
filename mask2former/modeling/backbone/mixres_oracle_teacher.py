@@ -102,7 +102,7 @@ class MROTB(nn.Module):
                                                                                               scale, target_pad)
 
             if scale < len(self.backbones) - 1:
-                upsampling_mask_pred = self.upsamplers[scale](all_feat[0])
+                upsampling_mask_pred = self.upsamplers[scale](all_feat[0]).squeeze(-1)
                 outs['upsampling_mask_pred_{}'.format(scale)] = upsampling_mask_pred
                 outs['upsampling_mask_oracle_{}'.format(scale)] = upsampling_mask_oracle
                 outs['upsampling_mask_pos_{}'.format(scale)] = all_pos[0]
@@ -113,7 +113,7 @@ class MROTB(nn.Module):
             else:
                 upsampling_mask = upsampling_mask_pred
 
-            print("Upsampling mask for scale {}: pred: {}, oracle: {}".format(scale,upsampling_mask_pred.shape, upsampling_mask_oracle))
+            print("Upsampling mask for scale {}: pred: {}, oracle: {}".format(scale, upsampling_mask_pred.shape, upsampling_mask_oracle.shape))
 
 
             all_pos = torch.cat(all_pos, dim=1)
