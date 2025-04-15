@@ -25,6 +25,7 @@ from .maskformer_model_ml import MaskFormerML
 from .maskfiner_model import MaskFiner
 from .maskfiner_oracle_model import MaskFinerOracle
 from .maskfiner_oracle_teacher_model import MaskFinerOracleTeacher
+from .maskfiner_oracle_teacher_model_bb import MaskFinerOracleTeacherBB
 from .test_time_augmentation import SemanticSegmentorWithTTA
 
 # evaluation

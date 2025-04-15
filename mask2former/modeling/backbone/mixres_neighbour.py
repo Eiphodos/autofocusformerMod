@@ -609,14 +609,17 @@ class MRNB(nn.Module):
 
 
     def divide_feat_pos_on_scale(self, tokens, patches_scale_coords, curr_scale, upsampling_mask):
-        B, _, _ = tokens.shape
+        B, N, _ = tokens.shape
         b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:, :, 0] == curr_scale)
         coords_at_curr_scale = patches_scale_coords[b_scale_idx, n_scale_idx, :]
         coords_at_curr_scale = rearrange(coords_at_curr_scale, '(b n) p -> b n p', b=B).contiguous()
         tokens_at_curr_scale = tokens[b_scale_idx, n_scale_idx, :]
         tokens_at_curr_scale = rearrange(tokens_at_curr_scale, '(b n) c -> b n c', b=B).contiguous()
-        upsampling_mask_curr = upsampling_mask[b_scale_idx, n_scale_idx]
-        upsampling_mask_curr = rearrange(upsampling_mask_curr, '(b n) -> b n', b=B).contiguous()
+        if upsampling_mask.shape[1] == N:
+            upsampling_mask_curr = upsampling_mask[b_scale_idx, n_scale_idx]
+            upsampling_mask_curr = rearrange(upsampling_mask_curr, '(b n) -> b n', b=B).contiguous()
+        else:
+            upsampling_mask_curr = upsampling_mask
 
         b_scale_idx, n_scale_idx = torch.where(patches_scale_coords[:, :, 0] != curr_scale)
         coords_at_older_scales = patches_scale_coords[b_scale_idx, n_scale_idx, :]

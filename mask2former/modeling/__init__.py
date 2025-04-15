@@ -9,6 +9,7 @@ from .backbone.mixres_neighbour import MixResNeighbour
 from .backbone.mixres_neighbour_xattn import MixResNeighbourXAttn
 from .backbone.mixres_vit import MixResViT
 from .backbone.convnextv2 import ConvNeXtV2
+from .backbone.mixres_oracle_teacher import OracleTeacherBackbone
 
 from .pixel_decoder.msdeformattn_pc_maskfiner_oracle_teacher import MSDeformAttnPixelDecoderMaskFinerOracleTeacher
 from .pixel_decoder.proj_maskfiner_oracle_teacher import ProjMaskFinerOracleTeacher
@@ -19,3 +20,4 @@ from .pixel_decoder.msdeformattn_up_pc import MSDeformAttnPixelDecoderUp
 from .meta_arch.mask_predictor import MaskPredictor
 from .meta_arch.mask_predictor_oracle_teacher import MaskPredictorOracleTeacher
 from .meta_arch.mask_former_head import MaskFormerHead
+from .meta_arch.mask_finer_ot_head import MaskFinerOTHead
