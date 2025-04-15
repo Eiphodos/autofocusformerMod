@@ -442,7 +442,7 @@ class BasicLayer(nn.Module):
                         cluster_mask = cluster_mask[:b]
                 else:
                     if self.no_reorder:
-                        pos, cluster_mean_pos, member_idx, cluster_mask, reorder = space_filling_cluster(pos, self.cluster_size, h, w, no_reorder=True)
+                        pos, cluster_mean_pos, member_idx, cluster_mask = space_filling_cluster(pos, self.cluster_size, h, w, no_reorder=True)
                     else:
                         pos, cluster_mean_pos, member_idx, cluster_mask, reorder = space_filling_cluster(pos, self.cluster_size, h, w, no_reorder=False)
                         feat = feat[torch.arange(b).to(feat.device).repeat_interleave(n), reorder.view(-1)].reshape(b, n, c)
