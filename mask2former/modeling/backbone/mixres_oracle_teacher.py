@@ -220,6 +220,8 @@ class OracleTeacherBackbone(MROTB, Backbone):
             border_mask = self.get_ignore_mask(targets_shifted, pad_h, pad_w)
             edge_mask = self.compute_edge_mask_with_ignores(targets_shifted, border_mask)
 
+            print("edge mask has nan: {}".format((edge_mask.isnan()).any()))
+
             pos_batch = pos[batch]
             p_org = (pos_batch * self.backbones[0].min_patch_size).long()
             patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
@@ -233,8 +235,11 @@ class OracleTeacherBackbone(MROTB, Backbone):
             edge_mask_patched = rearrange(edge_mask_patched, '(n ph pw) -> n ph pw', n=N, ph=patch_size, pw=patch_size)
             #print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
 
+            print("edge_mask_patched has nan: {}".format((edge_mask_patched.isnan()).any()))
+
             disagreement = edge_mask_patched.sum(dim=(1, 2))
             disagreement = disagreement / 2**((level - pos[batch][:, 0]) * 2) # Rescaling targets based on patch size
+            print("disagreement has nan: {}".format((disagreement.isnan()).any()))
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
         disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
