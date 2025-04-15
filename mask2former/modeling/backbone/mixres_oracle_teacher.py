@@ -90,11 +90,6 @@ class MROTB(nn.Module):
                     feat = feat[b_, pos_indices]
                     feat_pos = feat_pos[b_, pos_indices]
                     feat_scale = feat_scale[b_, pos_indices]
-
-                    print(outs[f + '_pos'][0, 0:10])
-                    print(outs[f + '_pos'][0, -10:])
-                    print(feat_pos[0, 0:10])
-                    print(feat_pos[0, -10:])
                     assert (outs[f + '_pos'] == feat_pos).all()
                     outs[f] = outs[f] + self.feat_proj[scale][curr_scale](feat)
                 else:
@@ -127,7 +122,6 @@ class MROTB(nn.Module):
 
             print("Upsampling mask for scale {}: pred: {}, oracle: {}".format(scale, upsampling_mask_pred.shape, upsampling_mask_oracle.shape))
 
-
             all_pos = torch.cat(all_pos, dim=1)
             all_scale = torch.cat(all_scale, dim=1)
             features_pos = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
@@ -135,7 +129,7 @@ class MROTB(nn.Module):
         outs['min_spatial_shape'] = output['min_spatial_shape']
         for k, v in outs.items():
             if type(v) == torch.Tensor:
-                print("Outs {} has shape {}".format(k, v.shape))
+                print("Outs {} has shape {} and has nan: {} ".format(k, v.shape, (v.isnan()).any()))
             else:
                 print("Outs {} is {}".format(k, v))
         return outs
