@@ -482,7 +482,7 @@ class MSDeformAttnPixelDecoder(nn.Module):
         Args
             features - a dictionary of a list of point clouds with their features, positions and canvas sizes
         """
-
+        '''
         for k, v in features.items():
             if type(v) == torch.Tensor:
                 print("PixelDecoder InFeature {} has shape {}".format(k, v.shape))
@@ -490,7 +490,7 @@ class MSDeformAttnPixelDecoder(nn.Module):
                 print("PixelDecoder InFeature {} has max {}".format(k, v.max()))
             else:
                 print("PixelDecoder InFeature {} is {}".format(k, v))
-
+        '''
         srcs = []
         poss = []
         pos_embed = []
@@ -513,7 +513,7 @@ class MSDeformAttnPixelDecoder(nn.Module):
             pos_embed.append(self.pe_layer(pos))
             spatial_shapes.append(spatial_shape)
             scaled_pos = scale_pos(pos, spatial_shape, grid_hw, no_bias=True)
-            print("Scaled PixelDecoder pos for feature {} is shape: {} with min: {} and max: {}".format(f, scaled_pos.shape, scaled_pos.min(), scaled_pos.max()))
+            #print("Scaled PixelDecoder pos for feature {} is shape: {} with min: {} and max: {}".format(f, scaled_pos.shape, scaled_pos.min(), scaled_pos.max()))
             nb_idx.append(knn_keops(grid_pos, scaled_pos, 4))
         last_pos = poss[-1]
         last_ss = spatial_shapes[-1]
@@ -538,10 +538,7 @@ class MSDeformAttnPixelDecoder(nn.Module):
             cur_fpn = lateral_conv(x)
             # Following FPN implementation, we use nearest upsampling here
             last_pos = scale_pos(last_pos, last_ss, spatial_shape, no_bias=True)
-            print("FPN PixelDecoder  last pos for feature {} is shape: {} with min: {} and max: {}".format(f,
-                                                                                                        last_pos.shape,
-                                                                                                        last_pos.min(),
-                                                                                                        last_pos.max()))
+            #print("FPN PixelDecoder  last pos for feature {} is shape: {} with min: {} and max: {}".format(f, last_pos.shape, last_pos.min(),last_pos.max()))
             y = cur_fpn + upsample_feature_shepard(pos, last_pos, out[-1], custom_kernel=True)
             y = output_conv((y, pos))
             last_pos = pos
