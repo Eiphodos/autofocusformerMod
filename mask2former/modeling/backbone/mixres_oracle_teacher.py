@@ -83,6 +83,10 @@ class MROTB(nn.Module):
 
 
                 if f + '_pos' in outs:
+                    print(outs[f + '_pos'][0, 0:10])
+                    print(outs[f + '_pos'][0, -10:])
+                    print(feat_pos[0, 0:10])
+                    print(feat_pos[0, -10:])
                     assert (outs[f + '_pos'] == feat_pos).all()
                     outs[f] = outs[f] + self.feat_proj[scale][curr_scale](feat)
                 else:
