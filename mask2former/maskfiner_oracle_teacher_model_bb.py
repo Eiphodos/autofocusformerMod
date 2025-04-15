@@ -54,8 +54,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
         semantic_on: bool,
         panoptic_on: bool,
         instance_on: bool,
-        test_topk_per_image: int,
-        oracle_teacher_ratio: float,
+        test_topk_per_image: int
     ):
         """
         Args:
