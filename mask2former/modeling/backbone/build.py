@@ -13,7 +13,7 @@ def build_backbone_indexed(cfg, layer_index=None):
     """
 
     backbone_name = cfg.MODEL.BACKBONE.NAME
-    if backbone_name == "MixRes":
+    if backbone_name == "MixRes" or backbone_name == "OracleTeacherBackbone":
         backbone_name = cfg.MODEL.MR.NAME[layer_index]
     backbone = BACKBONE_REGISTRY.get(backbone_name)(cfg, layer_index)
     assert isinstance(backbone, Backbone)

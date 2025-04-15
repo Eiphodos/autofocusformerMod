@@ -320,7 +320,8 @@ def setup(args):
 
 def main(args):
     cfg = setup(args)
-    torch.distributed.barrier()
+    if torch.distributed.is_initialized():
+        torch.distributed.barrier()
     import pykeops
     dirname = os.getenv('TMPDIR')
     pykeops.set_build_folder(dirname)
@@ -345,8 +346,8 @@ def main(args):
     if args.resume:
         trainer.resume_or_load(resume=args.resume)
     res = trainer.train()
-
-    torch.distributed.barrier()
+    if torch.distributed.is_initialized():
+        torch.distributed.barrier()
     return res
 
 
