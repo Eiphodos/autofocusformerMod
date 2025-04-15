@@ -822,7 +822,7 @@ class MixResNeighbour(MRNB, Backbone):
         if layer_index == 0:
             in_chans = 3
         else:
-            in_chans = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index - 1]
+            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
         image_size = cfg.INPUT.CROP.SIZE
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         keep_old_scale = cfg.MODEL.MR.KEEP_OLD_SCALE
