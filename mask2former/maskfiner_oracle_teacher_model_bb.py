@@ -483,8 +483,8 @@ class MaskFinerOracleTeacherBB(nn.Module):
         min_pos, max_pos = self.get_min_max_position(dis_pos_top, disagreement_map.shape[1], disagreement_map.shape[0])
         #print("Min pos at level {} for top scale {}: {}".format(level, scale, min_pos))
         #print("Max pos at level {} for top scale {}: {}".format(level, scale, max_pos))
-        pos_at_org_scale = dis_pos_top * self.mask_predictors[0].backbone.min_patch_size
-        patch_size = self.mask_predictors[level].backbone.patch_sizes[scale]
+        pos_at_org_scale = dis_pos_top * self.backbone.backbones[0].min_patch_size
+        patch_size = self.backbone.backbones[level].patch_sizes[scale]
 
         dis_mask_top = dis_mask_top.unsqueeze(1).expand(-1, patch_size ** 2).reshape(-1)
 
@@ -506,8 +506,8 @@ class MaskFinerOracleTeacherBB(nn.Module):
 
 
     def get_min_max_position(self, pos, width, height):
-        max_y = height // self.mask_predictors[0].backbone.min_patch_size
-        max_x = width // self.mask_predictors[0].backbone.min_patch_size
+        max_y = height // self.backbone.backbones[0].min_patch_size
+        max_x = width // self.backbone.backbones[0].min_patch_size
         #print("Max x: {}".format(max_x))
         #print("Max y: {}".format(max_y))
         #print("Pos max x: {}".format(pos[:,0].max().item()))
@@ -532,10 +532,10 @@ class MaskFinerOracleTeacherBB(nn.Module):
         return dis_mask_at_scale, dis_pos_at_scale
 
     def get_top_disagreement_mask_and_pos(self, dis_mask, dis_mask_pos, level):
-        if level == len(self.mask_predictors) - 1:
-            k_top = int(dis_mask.shape[0] * self.mask_predictors[0].backbone.upscale_ratio)
+        if level == len(self.backbone.backbones) - 1:
+            k_top = int(dis_mask.shape[0] * self.backbone.backbones[0].upscale_ratio)
         else:
-            k_top = int(dis_mask.shape[0] * self.mask_predictors[level + 1].backbone.upscale_ratio)
+            k_top = int(dis_mask.shape[0] * self.backbone.backbones[level + 1].upscale_ratio)
         sorted_scores, sorted_indices = torch.sort(dis_mask, dim=0, descending=False)
         top_indices = sorted_indices[-k_top:]
         top_dis_mask = dis_mask.gather(dim=0, index=top_indices)
@@ -549,206 +549,3 @@ class MaskFinerOracleTeacherBB(nn.Module):
         dis_mask_at_scale = dis_mask[n_scale_idx]
 
         return dis_mask_at_scale, dis_pos_at_scale
-
-    def generate_initial_oracle_upsampling_mask_gini(self, targets):
-        patch_size = self.mask_predictors[0].backbone.patch_size
-        disagreement_map = []
-        for batch in range(len(targets)):
-            targets_batch = targets[batch].squeeze()
-            #print("Initial oracle target shape: {}".format(targets_batch.shape))
-            H, W = targets_batch.shape
-            #targets_batch = self.fix_borders(targets_batch)
-            targets_patched = rearrange(targets_batch, '(hp ph) (wp pw) -> (hp wp) (ph pw)', ph=patch_size,
-                                        pw=patch_size, hp=H // patch_size, wp=W // patch_size)
-            #print("Initial patched target shape: {}".format(targets_patched.shape))
-            targets_shifted = (targets_patched.byte() + 2).long()
-            histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=152).sum(dim=1)
-            histogram = histogram[:, 1:]
-            histogram = torch.div(histogram, histogram.sum(dim=1).unsqueeze(1))
-            #print("Initial histogram shape: {}".format(targets_batch.shape))
-            disagreement = 1 - self.gini(histogram.float())
-            disagreement[(targets_shifted == 0).all(dim=1)] = 0
-            #print("Initial disagreement shape: {}".format(disagreement.shape))
-            disagreement_map.append(disagreement)
-        disagreement_map_tensor = torch.stack(disagreement_map)
-        #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
-        return disagreement_map_tensor
-
-    def generate_initial_oracle_upsampling_mask_edge(self, targets, targets_pad):
-        patch_size = self.mask_predictors[0].backbone.patch_size
-        disagreement_map = []
-        for batch in range(len(targets)):
-            targets_batch = targets[batch].squeeze()
-            targets_shifted = (targets_batch.byte() + 2).long()
-            pad_h, pad_w = targets_pad[batch]
-            border_mask = self.get_ignore_mask(targets_shifted, pad_h, pad_w)
-            edge_mask = self.compute_edge_mask_with_ignores(targets_shifted, border_mask)
-            disagreement = self.count_edges_per_patch_masked(edge_mask, patch_size=patch_size)
-            disagreement_map.append(disagreement)
-        disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
-        #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
-        return disagreement_map
-
-    def generate_subsequent_oracle_upsampling_mask_gini(self, targets, pos, level):
-        B,N,C = pos.shape
-        patch_size = self.mask_predictors[level].backbone.patch_size
-        disagreement_map = []
-        #pos_level = self.get_pos_at_scale(pos, level)
-        #print("Subsequent pos shape: {}".format(pos.shape))
-        for batch in range(B):
-            targets_batch = targets[batch].squeeze()
-            #targets_batch = self.fix_borders(targets_batch)
-            #print("Subsequent oracle target shape: {}".format(targets_batch.shape))
-            pos_batch = pos[batch][:,1:]
-            p_org = (pos_batch * self.mask_predictors[level].backbone.min_patch_size).long()
-            patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
-            patch_coords = patch_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(pos.device)
-            pos_patches = p_org.unsqueeze(1) + patch_coords.unsqueeze(0)
-            pos_patches = pos_patches.view(-1, 2)
-            x_pos = pos_patches[..., 0].long()
-            y_pos = pos_patches[..., 1].long()
-            targets_patched = targets_batch[y_pos, x_pos]
-            targets_patched = rearrange(targets_patched, '(n p) -> n p', n=N)
-            #print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
-            targets_shifted = (targets_patched.byte() + 2).long()
-            histogram = torch.nn.functional.one_hot(targets_shifted, num_classes=152).sum(dim=1)
-            histogram = histogram[:, 1:]
-            histogram = torch.div(histogram, histogram.sum(dim=1).unsqueeze(1))
-            #print("Subsequent histogram shape: {}".format(histogram.shape))
-            disagreement = 1 - self.gini(histogram.float())
-            #print("Subsequent disagreement shape: {}".format(disagreement.shape))
-            disagreement[pos[batch][:, 0] != level] = 0
-            disagreement[(targets_shifted == 0).all(dim=1)] = 0
-            disagreement_map.append(disagreement)
-        disagreement_map_tensor = torch.stack(disagreement_map)
-
-        #print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
-        return disagreement_map_tensor
-
-    def generate_subsequent_oracle_upsampling_mask_edge(self, targets, pos, level, targets_pad):
-        B,N,C = pos.shape
-        patch_size = self.mask_predictors[level].backbone.patch_size
-        initial_patch_size = self.mask_predictors[0].backbone.patch_size
-        disagreement_map = []
-        #pos_level = self.get_pos_at_scale(pos, level)
-        #print("Subsequent pos shape: {}".format(pos.shape))
-        for batch in range(B):
-            targets_batch = targets[batch].squeeze()
-            targets_shifted = (targets_batch.byte() + 2).long()
-            pad_h, pad_w = targets_pad[batch]
-            border_mask = self.get_ignore_mask(targets_shifted, pad_h, pad_w)
-            edge_mask = self.compute_edge_mask_with_ignores(targets_shifted, border_mask)
-
-            pos_batch = pos[batch][:,1:]
-            p_org = (pos_batch * self.mask_predictors[level].backbone.min_patch_size).long()
-            patch_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
-            patch_coords = patch_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(pos.device)
-            pos_patches = p_org.unsqueeze(1) + patch_coords.unsqueeze(0)
-            pos_patches = pos_patches.view(-1, 2)
-            x_pos = pos_patches[..., 0].long()
-            y_pos = pos_patches[..., 1].long()
-
-            edge_mask_patched = edge_mask[y_pos, x_pos]
-            edge_mask_patched = rearrange(edge_mask_patched, '(n ph pw) -> n ph pw', n=N, ph=patch_size, pw=patch_size)
-            #print("Subsequent targets_patched shape: {}".format(targets_patched.shape))
-
-            disagreement = edge_mask_patched.sum(dim=(1, 2))
-            disagreement = disagreement / 2**((level - pos[batch][:, 0]) * 2) # Rescaling targets based on patch size
-            disagreement_map.append(disagreement)
-        disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
-
-        #print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
-        return disagreement_map
-
-
-    def count_edge_pixels_per_patch(self, patches):
-        B, PH, PW = patches.shape
-        # Ignores edges on borders of the image.
-        edge_top = patches[:, 1:, :] != patches[:, :-1, :]
-        edge_bottom = edge_top
-        edge_left = patches[:, :, 1:] != patches[:, :, :-1]
-        edge_right = edge_left
-
-        edge_mask = torch.zeros_like(patches, dtype=torch.bool)
-        edge_mask[:, 1:, :] |= edge_top
-        edge_mask[:, :-1, :] |= edge_bottom
-        edge_mask[:, :, 1:] |= edge_left
-        edge_mask[:, :, :-1] |= edge_right
-
-        edge_pixel_counts = edge_mask.view(B, -1).sum(dim=1)
-
-        return edge_pixel_counts
-
-    def count_edges_per_patch_masked(self, edge_mask, patch_size):
-        H, W = edge_mask.shape
-        P = patch_size
-        patches = edge_mask.view(H // P, P, W // P, P).permute(0, 2, 1, 3)
-        patches = patches.reshape(-1, P, P)
-        return patches.sum(dim=(1, 2))
-
-    def get_ignore_mask(self, label_map, pad_h, pad_w, border_size=5):
-        H, W = label_map.shape
-        usable_h = H - pad_h
-        usable_w = W - pad_w
-
-        ignore_mask = (label_map == 0)
-        border_mask = torch.zeros_like(label_map, dtype=torch.bool)
-        border_mask[:border_size, :usable_w] = True
-        border_mask[usable_h - border_size:usable_h, :usable_w] = True
-        border_mask[:usable_h, :border_size] = True
-        border_mask[:usable_h, usable_w - border_size:usable_w] = True
-
-        class1_mask = (label_map == 1)
-        ignore_mask |= class1_mask & border_mask
-        return ignore_mask
-
-    def compute_edge_mask_with_ignores(self, label_map, ignore_mask):
-        H, W = label_map.shape
-        edge_mask = torch.zeros_like(label_map, dtype=torch.bool)
-
-        # Top neighbor (i, j) vs (i-1, j)
-        valid = (~ignore_mask[1:, :]) & (~ignore_mask[:-1, :])
-        diff = label_map[1:, :] != label_map[:-1, :]
-        edge_mask[1:, :] |= valid & diff
-
-        # Bottom neighbor
-        valid = (~ignore_mask[:-1, :]) & (~ignore_mask[1:, :])
-        diff = label_map[:-1, :] != label_map[1:, :]
-        edge_mask[:-1, :] |= valid & diff
-
-        # Left neighbor
-        valid = (~ignore_mask[:, 1:]) & (~ignore_mask[:, :-1])
-        diff = label_map[:, 1:] != label_map[:, :-1]
-        edge_mask[:, 1:] |= valid & diff
-
-        # Right neighbor
-        valid = (~ignore_mask[:, :-1]) & (~ignore_mask[:, 1:])
-        diff = label_map[:, :-1] != label_map[:, 1:]
-        edge_mask[:, :-1] |= valid & diff
-
-        return edge_mask
-
-    def gini(self, class_counts):
-        mad = torch.abs(class_counts.unsqueeze(1) - class_counts.unsqueeze(2)).mean(dim=(1, 2))
-        rmad = mad / class_counts.mean(dim=1)
-        g = 0.5 * rmad
-        return g
-
-    def get_pos_at_scale(self, pos, scale):
-        B, _, _ = pos.shape
-        b_scale_idx, n_scale_idx = torch.where(pos[:, :, 0] == scale)
-        coords_at_curr_scale = pos[b_scale_idx, n_scale_idx, :]
-        coords_at_curr_scale = rearrange(coords_at_curr_scale, '(b n) p -> b n p', b=B).contiguous()
-
-        return coords_at_curr_scale
-
-    def fix_borders(self, targets, border=5, pad_val=254):
-        H, W = targets.shape
-        targets[0:border, :][targets[0:border, :] == 0] = pad_val
-        targets[H - border:, :][targets[H - border:, :] == 0] = pad_val
-        targets[:, 0:border][targets[:, 0:border] == 0] = pad_val
-        targets[:, W - border:][targets[:, W - border:] == 0] = pad_val
-
-        return targets
