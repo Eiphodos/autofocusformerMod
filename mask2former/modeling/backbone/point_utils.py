@@ -166,6 +166,9 @@ def space_filling_cluster(pos, m, h, w, no_reorder=False, sf_type='', use_anchor
 
         k = int(math.ceil(n/m))
 
+        if not isinstance(h, int):
+            h, w = h.item(), w.item()
+
         if use_anchor:
             patch_len = (h*w/k)**0.5
             num_patch_h = int(round(h / patch_len))
