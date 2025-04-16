@@ -112,7 +112,7 @@ class MROTB(nn.Module):
                 upsampling_mask_pred = self.upsamplers[scale](all_feat[0]).squeeze(-1)
                 outs['upsampling_mask_pred_{}'.format(scale)] = upsampling_mask_pred
                 outs['upsampling_mask_oracle_{}'.format(scale)] = upsampling_mask_oracle
-                outs['upsampling_mask_pos_{}'.format(scale)] = all_pos[0]
+                outs['upsampling_mask_pos_{}'.format(scale)] = torch.cat([all_scale[0].unsqueeze(2), all_pos[0]], dim=2)
 
             if self.training and random.random() < self.oracle_teacher_ratio:
                 upsampling_mask = upsampling_mask_oracle

@@ -472,35 +472,18 @@ class MaskFinerOracleTeacherBB(nn.Module):
         return result
 
     def create_disagreement_map(self, disagreement_map, dis_mask, dis_mask_pos, level, scale):
-        min_pos, max_pos = self.get_min_max_position(dis_mask_pos[:,1:], disagreement_map.shape[1], disagreement_map.shape[0])
-        #print("Min pos at level {} for all: {}".format(level, min_pos))
-        #print("Max pos at level {} for all: {}".format(level, max_pos))
         dis_mask_at_scale, dis_pos_at_scale = self.get_disagreement_mask_and_pos_at_scale(dis_mask, dis_mask_pos, scale)
-        min_pos, max_pos = self.get_min_max_position(dis_pos_at_scale, disagreement_map.shape[1], disagreement_map.shape[0])
-        #print("Min pos at level {} for scale {}: {}".format(level, scale, min_pos))
-        #print("Max pos at level {} for scale {}: {}".format(level, scale, max_pos))
         dis_mask_top, dis_pos_top = self.get_top_disagreement_mask_and_pos(dis_mask_at_scale, dis_pos_at_scale, level)
-        min_pos, max_pos = self.get_min_max_position(dis_pos_top, disagreement_map.shape[1], disagreement_map.shape[0])
-        #print("Min pos at level {} for top scale {}: {}".format(level, scale, min_pos))
-        #print("Max pos at level {} for top scale {}: {}".format(level, scale, max_pos))
         pos_at_org_scale = dis_pos_top * self.backbone.backbones[0].min_patch_size
         patch_size = self.backbone.backbones[level].patch_sizes[scale]
-
-        dis_mask_top = dis_mask_top.unsqueeze(1).expand(-1, patch_size ** 2).reshape(-1)
 
         new_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
         new_coords = new_coords.permute(1, 2, 0).transpose(0, 1).reshape(-1, 2).to(dis_pos_top.device)
         pos_at_org_scale = pos_at_org_scale.unsqueeze(1) + new_coords
         pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
-        #print("pos_to_split shape before: {}".format(pos_to_split.shape))
-        #print("max x pos before: {}".format(pos_to_split[...,0].max()))
-        #print("max y pos before: {}".format(pos_to_split[...,1].max()))
 
         x_pos = pos_at_org_scale[...,0].long()
         y_pos = pos_at_org_scale[...,1].long()
-        #print("max x pos: {}".format(x_pos.max()))
-        #print("max y pos: {}".format(y_pos.max()))
-        #print("pred_map_low_res shape: {}".format(pred_map_low_res.shape))
         disagreement_map[y_pos, x_pos] = 255 #dis_mask_at_scale
         return disagreement_map
 
