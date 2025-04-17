@@ -110,6 +110,7 @@ class HungarianMatcherMix(nn.Module):
             # but approximate it in 1 - proba[target class].
             # The 1 is a constant that doesn't change the matching, it can be ommitted.
             cost_class = -out_prob[:, tgt_ids]
+            cost_class[cost_class.isnan()] = 1e6
 
             out_mask = outputs["pred_masks"][b]  # [num_queries, H_pred, W_pred]
             # gt masks are already padded when preparing target
