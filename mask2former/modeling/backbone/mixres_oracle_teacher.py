@@ -162,7 +162,7 @@ class OracleTeacherBackbone(MROTB, Backbone):
         self._in_features_channels = cfg.MODEL.MR.EMBED_DIM
 
         #self._out_feature_strides = { "res{}".format(layer_index+2): cfg.MODEL.MRNB.PATCH_SIZES[layer_index]}
-        self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MRML.PATCH_SIZES[i] for i in range(n_scales)}
+        self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in range(n_scales)}
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
         self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[i] for i in range(n_scales)}
