@@ -83,7 +83,6 @@ class MROTB(nn.Module):
 
                 #print("Output {} for scale {}: feat_shape: {}, pos_shape: {}, scale_shape: {}, spatial_shape: {}".format(f, scale, feat.shape, feat_pos.shape, feat_scale.shape, feat_ss))
 
-
                 if f + '_pos' in outs:
                     pos_indices = self.find_pos_org_order(outs[f + '_pos'], feat_pos)
                     b_ = torch.arange(B).unsqueeze(-1).expand(-1, N)

@@ -458,13 +458,7 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         assert len(x) == self.num_feature_levels
         src = []
         pos_emb = []
-        '''
-        print("x is length {}".format(len(x)))
-        print("x_pos is length {}".format(len(pos)))
-        print("mask_feature has shape {}".format(mask_features.shape))
-        print("mask_feature_pos has shape {}".format(mf_pos.shape))
-        print("finest input shape is {}".format(finest_input_shape))
-        '''
+
         if len(pos) == 1 and pos[0].shape == mf_pos.shape and (pos[0] == mf_pos).all():
             masked_attn = False
         else:
@@ -485,8 +479,19 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
             #print("Feature {} max pos after scaling: {}".format(i, pos_scaled.max()))
             poss_scaled.append(pos_scaled)
             i += 1
-        #finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
-        #finest_pos = finest_pos.to(mf_pos.device).repeat(b, 1, 1)
+        finest_pos_all = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
+        finest_pos_all = finest_pos_all.to(mf_pos.device).repeat(b, 1, 1)
+        print(finest_pos_all.shape)
+
+        N = finest_pos.shape[1]
+
+        pos_indices = self.find_pos_org_order(finest_pos_all, finest_pos)
+        b_ = torch.arange(b).unsqueeze(-1).expand(-1, N)
+        mask_features = mask_features[b_, pos_indices]
+        finest_pos = finest_pos[b_, pos_indices]
+        print(finest_pos.shape)
+        assert (finest_pos_all == finest_pos).all()
+
 
         for i in range(self.num_feature_levels):
             pos_emb.append(self.pe_layer(poss_scaled[i]))
@@ -657,3 +662,9 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
     def create_disagreement_mask4(self, outputs_mask):
         disagreement_mask = outputs_mask.sum(dim=1)
         return disagreement_mask
+
+    def find_pos_org_order(self, pos_org, pos_shuffled):
+        dists = torch.cdist(pos_org.float(), pos_shuffled.float(), p=1)  # Manhattan distance
+        pos_indices = torch.argmin(dists, dim=2)  # (B, N_)
+
+        return pos_indices
