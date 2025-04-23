@@ -12,7 +12,7 @@ from torch.nn import functional as F
 from detectron2.config import configurable
 
 from .position_encoding import PositionEmbeddingSine
-from ..backbone.point_utils import upsample_feature_shepard, upsample_by_patch
+from ..backbone.point_utils import upsample_feature_shepard, upsample_by_patch, hierarchical_upsample_ordered
 
 from .build_maskfiner_decoder import TRANSFORMER_DECODER_REGISTRY
 
@@ -450,7 +450,7 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         finest_inp_feat_shape = input_shapes[-1]
 
         tokens_per_scale = [tx.shape[1] for tx in x]
-        mask_features, finest_pos = upsample_by_patch(mask_features, torch.cat(pos, dim=1), tokens_per_scale)
+        mask_features, finest_pos = hierarchical_upsample_ordered(mask_features, torch.cat(pos, dim=1), tokens_per_scale, finest_input_shape)
 
         x = x[:self.num_feature_levels]
         pos = pos[:self.num_feature_levels]

@@ -606,3 +606,77 @@ def upsample_by_patch(features, positions, tokens_per_scale):
     final_feats = torch.cat(all_new_feats, dim=1)
     final_pos = torch.cat(all_new_pos, dim=1)
     return final_feats, final_pos
+
+
+def hierarchical_upsample_ordered(features, positions, tokens_per_scale, input_shape):
+    B, N, C = features.shape
+    device = features.device
+    H, W = input_shape
+    visibility = torch.zeros((B, H, W), dtype=torch.bool, device=device)
+
+    n_scales = len(tokens_per_scale)
+    ps = [2 ** (n_scales - s - 1) for s in range(n_scales)]
+    start_id = 0
+    scale_blocks = []
+    for t, p in zip(tokens_per_scale, ps):
+        end_id = start_id + t
+        scale_blocks.append((start_id, end_id, p))
+        start_id = end_id
+    scale_blocks = scale_blocks[::-1]
+
+    all_feats = []
+    all_pos = []
+
+    for start, end, patch_size in scale_blocks:
+        feats_s = features[:, start:end, :]        # (B, Ns, C)
+        pos_s = positions[:, start:end, :]         # (B, Ns, 2)
+        B_s, Ns, _ = pos_s.shape
+
+        dx, dy = torch.meshgrid(
+            torch.arange(patch_size, device=device),
+            torch.arange(patch_size, device=device),
+            indexing='ij'
+        )
+        offset = torch.stack([dx, dy], dim=-1).reshape(-1, 2)  # (ps², 2)
+
+        pos_exp = pos_s.unsqueeze(2) + offset.view(1, 1, -1, 2)  # (B, Ns, ps², 2)
+        pos_exp = pos_exp.view(B, -1, 2)
+        xg = pos_exp[:, :, 0]
+        yg = pos_exp[:, :, 1]
+
+        flat_visibility = visibility.view(B, -1)  # (B, H*W)
+        idx_flat = xg * W + yg
+        idx_batch = torch.arange(B, device=device).view(B, 1).repeat(1, idx_flat.shape[1])
+
+        claimed = flat_visibility[idx_batch, idx_flat].view(B, Ns, patch_size**2).any(dim=2)  # (B, Ns)
+        keep = ~claimed
+
+        if keep.sum() == 0:
+            continue
+
+        # Filter kept tokens
+        pos_keep = pos_s[keep]
+        feat_keep = feats_s[keep]
+        B_idx, Ns_idx = torch.nonzero(keep, as_tuple=True)
+
+        pos_grid = pos_keep.unsqueeze(1) + offset.unsqueeze(0)  # (N_keep, ps², 2)
+        pos_grid = pos_grid.view(-1, 2)
+        feat_grid = feat_keep.unsqueeze(1).repeat(1, patch_size**2, 1).view(-1, C)
+
+        # Add scale=3 to final positions
+        scale3 = torch.full((pos_grid.shape[0], 1), 3, dtype=torch.long, device=device)
+        pos_out = torch.cat([scale3, pos_grid], dim=1)
+
+        all_feats.append(feat_grid)
+        all_pos.append(pos_out)
+
+        # Update visibility
+        x_vis = pos_grid[:, 0].clamp(0, H - 1)
+        y_vis = pos_grid[:, 1].clamp(0, W - 1)
+        b_grid = B_idx.repeat_interleave(patch_size**2)
+        visibility[b_grid, x_vis, y_vis] = True
+
+    return (
+        torch.cat(all_feats, dim=0).view(B, -1, C),
+        torch.cat(all_pos, dim=0).view(B, -1, 3)
+    )
