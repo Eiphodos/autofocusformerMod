@@ -482,7 +482,7 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         finest_pos_all = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
         finest_pos_all = finest_pos_all.to(mf_pos.device).repeat(b, 1, 1)
         print(finest_pos_all.shape)
-
+        print(finest_pos_all[0,0:10])
         N = finest_pos.shape[1]
 
         pos_indices = self.find_pos_org_order(finest_pos_all, finest_pos)
@@ -490,6 +490,7 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         mask_features = mask_features[b_, pos_indices]
         finest_pos = finest_pos[b_, pos_indices]
         print(finest_pos.shape)
+        print(finest_pos[0, 0:10])
         assert (finest_pos_all == finest_pos).all()
 
 
