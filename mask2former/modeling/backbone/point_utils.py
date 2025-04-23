@@ -660,23 +660,19 @@ def hierarchical_upsample_ordered(features, positions, tokens_per_scale, input_s
         B_idx, Ns_idx = torch.nonzero(keep, as_tuple=True)
 
         pos_grid = pos_keep.unsqueeze(1) + offset.unsqueeze(0)  # (N_keep, ps², 2)
-        pos_grid = pos_grid.view(-1, 2)
+        pos_grid = pos_grid.view(-1, 2).long()
         feat_grid = feat_keep.unsqueeze(1).repeat(1, patch_size**2, 1).view(-1, C)
 
-        # Add scale=3 to final positions
-        scale3 = torch.full((pos_grid.shape[0], 1), 3, dtype=torch.long, device=device)
-        pos_out = torch.cat([scale3, pos_grid], dim=1)
-
         all_feats.append(feat_grid)
-        all_pos.append(pos_out)
+        all_pos.append(pos_grid)
 
         # Update visibility
-        x_vis = pos_grid[:, 0].clamp(0, H - 1)
-        y_vis = pos_grid[:, 1].clamp(0, W - 1)
-        b_grid = B_idx.repeat_interleave(patch_size**2)
+        x_vis = pos_grid[:, 0]
+        y_vis = pos_grid[:, 1]
+        b_grid = B_idx.repeat_interleave(patch_size**2).long()
         visibility[b_grid, x_vis, y_vis] = True
 
     return (
         torch.cat(all_feats, dim=0).view(B, -1, C),
-        torch.cat(all_pos, dim=0).view(B, -1, 3)
+        torch.cat(all_pos, dim=0).view(B, -1, 2)
     )
