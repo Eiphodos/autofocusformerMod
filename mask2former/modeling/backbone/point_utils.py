@@ -654,3 +654,46 @@ def hierarchical_upsample_ordered(features, positions, tokens_per_scale, input_s
         b_grid = B_idx.repeat_interleave(patch_size**2).long()
         visibility[b_grid, x_vis, y_vis] = True
     return torch.cat(all_feats, dim=0).view(B, -1, C), torch.cat(all_pos, dim=0).view(B, -1, 2)
+
+
+def upsample_tokens_fixed_scales(features, positions, tokens_per_scale):
+    B, N, C = features.shape
+    device = features.device
+    n_scales = len(tokens_per_scale)
+    ps = [2 ** (n_scales - s - 1) for s in range(n_scales)]
+    start_id = 0
+    scale_blocks = []
+    for s, t, p in zip(range(n_scales), tokens_per_scale, ps):
+        end_id = start_id + t
+        scale_blocks[s] = (start_id, end_id, p)
+        start_id = end_id
+
+    all_new_feats = []
+    all_new_pos = []
+
+    for scale, (start, end, patch_size) in scale_blocks.items():
+        feat_s = features[:, start:end, :]              # (B, Ns, C)
+        pos_s = positions[:, start:end, :]             # (B, Ns, 2) — just x, y
+
+        B_s, Ns, _ = pos_s.shape
+
+        # Generate relative grid positions (ps x ps x 2)
+        offsets = torch.arange(patch_size, device=device)
+        dx, dy = torch.meshgrid(offsets, offsets, indexing='ij')
+        dxy = torch.stack([dx, dy], dim=-1).reshape(-1, 2)  # (ps*ps, 2)
+
+        # Expand pos_s: (B, Ns, 1, 2) + (1, 1, ps*ps, 2)
+        pos_s_exp = pos_s.unsqueeze(2) + dxy.view(1, 1, -1, 2)  # (B, Ns, ps*ps, 2)
+        pos_s_exp = pos_s_exp.view(B, -1, 2)                    # (B, Ns * ps^2, 2)
+
+        # Expand feats: repeat each feature ps^2 times
+        feat_s_exp = feat_s.unsqueeze(2).repeat(1, 1, patch_size**2, 1).view(B, -1, C)  # (B, Ns * ps^2, C)
+
+        all_new_feats.append(feat_s_exp)
+        all_new_pos.append(pos_s_exp)
+
+    # Concatenate across all scales
+    final_feats = torch.cat(all_new_feats, dim=1)  # (B, N', C)
+    final_pos = torch.cat(all_new_pos, dim=1)      # (B, N', 3)
+
+    return final_feats, final_pos
