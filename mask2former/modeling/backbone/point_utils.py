@@ -640,13 +640,13 @@ def hierarchical_upsample_ordered(features, positions, tokens_per_scale, input_s
         offset = torch.stack([dx, dy], dim=-1).reshape(-1, 2)  # (ps², 2)
 
         pos_exp = pos_s.unsqueeze(2) + offset.view(1, 1, -1, 2)  # (B, Ns, ps², 2)
-        pos_exp = pos_exp.view(B, -1, 2)
+        pos_exp = pos_exp.view(B, -1, 2).long()
         xg = pos_exp[:, :, 0]
         yg = pos_exp[:, :, 1]
 
         flat_visibility = visibility.view(B, -1)  # (B, H*W)
         idx_flat = xg * W + yg
-        idx_batch = torch.arange(B, device=device).view(B, 1).repeat(1, idx_flat.shape[1])
+        idx_batch = torch.arange(B, device=device).view(B, 1).repeat(1, idx_flat.shape[1]).long()
 
         claimed = flat_visibility[idx_batch, idx_flat].view(B, Ns, patch_size**2).any(dim=2)  # (B, Ns)
         keep = ~claimed
