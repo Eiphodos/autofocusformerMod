@@ -576,3 +576,33 @@ def calculate_hilbert_order(h, w, pos):
     final_order_ = torch.zeros_like(order_src)
     final_order_.scatter_(index=final_order_index, src=order_src, dim=1)
     return final_order_, final_order_index
+
+
+def upsample_by_patch(features, positions, tokens_per_scale):
+    B, N, C = features.shape
+    device = features.device
+    n_scales = len(tokens_per_scale)
+    ps = [2 ** (n_scales - s - 1) for s in range(n_scales)]
+    start_id = 0
+    scale_blocks = {}
+    for s, t, p in zip(range(n_scales), tokens_per_scale, ps):
+        end_id = start_id + t
+        scale_blocks[s] = (start_id, end_id, p)
+        start_id = end_id
+    all_new_feats = []
+    all_new_pos = []
+    for scale, (start, end, patch_size) in scale_blocks.items():
+        feat_s = features[:, start:end, :]
+        pos_s = positions[:, start:end, :]
+        B_s, Ns, _ = pos_s.shape
+        offsets = torch.arange(patch_size, device=device)
+        dx, dy = torch.meshgrid(offsets, offsets, indexing='ij')
+        dxy = torch.stack([dx, dy], dim=-1).reshape(-1, 2)
+        pos_s_exp = pos_s.unsqueeze(2) + dxy.view(1, 1, -1, 2)
+        pos_s_exp = pos_s_exp.view(B, -1, 2)
+        feat_s_exp = feat_s.unsqueeze(2).repeat(1, 1, patch_size**2, 1).view(B, -1, C)
+        all_new_feats.append(feat_s_exp)
+        all_new_pos.append(pos_s_exp)
+    final_feats = torch.cat(all_new_feats, dim=1)
+    final_pos = torch.cat(all_new_pos, dim=1)
+    return final_feats, final_pos
