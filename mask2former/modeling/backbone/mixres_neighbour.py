@@ -808,7 +808,7 @@ class MRNB(nn.Module):
             out_scale = x[b_scale_idx, n_scale_idx, :]
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
             outs["res{}".format(out_idx)] = self.norm_out(out_scale)
-            outs["res{}_pos".format(out_idx)] = pos_scale[:,:,1:]
+            outs["res{}_pos".format(out_idx)] = pos_scale[:, :, 1:]
             outs["res{}_scale".format(out_idx)] = pos_scale[:, :, 0]
             outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
         outs["min_spatial_shape"] = min_patched_im_size
