@@ -449,10 +449,6 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         # x is a list of multi-scale feature
         finest_inp_feat_shape = input_shapes[-1]
 
-        for i, (f, p) in enumerate(zip(x, pos)):
-            print("feature {} size: {}".format(i, f.shape))
-            print("pos {} size: {}, max: {}".format(i, p.shape, p.max()))
-
         tokens_per_scale = [tx.shape[1] for tx in x]
         mask_features, finest_pos = hierarchical_upsample_ordered(mask_features, torch.cat(pos, dim=1), tokens_per_scale, finest_input_shape)
 
@@ -483,20 +479,8 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
             #print("Feature {} max pos after scaling: {}".format(i, pos_scaled.max()))
             poss_scaled.append(pos_scaled)
             i += 1
-        finest_pos_all = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
-        finest_pos_all = finest_pos_all.to(mf_pos.device).repeat(b, 1, 1)
-        print(finest_pos_all.shape)
-        print(finest_pos_all[0,0:10])
-        N = finest_pos.shape[1]
-
-        pos_indices = self.find_pos_org_order(finest_pos_all, finest_pos)
-        b_ = torch.arange(b).unsqueeze(-1).expand(-1, N)
-        mask_features = mask_features[b_, pos_indices]
-        finest_pos = finest_pos[b_, pos_indices]
-        print(finest_pos.shape)
-        print(finest_pos[0, 0:10])
-        assert (finest_pos_all == finest_pos).all()
-
+        #finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
+        #finest_pos = finest_pos_all.to(mf_pos.device).repeat(b, 1, 1)
 
         for i in range(self.num_feature_levels):
             pos_emb.append(self.pe_layer(poss_scaled[i]))
