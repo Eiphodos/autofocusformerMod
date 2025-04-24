@@ -635,25 +635,27 @@ def hierarchical_upsample_ordered(features, positions, tokens_per_scale, input_s
         xg = pos_exp[:, :, 0]
         yg = pos_exp[:, :, 1]
         flat_visibility = visibility.view(B, -1)  # (B, H*W)
-        idx_flat = xg * W + yg
+        idx_flat = yg * H + xg
         idx_batch = torch.arange(B, device=device).view(B, 1).repeat(1, idx_flat.shape[1]).long()
         claimed = flat_visibility[idx_batch, idx_flat].view(B, Ns, patch_size**2).any(dim=2)  # (B, Ns)
         keep = ~claimed
         if keep.sum() == 0:
             continue
-        pos_keep = pos_s[keep]
-        feat_keep = feats_s[keep]
         B_idx, Ns_idx = torch.nonzero(keep, as_tuple=True)
-        pos_grid = pos_keep.unsqueeze(1) + offset.unsqueeze(0)  # (N_keep, ps², 2)
-        pos_grid = pos_grid.view(-1, 2).long()
-        feat_grid = feat_keep.unsqueeze(1).repeat(1, patch_size**2, 1).view(-1, C)
+        pos_keep = pos_s[B_idx, Ns_idx]
+        feat_keep = feats_s[B_idx, Ns_idx]
+        pos_keep = pos_keep.view(B, -1, 2)
+        feat_keep = feat_keep.view(B, -1, C)
+        pos_grid = pos_keep.unsqueeze(2) + offset.view(1, 1, -1, 2)  # (N_keep, ps², 2)
+        pos_grid = pos_grid.view(B, -1, 2).long()
+        feat_grid = feat_keep.unsqueeze(2).repeat(1, 1, patch_size**2, 1).view(B, -1, C)
         all_feats.append(feat_grid)
         all_pos.append(pos_grid)
-        x_vis = pos_grid[:, 0]
-        y_vis = pos_grid[:, 1]
-        b_grid = B_idx.repeat_interleave(patch_size**2).long()
-        visibility[b_grid, x_vis, y_vis] = True
-    return torch.cat(all_feats, dim=0).view(B, -1, C), torch.cat(all_pos, dim=0).view(B, -1, 2)
+        x_vis = pos_grid[:, :, 0]
+        y_vis = pos_grid[:, :, 1]
+        b_vis = torch.arange(B).unsqueeze(-1).expand(-1, pos_grid.shape[1])
+        visibility[b_vis, y_vis, x_vis] = True
+    return torch.cat(all_feats, dim=1), torch.cat(all_pos, dim=1)
 
 
 def upsample_tokens_fixed_scales(features, positions, tokens_per_scale):
