@@ -9,6 +9,8 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from timm.models.layers import trunc_normal_
+
 from detectron2.config import configurable
 from detectron2.modeling import BACKBONE_REGISTRY, Backbone, ShapeSpec, build_backbone
 
@@ -57,7 +59,18 @@ class MROTB(nn.Module):
             feat_projs.append(scale_projs)
         self.feat_proj = nn.ModuleList(feat_projs)
 
+        self.apply(self._init_weights)
+
         print("Successfully built OracleTeacherBackbone model!")
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            trunc_normal_(m.weight, std=.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
 
 
     def forward(self, im, sem_seg_gt, target_pad):
