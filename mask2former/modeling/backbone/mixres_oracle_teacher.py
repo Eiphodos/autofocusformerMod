@@ -103,7 +103,7 @@ class MROTB(nn.Module):
                     feat_pos = feat_pos[b_, pos_indices]
                     feat_scale = feat_scale[b_, pos_indices]
                     assert (outs[f + '_pos'] == feat_pos).all()
-                    outs[f] = outs[f] + self.feat_proj[scale][curr_scale](feat) #torch.max(outs[f], self.feat_proj[scale][curr_scale](feat))
+                    outs[f] = torch.max(outs[f], self.feat_proj[scale][curr_scale](feat)) #outs[f] + self.feat_proj[scale][curr_scale](feat)
                 else:
                     outs[f] = feat
                     outs[f + '_pos'] = feat_pos
