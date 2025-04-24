@@ -454,7 +454,7 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
             print("pos {} size: {}, max: {}".format(i, p.shape, p.max()))
 
         tokens_per_scale = [tx.shape[1] for tx in x]
-        mask_features, finest_pos = upsample_tokens_fixed_scales(mask_features, torch.cat(pos, dim=1), tokens_per_scale)
+        mask_features, finest_pos = hierarchical_upsample_ordered(mask_features, torch.cat(pos, dim=1), tokens_per_scale, finest_input_shape)
 
         x = x[:self.num_feature_levels]
         pos = pos[:self.num_feature_levels]
