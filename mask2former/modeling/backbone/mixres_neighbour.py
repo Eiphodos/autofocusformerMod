@@ -807,8 +807,13 @@ class MRNB(nn.Module):
             pos_scale = rearrange(pos_scale, '(b n) p -> b n p', b=B).contiguous()
             out_scale = x[b_scale_idx, n_scale_idx, :]
             out_scale = rearrange(out_scale, '(b n) c -> b n c', b=B).contiguous()
+
+            p = pos_scale[:, :, 1:]
+            p_unq = p.unique(dim=1)
+            print("scale {} pos org shape: {}. unq shape: {}".format(s, p.shape, p_unq.shape))
+
             outs["res{}".format(out_idx)] = self.norm_out(out_scale)
-            outs["res{}_pos".format(out_idx)] = pos_scale[:, :, 1:]
+            outs["res{}_pos".format(out_idx)] = p
             outs["res{}_scale".format(out_idx)] = pos_scale[:, :, 0]
             outs["res{}_spatial_shape".format(out_idx)] = patched_im_size
         outs["min_spatial_shape"] = min_patched_im_size
