@@ -592,7 +592,7 @@ class MRNB(nn.Module):
         _load_weights(self, checkpoint_path, prefix)
 
 
-    def divide_tokens_to_split_and_keep_old(self, feat_at_curr_scale, pos_at_curr_scale, upsampling_mask):
+    def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, upsampling_mask):
         B, N, C = feat_at_curr_scale.shape
         k_split = int(feat_at_curr_scale.shape[1] * self.upscale_ratio)
         k_bottom = 0 #k_split // 2
@@ -615,7 +615,7 @@ class MRNB(nn.Module):
         return tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep
 
 
-    def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, importance_scores):
+    def divide_tokens_to_split_and_keep_new(self, feat_at_curr_scale, pos_at_curr_scale, importance_scores):
         B, N, C = feat_at_curr_scale.shape
         k_split = int(N * self.upscale_ratio)
         k_keep = int(N - k_split)
