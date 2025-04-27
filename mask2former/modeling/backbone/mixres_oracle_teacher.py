@@ -50,14 +50,21 @@ class MROTB(nn.Module):
         self.upsamplers = nn.ModuleList(upsamplers)
 
         feat_projs = []
+        feat_norms = []
         for i in range(len(self.backbones)):
             scale_projs = []
+            scale_norms = []
             for j in range(len(self.backbones[i]._out_features) - 1):
                 f_proj = nn.Linear(backbone_dims[i], backbone_dims[j])
+                f_norm = nn.LayerNorm(backbone_dims[j])
                 scale_projs.append(f_proj)
+                scale_norms.append(f_norm)
             scale_projs = nn.ModuleList(scale_projs)
+            scale_norms = nn.ModuleList(scale_norms)
             feat_projs.append(scale_projs)
+            feat_norms.append(scale_norms)
         self.feat_proj = nn.ModuleList(feat_projs)
+        self.feat_norm = nn.ModuleList(feat_norms)
 
         self.apply(self._init_weights)
 
@@ -103,7 +110,8 @@ class MROTB(nn.Module):
                     feat_pos = feat_pos[b_, pos_indices]
                     feat_scale = feat_scale[b_, pos_indices]
                     assert (outs[f + '_pos'] == feat_pos).all()
-                    outs[f] = outs[f] + self.feat_proj[scale][curr_scale](feat) #torch.max(outs[f], self.feat_proj[scale][curr_scale](feat))
+                    orig_dtype = feat.dtype
+                    outs[f] = outs[f] + self.feat_norm[scale][curr_scale](self.feat_proj[scale][curr_scale](feat).float()).to(orig_dtype)
                 else:
                     outs[f] = feat
                     outs[f + '_pos'] = feat_pos
