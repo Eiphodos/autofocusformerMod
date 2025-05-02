@@ -49,6 +49,7 @@ class MROTB(nn.Module):
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
 
+        '''
         feat_projs = []
         feat_norms = []
         for i in range(len(self.backbones)):
@@ -65,6 +66,7 @@ class MROTB(nn.Module):
             feat_norms.append(scale_norms)
         self.feat_proj = nn.ModuleList(feat_projs)
         self.feat_norm = nn.ModuleList(feat_norms)
+        '''
 
         self.apply(self._init_weights)
 
@@ -111,7 +113,7 @@ class MROTB(nn.Module):
                     feat_scale = feat_scale[b_, pos_indices]
                     assert (outs[f + '_pos'] == feat_pos).all()
                     orig_dtype = feat.dtype
-                    outs[f] = torch.max(outs[f], self.feat_norm[scale][curr_scale](self.feat_proj[scale][curr_scale](feat).float()).to(orig_dtype))
+                    outs[f] = torch.cat(outs[f], feat, dim=2)
                 else:
                     outs[f] = feat
                     outs[f + '_pos'] = feat_pos
@@ -185,7 +187,9 @@ class OracleTeacherBackbone(MROTB, Backbone):
         self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in range(n_scales)}
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
-        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[i] for i in range(n_scales)}
+        #self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[i] for i in range(n_scales)}
+        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): sum(cfg.MODEL.MR.EMBED_DIM[i:]) for i in
+                                      range(n_scales)}
         #print("backbone channels: {}".format(self._out_feature_channels))
 
     def forward(self, x, sem_seg_gt, target_pad):
