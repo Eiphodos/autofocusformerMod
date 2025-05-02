@@ -113,7 +113,7 @@ class MROTB(nn.Module):
                     feat_scale = feat_scale[b_, pos_indices]
                     assert (outs[f + '_pos'] == feat_pos).all()
                     orig_dtype = feat.dtype
-                    outs[f] = torch.cat(outs[f], feat, dim=2)
+                    outs[f] = torch.cat([outs[f], feat], dim=2)
                 else:
                     outs[f] = feat
                     outs[f + '_pos'] = feat_pos
