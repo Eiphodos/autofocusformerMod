@@ -112,6 +112,7 @@ class MROTB(nn.Module):
                     feat_pos = feat_pos[b_, pos_indices]
                     feat_scale = feat_scale[b_, pos_indices]
                     assert (outs[f + '_pos'] == feat_pos).all()
+                    orig_dtype = feat.dtype
                     outs[f] = torch.cat([outs[f], feat], dim=2)
                 else:
                     outs[f] = feat
@@ -186,7 +187,9 @@ class OracleTeacherBackbone(MROTB, Backbone):
         self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in range(n_scales)}
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
-        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[i] for i in range(n_scales)}
+        #self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[i] for i in range(n_scales)}
+        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): sum(cfg.MODEL.MR.EMBED_DIM[i:]) for i in
+                                      range(n_scales)}
         #print("backbone channels: {}".format(self._out_feature_channels))
 
     def forward(self, x, sem_seg_gt, target_pad):
