@@ -49,6 +49,7 @@ class MROTB(nn.Module):
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
 
+        '''
         feat_projs = []
         feat_norms = []
         for i in range(len(self.backbones)):
@@ -65,6 +66,7 @@ class MROTB(nn.Module):
             feat_norms.append(scale_norms)
         self.feat_proj = nn.ModuleList(feat_projs)
         self.feat_norm = nn.ModuleList(feat_norms)
+        '''
 
         self.apply(self._init_weights)
 
@@ -110,8 +112,7 @@ class MROTB(nn.Module):
                     feat_pos = feat_pos[b_, pos_indices]
                     feat_scale = feat_scale[b_, pos_indices]
                     assert (outs[f + '_pos'] == feat_pos).all()
-                    orig_dtype = feat.dtype
-                    outs[f] = torch.max(outs[f], self.feat_norm[scale][curr_scale](self.feat_proj[scale][curr_scale](feat).float()).to(orig_dtype))
+                    outs[f] = torch.cat([outs[f], feat], dim=2)
                 else:
                     outs[f] = feat
                     outs[f + '_pos'] = feat_pos
