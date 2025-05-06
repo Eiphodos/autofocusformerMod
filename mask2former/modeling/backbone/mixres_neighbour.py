@@ -84,6 +84,35 @@ class Mlp(nn.Module):
         return x
 
 
+class MLPBlock(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.linear = nn.Linear(in_dim, out_dim)
+        self.norm = nn.LayerNorm(out_dim)
+
+    def forward(self, x):
+        x = self.linear(x)
+        x = nn.functional.gelu(x)
+        x = self.norm(x)
+        return x
+
+class MLPDeepNorm(nn.Module):
+
+    def __init__(self, in_features, hidden_features, out_features, num_layers):
+        super().__init__()
+        self.num_layers = num_layers
+        h = [hidden_features] * (num_layers - 1)
+        layers = []
+        for n, k in zip([in_features] + h, h + [out_features]):
+            layers.append(MLPBlock(n, k))
+        self.layers = nn.ModuleList(layers)
+
+    def forward(self, x):
+        for i, layer in enumerate(self.layers):
+            x = layer(x)
+        return x
+
+
 class ClusterAttention(nn.Module):
     """
     Performs local attention on nearest clusters
@@ -565,8 +594,8 @@ class MRNB(nn.Module):
             input_dim = max(channels, 3 * self.patch_size ** 2)
             self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
         self.high_res_norm1 = nn.LayerNorm(input_dim)
-        self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels, act_layer=nn.LeakyReLU)
-        self.high_res_norm2 = nn.LayerNorm(channels)
+        self.high_res_mlp = MLPDeepNorm(in_features=input_dim, out_features=channels, hidden_features=channels, num_layers=3)
+        #self.high_res_norm2 = nn.LayerNorm(channels)
         #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
         self.token_projection = nn.Linear(channels, d_model)
@@ -729,10 +758,10 @@ class MRNB(nn.Module):
         all_pos_sorted_by_scale = torch.cat(all_pos_sorted_by_scale, dim=1)
         all_projected_image_features = torch.cat(all_projected_image_features, dim=1)
 
-        #all_projected_image_features = nn.functional.leaky_relu(all_projected_image_features)
+        all_projected_image_features = nn.functional.gelu(all_projected_image_features)
         all_projected_image_features = self.high_res_norm1(all_projected_image_features)
         all_projected_image_features = self.high_res_mlp(all_projected_image_features)
-        all_projected_image_features = self.high_res_norm2(all_projected_image_features)
+        #all_projected_image_features = self.high_res_norm2(all_projected_image_features)
         all_tokens_sorted_by_scale = all_tokens_sorted_by_scale + all_projected_image_features
 
         return all_tokens_sorted_by_scale, all_pos_sorted_by_scale
