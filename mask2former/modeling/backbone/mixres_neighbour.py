@@ -734,10 +734,10 @@ class MRNB(nn.Module):
         im_high = im[b_, :, y_pos, x_pos]
         im_high = rearrange(im_high, 'b (n p) c -> b n (p c)', b=b, n=n, c=3)
         im_high = self.image_patch_projection(im_high)
-        im_high = nn.functional.leaky_relu(im_high)
+        im_high = nn.functional.gelu(im_high)
         im_high = self.high_res_norm1(im_high)
         im_high = self.high_res_mlp(im_high)
-        im_high = self.high_res_norm2(im_high)
+        #im_high = self.high_res_norm2(im_high)
         tokens = tokens + im_high
 
         return tokens
