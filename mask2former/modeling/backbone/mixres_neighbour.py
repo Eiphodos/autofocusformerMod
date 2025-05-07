@@ -29,14 +29,17 @@ pre_table = torch.stack([pre_xs, pre_ys, dis_table, sin_table, cos_table], dim=2
 pre_table[torch.bitwise_or(pre_table.isnan(), pre_table.isinf()).nonzero(as_tuple=True)] = 0
 pre_table = pre_table.reshape(-1, 5)
 
-def get_2dpos_of_ps(height, width, patch_size):
-    patches_coords = torch.meshgrid(torch.arange(0, width // patch_size),
-                                    torch.arange(0, height // patch_size),
-                                    indexing='ij')
+def get_2dpos_of_curr_ps_in_min_ps(height, width, patch_size, min_patch_size, scale):
+    patches_coords = torch.meshgrid(torch.arange(0, width // min_patch_size, patch_size // min_patch_size), torch.arange(0, height // min_patch_size, patch_size // min_patch_size), indexing='ij')
     patches_coords = torch.stack([patches_coords[0], patches_coords[1]])
     patches_coords = patches_coords.permute(1, 2, 0)
-    patches_coords = patches_coords.view(-1, 2)
-    return patches_coords
+    patches_coords = patches_coords.transpose(0, 1)
+    patches_coords = patches_coords.reshape(-1, 2)
+    n_patches = patches_coords.shape[0]
+
+    scale_lvl = torch.tensor([[scale]] * n_patches)
+    patches_scale_coords = torch.cat([scale_lvl, patches_coords], dim=1)
+    return patches_scale_coords
 
 
 def drop_path(x, drop_prob: float = 0., training: bool = False, scale_by_keep: bool = True):
@@ -507,6 +510,42 @@ class BasicLayer(nn.Module):
         return f"dim={self.dim}, depth={self.depth}"
 
 
+class DownSampleConvBlock(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.conv = nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1)
+        self.b_norm = nn.BatchNorm2d(out_dim)
+        self.relu = nn.LeakyReLU()
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.relu(x)
+        x = self.b_norm(x)
+
+        return x
+
+class OverlapPatchEmbedding(nn.Module):
+    def __init__(self, patch_size, embed_dim, channels):
+        super().__init__()
+
+        self.patch_size = patch_size
+
+        n_layers = int(torch.log2(torch.tensor([patch_size])).item())
+        conv_layers = []
+        emb_dims = [int(embed_dim // 2**(n_layers -1 - i)) for i in range(n_layers) ]
+        emb_dim_list = [channels] + emb_dims
+        for i in range(n_layers):
+            conv = DownSampleConvBlock(emb_dim_list[i], emb_dim_list[i + 1])
+            conv_layers.append(conv)
+        self.conv_layers = nn.Sequential(*conv_layers)
+        self.out_norm = nn.LayerNorm(embed_dim)
+
+    def forward(self, im):
+        x = self.conv_layers(im).flatten(2).transpose(1, 2)
+        x = self.out_norm(x)
+        return x
+
+
 class MRNB(nn.Module):
     def __init__(
             self,
@@ -555,8 +594,7 @@ class MRNB(nn.Module):
 
         # Pos Embs
         #self.pe_layer = PositionEmbeddingSine(channels // 2, normalize=True)
-        self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
-        self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
+
 
         # stochastic depth
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, n_layers)]
@@ -577,36 +615,35 @@ class MRNB(nn.Module):
                                layer_scale=layer_scale,
                                )
 
-        # Split layers
-        #self.split = nn.Linear(channels, channels * self.split_ratio)
+        if self.scale > 0:
+            # Split layers
+            #self.split = nn.Linear(channels, channels * self.split_ratio)
 
-        #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
-        #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
-        if self.add_image_data_to_all:
-            input_dim = channels
-            image_projectors = []
-            for i in range(self.scale + 1):
-                in_dim = 3 * (self.patch_sizes[i]**2)
-                proj = nn.Linear(in_dim, channels)
-                image_projectors.append(proj)
-            self.image_patch_projectors = nn.ModuleList(image_projectors)
+            self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
+            self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
+
+            #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
+            #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
+            if self.add_image_data_to_all:
+                input_dim = channels
+                image_projectors = []
+                for i in range(self.scale + 1):
+                    in_dim = 3 * (self.patch_sizes[i]**2)
+                    proj = nn.Linear(in_dim, channels)
+                    image_projectors.append(proj)
+                self.image_patch_projectors = nn.ModuleList(image_projectors)
+            else:
+                input_dim = max(channels, 3 * self.patch_size ** 2)
+                self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
+            self.high_res_norm1 = nn.LayerNorm(input_dim)
+            self.high_res_mlp = MLPDeepNorm(in_features=input_dim, out_features=channels, hidden_features=channels, num_layers=3)
+            #self.high_res_norm2 = nn.LayerNorm(channels)
+            #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
+
+            self.token_projection = nn.Linear(channels, d_model)
         else:
-            input_dim = max(channels, 3 * self.patch_size ** 2)
-            self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
-        self.high_res_norm1 = nn.LayerNorm(input_dim)
-        self.high_res_mlp = MLPDeepNorm(in_features=input_dim, out_features=channels, hidden_features=channels, num_layers=3)
-        #self.high_res_norm2 = nn.LayerNorm(channels)
-        #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
+            self.patch_embed = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=d_model, channels=channels)
 
-        self.token_projection = nn.Linear(channels, d_model)
-
-        '''
-        # add a norm layer for each output
-        for i_layer in range(len(n_layers)):
-            layer = norm_layer(num_features[i_layer])
-            layer_name = f"norm{i_layer}"
-            self.add_module(layer_name, layer)
-        '''
         self.norm_out = nn.LayerNorm(d_model)
         self.apply(init_weights)
 
@@ -851,10 +888,14 @@ class MRNB(nn.Module):
         PS = self.patch_size
         min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
 
-
-        x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
+        if scale > 0:
+            x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
+        else:
+            x = self.patch_embed(im)
+            pos = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, scale).to('cuda')
+            pos = pos.repeat(B, 1, 1)
         pos, x = self.layers(pos, x, h=min_patched_im_size[0], w=min_patched_im_size[1], on_grid=False)
-        #success = self.test_pos_cover_and_overlap(pos[0], H, W, scale)
+
         outs = {}
         for s in range(scale + 1):
             out_idx = self.n_scales - s + 1
