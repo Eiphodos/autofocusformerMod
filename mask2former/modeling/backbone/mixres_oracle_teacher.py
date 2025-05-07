@@ -160,7 +160,7 @@ class MROTB(nn.Module):
 
         for i in range(self.n_scales):
             out_idx = self.n_scales - i + 1
-            outs["res{}".format(out_idx)] = self.norm_out[i](outs["res{}".format(out_idx)])
+            outs["res{}".format(out_idx)] = self.out_norms[i](outs["res{}".format(out_idx)])
         return outs
 
 
