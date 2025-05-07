@@ -647,11 +647,11 @@ class MRNB(nn.Module):
     def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, importance_scores):
         B, N, C = feat_at_curr_scale.shape
         k_split = int(N * self.upscale_ratio)
-        k_keep = int(N - k_split)
 
-        # Top-k selection
-        _, topk_idx = torch.topk(importance_scores, k=k_split, dim=1)
-        _, bottomk_idx = torch.topk(importance_scores, k=k_keep, dim=1, largest=False)
+        _, sorted_indices = torch.sort(importance_scores, dim=1, descending=False)
+        bottomk_idx = sorted_indices[:, :-k_split]
+        topk_idx = sorted_indices[:, -k_split:]
+
         mask_split_hard = torch.zeros_like(importance_scores).scatter(1, topk_idx, 1.0)
         mask_keep_hard = torch.zeros_like(importance_scores).scatter(1, bottomk_idx, 1.0)
 
@@ -662,7 +662,6 @@ class MRNB(nn.Module):
         tokens_masked_split = feat_at_curr_scale * mask_split.unsqueeze(-1)
         tokens_masked_keep = feat_at_curr_scale * mask_keep.unsqueeze(-1)
 
-        # Slice tensors
         batch_idx = torch.arange(B, device=feat_at_curr_scale.device).unsqueeze(1)
         tokens_to_split = tokens_masked_split[batch_idx, topk_idx]
         tokens_to_keep = tokens_masked_keep[batch_idx, bottomk_idx]
