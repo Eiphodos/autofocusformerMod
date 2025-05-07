@@ -578,7 +578,7 @@ class MRNB(nn.Module):
                                )
 
         # Split layers
-        self.split = nn.Linear(channels, channels * self.split_ratio)
+        #self.split = nn.Linear(channels, channels * self.split_ratio)
 
         #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
         #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
@@ -621,7 +621,7 @@ class MRNB(nn.Module):
         _load_weights(self, checkpoint_path, prefix)
 
 
-    def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, upsampling_mask):
+    def divide_tokens_to_split_and_keep_old(self, feat_at_curr_scale, pos_at_curr_scale, upsampling_mask):
         B, N, C = feat_at_curr_scale.shape
         k_split = int(feat_at_curr_scale.shape[1] * self.upscale_ratio)
         k_bottom = 0 #k_split // 2
@@ -644,7 +644,7 @@ class MRNB(nn.Module):
         return tokens_to_split, coords_to_split, tokens_to_keep, coords_to_keep
 
 
-    def divide_tokens_to_split_and_keep_new(self, feat_at_curr_scale, pos_at_curr_scale, importance_scores):
+    def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, importance_scores):
         B, N, C = feat_at_curr_scale.shape
         k_split = int(N * self.upscale_ratio)
         k_keep = int(N - k_split)
@@ -695,8 +695,9 @@ class MRNB(nn.Module):
 
 
     def split_features(self, tokens_to_split):
-        x_splitted = self.split(tokens_to_split)
-        x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
+        #x_splitted = self.split(tokens_to_split)
+        #x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
+        x_splitted = tokens_to_split.unsqueeze(2).repeat(1, 1, self.split_ratio, 1)
         x_splitted = x_splitted + self.rel_pos_emb + self.scale_emb
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
