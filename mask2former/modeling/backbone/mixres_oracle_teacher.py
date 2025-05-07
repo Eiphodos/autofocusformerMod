@@ -158,7 +158,7 @@ class MROTB(nn.Module):
             features = torch.cat(all_feat, dim=1)
         outs['min_spatial_shape'] = output['min_spatial_shape']
 
-        for i in self.n_scales:
+        for i in range(self.n_scales):
             out_idx = self.n_scales - i + 1
             outs["res{}".format(out_idx)] = self.norm_out[i](outs["res{}".format(out_idx)])
         return outs
