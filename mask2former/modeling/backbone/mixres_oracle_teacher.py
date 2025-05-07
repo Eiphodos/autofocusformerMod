@@ -106,11 +106,14 @@ class MROTB(nn.Module):
                 #print("Output {} for scale {}: feat_shape: {}, pos_shape: {}, scale_shape: {}, spatial_shape: {}".format(f, scale, feat.shape, feat_pos.shape, feat_scale.shape, feat_ss))
 
                 if f + '_pos' in outs:
+                    print("Original pos: {} and shape: {}".format(outs[f + '_pos'][0, 0:10], outs[f + '_pos'].shape))
+                    print("Pos before sort: {} and shape: {}".format(feat_pos[0, 0:10], feat_pos.shape))
                     pos_indices = self.find_pos_org_order(outs[f + '_pos'], feat_pos)
                     b_ = torch.arange(B).unsqueeze(-1).expand(-1, N)
                     feat = feat[b_, pos_indices]
                     feat_pos = feat_pos[b_, pos_indices]
                     feat_scale = feat_scale[b_, pos_indices]
+                    print("Pos after sort: {} and shape: {}".format(feat_pos[0, 0:10], feat_pos.shape))
                     assert (outs[f + '_pos'] == feat_pos).all()
                     orig_dtype = feat.dtype
                     outs[f] = torch.cat([outs[f], feat], dim=2)
