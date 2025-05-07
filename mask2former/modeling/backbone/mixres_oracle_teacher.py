@@ -113,13 +113,6 @@ class MROTB(nn.Module):
                     feat = feat[b_, pos_indices]
                     feat_pos = feat_pos[b_, pos_indices]
                     feat_scale = feat_scale[b_, pos_indices]
-                    errors = (outs[f + '_pos'] != feat_pos).any(dim=2)
-                    if errors.sum() > 0:
-                        #print("Original pos: {} and shape: {}".format(outs[f + '_pos'][0, 0:10], outs[f + '_pos'].shape))
-                        #print("Pos after sort: {} and shape: {}".format(feat_pos[0, 0:10], feat_pos.shape))
-                        err_org = outs[f + '_pos'][errors]
-                        err_sort = feat_pos[errors]
-                        print("Num errors: {}, org pos: {}, sorted pos: {}".format(errors.sum(), err_org, err_sort))
                     assert (outs[f + '_pos'] == feat_pos).all()
                     orig_dtype = feat.dtype
                     outs[f] = torch.cat([outs[f], feat], dim=2)
