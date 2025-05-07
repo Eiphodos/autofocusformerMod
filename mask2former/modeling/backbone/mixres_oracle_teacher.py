@@ -44,10 +44,17 @@ class MROTB(nn.Module):
         self.n_scales = n_scales
 
         upsamplers = []
-        for i in range(len(self.backbones) - 1):
+        for i in range(self.n_scales - 1):
             upsample_out = MLP(backbone_dims[i], backbone_dims[i], 1, num_layers=3)
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
+
+        out_norms = []
+        for i in range(self.n_scales):
+            norm_dim = sum(backbone_dims[i:])
+            norm_out = nn.LayerNorm(norm_dim)
+            out_norms.append(norm_out)
+        self.out_norms = nn.ModuleList(out_norms)
 
         '''
         feat_projs = []
@@ -150,13 +157,10 @@ class MROTB(nn.Module):
             features_pos = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
             features = torch.cat(all_feat, dim=1)
         outs['min_spatial_shape'] = output['min_spatial_shape']
-        '''
-        for k, v in outs.items():
-            if type(v) == torch.Tensor:
-                print("Outs {} has shape {} and has nan: {} ".format(k, v.shape, (v.isnan()).any()))
-            else:
-                print("Outs {} is {}".format(k, v))
-        '''
+
+        for i in self.n_scales:
+            out_idx = self.n_scales - i + 1
+            outs["res{}".format(out_idx)] = self.norm_out[i](outs["res{}".format(out_idx)])
         return outs
 
 
