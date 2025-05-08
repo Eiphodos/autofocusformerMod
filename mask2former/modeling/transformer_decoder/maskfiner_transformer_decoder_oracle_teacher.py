@@ -450,7 +450,7 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         finest_inp_feat_shape = input_shapes[-1]
 
         tokens_per_scale = [tx.shape[1] for tx in x]
-        mask_features, finest_pos = hierarchical_upsample_ordered(mask_features, torch.cat(pos, dim=1), tokens_per_scale, finest_input_shape)
+        #mask_features, finest_pos = hierarchical_upsample_ordered(mask_features, torch.cat(pos, dim=1), tokens_per_scale, finest_input_shape)
 
         x = x[:self.num_feature_levels]
         pos = pos[:self.num_feature_levels]
@@ -479,8 +479,8 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
             #print("Feature {} max pos after scaling: {}".format(i, pos_scaled.max()))
             poss_scaled.append(pos_scaled)
             i += 1
-        #finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
-        #finest_pos = finest_pos.to(mf_pos.device).repeat(b, 1, 1)
+        finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
+        finest_pos = finest_pos.to(mf_pos.device).repeat(b, 1, 1)
 
         for i in range(self.num_feature_levels):
             pos_emb.append(self.pe_layer(poss_scaled[i]))
@@ -497,7 +497,7 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         output = self.query_feat.weight.unsqueeze(1).repeat(1, b, 1)
         predictions_class = []
         predictions_mask = []
-        #mask_features = upsample_feature_shepard(finest_pos, mf_pos_scaled, mask_features)
+        mask_features = upsample_feature_shepard(finest_pos, mf_pos_scaled, mask_features)
         outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         #outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         #pos_indices = find_pos_indices_in_pos(finest_pos, mf_pos_scaled)

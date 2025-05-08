@@ -617,7 +617,7 @@ class MRNB(nn.Module):
 
         if self.scale > 0:
             # Split layers
-            #self.split = nn.Linear(channels, channels * self.split_ratio)
+            self.split = nn.Linear(channels, channels * self.split_ratio)
 
             self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
             self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
@@ -636,8 +636,8 @@ class MRNB(nn.Module):
                 input_dim = max(channels, 3 * self.patch_size ** 2)
                 self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
             self.high_res_norm1 = nn.LayerNorm(input_dim)
-            self.high_res_mlp = MLPDeepNorm(in_features=input_dim, out_features=channels, hidden_features=channels, num_layers=3)
-            #self.high_res_norm2 = nn.LayerNorm(channels)
+            self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels)
+            self.high_res_norm2 = nn.LayerNorm(channels)
             #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
             self.token_projection = nn.Linear(channels, d_model)
@@ -732,8 +732,8 @@ class MRNB(nn.Module):
 
 
     def split_features(self, tokens_to_split):
-        #x_splitted = self.split(tokens_to_split)
-        #x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
+        x_splitted = self.split(tokens_to_split)
+        x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
         x_splitted = tokens_to_split.unsqueeze(2).repeat(1, 1, self.split_ratio, 1)
         x_splitted = x_splitted + self.rel_pos_emb + self.scale_emb
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
@@ -799,7 +799,7 @@ class MRNB(nn.Module):
         all_projected_image_features = nn.functional.gelu(all_projected_image_features)
         all_projected_image_features = self.high_res_norm1(all_projected_image_features)
         all_projected_image_features = self.high_res_mlp(all_projected_image_features)
-        #all_projected_image_features = self.high_res_norm2(all_projected_image_features)
+        all_projected_image_features = self.high_res_norm2(all_projected_image_features)
         all_tokens_sorted_by_scale = all_tokens_sorted_by_scale + all_projected_image_features
 
         return all_tokens_sorted_by_scale, all_pos_sorted_by_scale
