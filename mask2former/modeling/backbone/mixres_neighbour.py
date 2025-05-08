@@ -775,7 +775,7 @@ class MRNB(nn.Module):
         im_high = nn.functional.gelu(im_high)
         im_high = self.high_res_norm1(im_high)
         im_high = self.high_res_mlp(im_high)
-        #im_high = self.high_res_norm2(im_high)
+        im_high = self.high_res_norm2(im_high)
         tokens = tokens + im_high
 
         return tokens
