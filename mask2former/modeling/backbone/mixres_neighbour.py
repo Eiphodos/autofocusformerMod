@@ -642,6 +642,7 @@ class MRNB(nn.Module):
 
             self.token_projection = nn.Linear(channels, d_model)
         else:
+            self.pos_embed = PositionEmbeddingSine(d_model // 2, normalize=True)
             self.patch_embed = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=d_model, channels=channels)
 
         self.norm_out = nn.LayerNorm(d_model)
@@ -894,6 +895,7 @@ class MRNB(nn.Module):
             x = self.patch_embed(im)
             pos = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, scale).to('cuda')
             pos = pos.repeat(B, 1, 1)
+            x = x + self.pos_embed(pos[:, :, 1:])
         pos, x = self.layers(pos, x, h=min_patched_im_size[0], w=min_patched_im_size[1], on_grid=False)
 
         outs = {}
