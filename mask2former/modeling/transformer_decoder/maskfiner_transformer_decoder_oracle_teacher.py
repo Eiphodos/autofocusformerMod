@@ -87,7 +87,7 @@ def point2img(x, pos, mask_size=None):
 class SelfAttentionLayer(nn.Module):
 
     def __init__(self, d_model, nhead, dropout=0.0,
-                 activation="relu", normalize_before=False):
+                 activation="lrelu", normalize_before=False):
         super().__init__()
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
 
@@ -145,7 +145,7 @@ class SelfAttentionLayer(nn.Module):
 class CrossAttentionLayer(nn.Module):
 
     def __init__(self, d_model, nhead, dropout=0.0,
-                 activation="relu", normalize_before=False):
+                 activation="lrelu", normalize_before=False):
         super().__init__()
         self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
 
@@ -208,7 +208,7 @@ class CrossAttentionLayer(nn.Module):
 class FFNLayer(nn.Module):
 
     def __init__(self, d_model, dim_feedforward=2048, dropout=0.0,
-                 activation="relu", normalize_before=False):
+                 activation="lrelu", normalize_before=False):
         super().__init__()
         # Implementation of Feedforward model
         self.linear1 = nn.Linear(d_model, dim_feedforward)
@@ -252,6 +252,8 @@ def _get_activation_fn(activation):
     """Return an activation function given a string"""
     if activation == "relu":
         return F.relu
+    if activation == "lrelu":
+        return F.leaky_relu
     if activation == "gelu":
         return F.gelu
     if activation == "glu":

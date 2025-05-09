@@ -305,6 +305,8 @@ def _get_activation_fn(activation):
     """Return an activation function given a string"""
     if activation == "relu":
         return F.relu
+    if activation == "lrelu":
+        return F.leaky_relu
     if activation == "gelu":
         return F.gelu
     if activation == "glu":

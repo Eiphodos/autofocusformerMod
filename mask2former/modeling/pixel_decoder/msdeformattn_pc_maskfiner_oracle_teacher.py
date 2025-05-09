@@ -82,7 +82,7 @@ def scale_pos(last_pos, last_ss, cur_ss, no_bias=False):
 class MSDeformAttnTransformerEncoderOnlyPc(nn.Module):
     def __init__(self, d_model=256, nhead=8,
                  num_encoder_layers=6, dim_feedforward=1024, dropout=0.1,
-                 activation="relu",
+                 activation="lrelu",
                  num_feature_levels=3, enc_n_points=4,
                  shepard_power=3.0, shepard_power_learnable=True
                  ):
@@ -235,7 +235,7 @@ class MSDeformAttnPc(nn.Module):
 class MSDeformAttnTransformerEncoderLayerPc(nn.Module):
     def __init__(self,
                  d_model=256, d_ffn=1024,
-                 dropout=0.1, activation="relu",
+                 dropout=0.1, activation="lrelu",
                  n_levels=4, n_heads=8, n_points=4,
                  shepard_power=3.0, shepard_power_learnable=True):
         super().__init__()
@@ -472,7 +472,7 @@ class MSDeformAttnPixelDecoderMaskFinerOracleTeacher(nn.Module):
             output_conv = nn.Sequential(
                 PointConv(conv_dim, conv_dim, bias=True),
                 nn.LayerNorm(conv_dim),
-                nn.ReLU()
+                nn.LeakyReLU()
             )
             weight_init.c2_xavier_fill(lateral_conv[0])
             self.add_module("adapter_{}".format(idx + 1), lateral_conv)
