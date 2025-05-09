@@ -69,7 +69,7 @@ def shepard_decay_weights(dist, power=3):
     Returns:
         weights - b x n x k, normalized weights
     """
-    ipd = 1.0/(dist.pow(power)+10e-12)
+    ipd = 1.0/(dist.pow(power)+1e-6)
     weights = ipd / ipd.sum(dim=2, keepdim=True)
     return weights
 
@@ -100,7 +100,13 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
     else:
         k = min(k, n_)
         nn_idx = knn_keops(query, database, k=k, return_dist=False)
+    if (nn_idx >= database.shape[1]).any():
+        print("Index out of bounds in nn_idx")
     nn_pos = database.gather(index=nn_idx.view(b, -1, 1).expand(-1, -1, 2), dim=1).reshape(b, n, k, d)
+    if torch.isnan(query).any():
+        print("NaNs detected in query")
+    if torch.isnan(nn_pos).any():
+        print("NaNs detected in nn_pos")
     nn_dist = (query.unsqueeze(2) - nn_pos).pow(2).sum(-1)  # b x n x k
 
     nn_weights = shepard_decay_weights(nn_dist, power=power)  # b x n x k, weights of the samples
