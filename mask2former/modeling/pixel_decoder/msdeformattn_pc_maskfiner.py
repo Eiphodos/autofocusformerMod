@@ -82,7 +82,7 @@ def scale_pos(last_pos, last_ss, cur_ss, no_bias=False):
 class MSDeformAttnTransformerEncoderOnlyPc(nn.Module):
     def __init__(self, d_model=256, nhead=8,
                  num_encoder_layers=6, dim_feedforward=1024, dropout=0.1,
-                 activation="relu",
+                 activation="lrelu",
                  num_feature_levels=3, enc_n_points=4,
                  shepard_power=3.0, shepard_power_learnable=True
                  ):
@@ -235,7 +235,7 @@ class MSDeformAttnPc(nn.Module):
 class MSDeformAttnTransformerEncoderLayerPc(nn.Module):
     def __init__(self,
                  d_model=256, d_ffn=1024,
-                 dropout=0.1, activation="relu",
+                 dropout=0.1, activation="lrelu",
                  n_levels=4, n_heads=8, n_points=4,
                  shepard_power=3.0, shepard_power_learnable=True):
         super().__init__()
@@ -450,7 +450,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         # extra fpn levels
         min_stride_trans = min(self.transformer_feature_strides)
         min_stride_all = max(self.feature_strides)
-        fpnl = 1 if len(self.in_features) == 4 else 0
+        fpnl = len(self.in_features) - len(self.transformer_in_features)
         self.num_fpn_levels = fpnl #int(np.log2(min_stride_trans) - np.log2(min_stride_all))
 
         lateral_convs = []
