@@ -49,13 +49,14 @@ class MROTB(nn.Module):
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
 
+        '''
         out_norms = []
         for i in range(self.n_scales):
             norm_dim = sum(backbone_dims[i:])
             norm_out = nn.LayerNorm(norm_dim)
             out_norms.append(norm_out)
         self.out_norms = nn.ModuleList(out_norms)
-
+        '''
         '''
         feat_projs = []
         feat_norms = []
@@ -158,9 +159,9 @@ class MROTB(nn.Module):
             features = torch.cat(all_feat, dim=1)
         outs['min_spatial_shape'] = output['min_spatial_shape']
 
-        for i in range(self.n_scales):
-            out_idx = self.n_scales - i + 1
-            outs["res{}".format(out_idx)] = self.out_norms[i](outs["res{}".format(out_idx)])
+        #for i in range(self.n_scales):
+        #    out_idx = self.n_scales - i + 1
+        #    outs["res{}".format(out_idx)] = self.out_norms[i](outs["res{}".format(out_idx)])
         return outs
 
 
