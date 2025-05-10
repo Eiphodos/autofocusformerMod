@@ -111,9 +111,8 @@ class MROTB(nn.Module):
                 B, N, C = feat.shape
 
                 #print("Output {} for scale {}: feat_shape: {}, pos_shape: {}, scale_shape: {}, spatial_shape: {}".format(f, scale, feat.shape, feat_pos.shape, feat_scale.shape, feat_ss))
-
+                '''
                 if f + '_pos' in outs:
-
                     #print("Pos before sort: {} and shape: {}".format(feat_pos[0, 0:10], feat_pos.shape))
                     pos_indices = self.find_pos_org_order(outs[f + '_pos'], feat_pos)
                     b_ = torch.arange(B).unsqueeze(-1).expand(-1, N)
@@ -124,10 +123,11 @@ class MROTB(nn.Module):
                     orig_dtype = feat.dtype
                     outs[f] = torch.cat([outs[f], feat], dim=2)
                 else:
-                    outs[f] = feat
-                    outs[f + '_pos'] = feat_pos
-                    outs[f + '_scale'] = feat_scale
-                    outs[f + '_spatial_shape'] = feat_ss
+                '''
+                outs[f] = feat
+                outs[f + '_pos'] = feat_pos
+                outs[f + '_scale'] = feat_scale
+                outs[f + '_spatial_shape'] = feat_ss
 
                 all_feat.append(feat)
                 all_pos.append(feat_pos)
@@ -194,8 +194,8 @@ class OracleTeacherBackbone(MROTB, Backbone):
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
         #self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[i] for i in range(n_scales)}
-        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): sum(cfg.MODEL.MR.EMBED_DIM[i:]) for i in
-                                      range(n_scales)}
+        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[-1] for i in range(n_scales)}
+        #self._out_feature_channels = {"res{}".format(n_scales + 1 - i): sum(cfg.MODEL.MR.EMBED_DIM[i:]) for i in range(n_scales)}
         #print("backbone channels: {}".format(self._out_feature_channels))
 
     def forward(self, x, sem_seg_gt, target_pad):
