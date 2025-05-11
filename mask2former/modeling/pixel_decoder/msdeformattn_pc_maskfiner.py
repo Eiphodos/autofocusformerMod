@@ -218,6 +218,8 @@ class MSDeformAttnPc(nn.Module):
                 nb_idx_real = nb_idx[j].gather(index=gather_idx.view(b, -1, 1).expand(-1, -1, 4), dim=1).reshape(b*h, -1, 4)
 
                 nn_idxs.append(nb_idx_real + idx_acc)
+                if torch.isnan(sampling_location).any():
+                    print("NaNs detected in sampling_location")
                 nn_weight = upsample_feature_shepard(sampling_location.contiguous(), poss[j].unsqueeze(1).expand(-1, h, -1, -1).reshape(b*h, -1, 2).contiguous(), None, power=self.shepard_power, custom_kernel=True, nn_idx=nb_idx_real, return_weight_only=True)  # b*h x n*k x 4
                 nn_weights.append(nn_weight)
                 idx_acc += querys[j].shape[1]
@@ -591,6 +593,8 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             fixed_pos = fix_pos_no_bias(pos, spatial_shape, min_spatial_shape)
             fixed_poss.append(fixed_pos)
             fixed_last_pos = fix_pos_no_bias(last_pos, last_ss, min_spatial_shape)
+            if torch.isnan(fixed_pos).any():
+                print("NaNs detected in fixed_pos")
             upfeat = upsample_feature_shepard(fixed_pos, fixed_last_pos, out[-1], custom_kernel=True)
             #print("Upsampled feature shape: {} for {}".format(upfeat.shape, f))
             y = cur_fpn + upfeat
