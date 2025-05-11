@@ -49,14 +49,12 @@ class MROTB(nn.Module):
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
 
-        '''
         out_norms = []
         for i in range(self.n_scales):
             norm_dim = sum(backbone_dims[i:])
             norm_out = nn.LayerNorm(norm_dim)
             out_norms.append(norm_out)
         self.out_norms = nn.ModuleList(out_norms)
-        '''
         '''
         feat_projs = []
         feat_norms = []
@@ -112,7 +110,6 @@ class MROTB(nn.Module):
                 B, N, C = feat.shape
 
                 #print("Output {} for scale {}: feat_shape: {}, pos_shape: {}, scale_shape: {}, spatial_shape: {}".format(f, scale, feat.shape, feat_pos.shape, feat_scale.shape, feat_ss))
-                '''
                 if f + '_pos' in outs:
                     #print("Pos before sort: {} and shape: {}".format(feat_pos[0, 0:10], feat_pos.shape))
                     pos_indices = self.find_pos_org_order(outs[f + '_pos'], feat_pos)
@@ -124,11 +121,10 @@ class MROTB(nn.Module):
                     orig_dtype = feat.dtype
                     outs[f] = torch.cat([outs[f], feat], dim=2)
                 else:
-                '''
-                outs[f] = feat
-                outs[f + '_pos'] = feat_pos
-                outs[f + '_scale'] = feat_scale
-                outs[f + '_spatial_shape'] = feat_ss
+                    outs[f] = feat
+                    outs[f + '_pos'] = feat_pos
+                    outs[f + '_scale'] = feat_scale
+                    outs[f + '_spatial_shape'] = feat_ss
 
                 all_feat.append(feat)
                 all_pos.append(feat_pos)
@@ -159,9 +155,9 @@ class MROTB(nn.Module):
             features = torch.cat(all_feat, dim=1)
         outs['min_spatial_shape'] = output['min_spatial_shape']
 
-        #for i in range(self.n_scales):
-        #    out_idx = self.n_scales - i + 1
-        #    outs["res{}".format(out_idx)] = self.out_norms[i](outs["res{}".format(out_idx)])
+        for i in range(self.n_scales):
+            out_idx = self.n_scales - i + 1
+            outs["res{}".format(out_idx)] = self.out_norms[i](outs["res{}".format(out_idx)])
         return outs
 
 
@@ -195,8 +191,8 @@ class OracleTeacherBackbone(MROTB, Backbone):
         #print("backbone strides: {}".format(self._out_feature_strides))
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
         #self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[i] for i in range(n_scales)}
-        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[-1] for i in range(n_scales)}
-        #self._out_feature_channels = {"res{}".format(n_scales + 1 - i): sum(cfg.MODEL.MR.EMBED_DIM[i:]) for i in range(n_scales)}
+        #self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[-1] for i in range(n_scales)}
+        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): sum(cfg.MODEL.MR.EMBED_DIM[i:]) for i in range(n_scales)}
         #print("backbone channels: {}".format(self._out_feature_channels))
 
     def forward(self, x, sem_seg_gt, target_pad):
