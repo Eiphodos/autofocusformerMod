@@ -275,9 +275,9 @@ class MSDeformAttnTransformerEncoderLayerPc(nn.Module):
 
     def forward(self, srcs, poss, spatial_shapes, pos_embeds, nb_idx):
         # self attention
-        if torch.isnan(srcs).any():
+        if any([torch.isnan(s).any() for s in srcs]):
             print("NaNs detected in pixel decoder srcs")
-        if torch.isnan(pos_embeds).any():
+        if any([torch.isnan(p).any() for p in pos_embeds]):
             print("NaNs detected in pixel decoder pos_embeds")
         src2s = self.self_attn(self.with_pos_embed(srcs, pos_embeds), poss, srcs, spatial_shapes, nb_idx)
         for i, src2 in enumerate(src2s):
