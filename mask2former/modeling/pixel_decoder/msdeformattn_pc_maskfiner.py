@@ -186,8 +186,8 @@ class MSDeformAttnPc(nn.Module):
         values = self.value_proj(torch.cat(values, dim=1)).reshape(b, -1, h, c_).permute(0, 2, 1, 3).reshape(b*h, -1, c_)
 
         sampling_offsets = [self.sampling_offsets(query).view(b, -1, h, l, k, 2) for query in querys]  # b x n x h x l x k x 2
-        if torch.isnan(sampling_offsets).any():
-            print("NaNs detected in sampling_offsets")
+        if any([torch.isnan(s).any() for s in sampling_offsets]):
+            print("NaNs detected in pixel decoder srcs")
         attention_weights = [self.attention_weights(query).view(b, -1, h, l*k) for query in querys]  # b x n x h x l*k
         attention_weights = [F.softmax(attention_weight, -1).view(b, -1, h, l, k) for attention_weight in attention_weights]  # b x n x h x l x k
         scaled_poss = []
