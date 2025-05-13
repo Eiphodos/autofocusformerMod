@@ -282,12 +282,11 @@ class MRVIT(nn.Module):
     def forward(self, im, scale, features, features_pos, upsampling_mask):
         B, _, H, W = im.shape
         PS = self.patch_size
+        patched_im_size = (H // PS, W // PS)
+        min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
 
         if self.first_layer:
             x = self.patch_embed(im)
-            patched_im_size = (H // PS, W // PS)
-            min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
-
             pos = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, scale).to('cuda')
             pos = pos.repeat(B, 1, 1)
             #print("Encoder pos max x: {}, max y: {}, and all pos: {}".format(pos[:, :, 0].max(), pos[:, :, 1].max(), pos))
