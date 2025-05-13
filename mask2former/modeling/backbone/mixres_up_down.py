@@ -80,19 +80,33 @@ class MRUD(nn.Module):
             all_scale = []
             all_pos = []
             all_ss = []
-            print("Backbone {} has {} out features".format(j, all_out_features))
-            print("Next Backbone {} has {} in features".format(j + 1, self.bb_in_feats[j + 1]))
+            #print("Backbone {} has {} out features".format(j, all_out_features))
+            #print("Next Backbone {} has {} in features".format(j + 1, self.bb_in_feats[j + 1]))
             for i, f in enumerate(all_out_features):
                 feat = output[f]
                 feat_pos = output[f + '_pos']
                 feat_scale = output[f + '_scale']
                 feat_ss = output[f + '_spatial_shape']
-                outs[f] = feat
-                outs[f + '_pos'] = feat_pos
-                outs[f + '_scale'] = feat_scale
-                outs[f + '_spatial_shape'] = feat_ss
+                B, N, C = feat.shape
+                if f + '_pos' in outs:
+                    pos_indices = self.find_pos_org_order(outs[f + '_pos'], feat_pos)
+                    b_ = torch.arange(B).unsqueeze(-1).expand(-1, N)
+                    feat = feat[b_, pos_indices]
+                    feat_pos = feat_pos[b_, pos_indices]
+                    feat_scale = feat_scale[b_, pos_indices]
+                    assert (outs[f + '_pos'] == feat_pos).all()
+                    outs[f].append(feat)
+                else:
+                    outs[f] = [feat]
+                    outs[f + '_pos'] = feat_pos
+                    outs[f + '_scale'] = feat_scale
+                    outs[f + '_spatial_shape'] = feat_ss
                 if f in self.bb_in_feats[j + 1]:
-                    all_feat.append(feat)
+                    if j == self.n_scales:
+                        out_feat = torch.cat(outs[f][-((j - self.n_scales)*2 + 2):], dim=2)
+                    else:
+                        out_feat = feat
+                    all_feat.append(out_feat)
                     all_pos.append(feat_pos)
                     all_scale.append(feat_scale)
                     all_ss.append(feat_ss)
@@ -117,7 +131,7 @@ class MRUD(nn.Module):
                 all_scale = torch.cat(all_scale, dim=1)
                 features_pos = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
                 features = torch.cat(all_feat, dim=1)
-                print("For bb level {}, feature shape is {}".format(j, features.shape))
+                #print("For bb level {}, feature shape is {}".format(j, features.shape))
 
 
         outs['min_spatial_shape'] = output['min_spatial_shape']

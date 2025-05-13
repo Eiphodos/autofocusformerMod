@@ -647,7 +647,11 @@ class MRNB(nn.Module):
                 self.high_res_norm2 = nn.LayerNorm(channels)
                 #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
-            self.token_projection = nn.Linear(channels, d_model)
+            self.token_norm = nn.LayerNorm(channels)
+            if channels != d_model:
+                self.token_projection = nn.Linear(channels, d_model)
+            else:
+                self.token_projection = nn.Identity()
 
         self.norm_out = nn.LayerNorm(d_model)
         self.apply(init_weights)
@@ -882,6 +886,7 @@ class MRNB(nn.Module):
                 all_feat = torch.cat(all_feat, dim=1)
                 all_pos = torch.cat(all_pos, dim=1)
 
+        all_feat = self.token_norm(all_feat)
         all_feat = self.token_projection(all_feat)
 
         return all_feat, all_pos
@@ -900,6 +905,7 @@ class MRNB(nn.Module):
             if self.do_upsample:
                 x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
             else:
+                features = self.token_norm(features)
                 x = self.token_projection(features)
                 pos = features_pos
         pos, x = self.layers(pos, x, h=min_patched_im_size[0], w=min_patched_im_size[1], on_grid=False)
@@ -941,6 +947,7 @@ class MixResNeighbour(MRNB, Backbone):
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True
+            in_chans = cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)]
         else:
             scale = layer_index
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]

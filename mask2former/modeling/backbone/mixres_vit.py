@@ -261,7 +261,11 @@ class MRVIT(nn.Module):
                 channels,
             )
         else:
-            self.token_projection = nn.Linear(channels, d_model)
+            self.token_norm = nn.LayerNorm(channels)
+            if channels != d_model:
+                self.token_projection = nn.Linear(channels, d_model)
+            else:
+                self.token_projection = nn.Identity()
         dim_ff = int(d_model * mlp_ratio)
         # transformer layers
         self.layers = TransformerLayer(n_layers, d_model, n_heads, dim_ff, dropout, drop_path_rate)
@@ -294,6 +298,7 @@ class MRVIT(nn.Module):
             pos_embed = self.pe_layer(pos[:,:,1:])
             x = x + pos_embed
         else:
+            features = self.token_norm(features)
             x = self.token_projection(features)
             pos = features_pos
 
@@ -326,6 +331,7 @@ class MixResViT(MRVIT, Backbone):
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True
+            in_chans = cfg.MODEL.MR.EMBED_DIM[-(layer_index + 1):-(n_layers - layer_index)]
         else:
             scale = layer_index
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
