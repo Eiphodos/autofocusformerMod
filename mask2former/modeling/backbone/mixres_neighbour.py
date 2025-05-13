@@ -568,7 +568,8 @@ class MRNB(nn.Module):
             upscale_ratio=0.25,
             keep_old_scale=False,
             scale=1,
-            add_image_data_to_all=False
+            add_image_data_to_all=False,
+            first_layer=False
     ):
         super().__init__()
         self.patch_size = patch_sizes[-1]
@@ -588,6 +589,8 @@ class MRNB(nn.Module):
         self.keep_old_scale = keep_old_scale
         self.scale = scale
         self.add_image_data_to_all = add_image_data_to_all
+        self.first_layer = first_layer
+        self.do_upsample = upscale_ratio == 0 or first_layer
 
         num_features = d_model
         self.num_features = num_features
@@ -615,40 +618,42 @@ class MRNB(nn.Module):
                                layer_scale=layer_scale,
                                )
 
-        if self.scale > 0:
-            # Split layers
-            self.split = nn.Linear(channels, channels * self.split_ratio)
-
-            self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
-            self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
-
-            #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
-            #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
-            if self.add_image_data_to_all:
-                input_dim = channels
-                image_projectors = []
-                for i in range(self.scale + 1):
-                    in_dim = 3 * (self.patch_sizes[i]**2)
-                    proj = nn.Linear(in_dim, channels)
-                    image_projectors.append(proj)
-                self.image_patch_projectors = nn.ModuleList(image_projectors)
-            else:
-                input_dim = max(channels, 3 * self.patch_size ** 2)
-                self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
-            self.high_res_norm1 = nn.LayerNorm(input_dim)
-            self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels)
-            self.high_res_norm2 = nn.LayerNorm(channels)
-            #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
-
-            self.token_projection = nn.Linear(channels, d_model)
-        else:
+        if self.first_layer:
             self.pos_embed = PositionEmbeddingSine(d_model // 2, normalize=True)
             self.patch_embed = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=d_model, channels=channels)
+        else:
+            if self.do_upsample:
+                # Split layers
+                self.split = nn.Linear(channels, channels * self.split_ratio)
+
+                self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
+                self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
+
+                #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
+                #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
+                if self.add_image_data_to_all:
+                    input_dim = channels
+                    image_projectors = []
+                    for i in range(self.scale + 1):
+                        in_dim = 3 * (self.patch_sizes[i]**2)
+                        proj = nn.Linear(in_dim, channels)
+                        image_projectors.append(proj)
+                    self.image_patch_projectors = nn.ModuleList(image_projectors)
+                else:
+                    input_dim = max(channels, 3 * self.patch_size ** 2)
+                    self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
+                self.high_res_norm1 = nn.LayerNorm(input_dim)
+                self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels)
+                self.high_res_norm2 = nn.LayerNorm(channels)
+                #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
+
+            self.token_projection = nn.Linear(channels, d_model)
 
         self.norm_out = nn.LayerNorm(d_model)
         self.apply(init_weights)
 
-        print("Successfully built MixResNeighbour model!")
+        print("Successfully built MixResNeighbour model with {} out_features, {} strides and {} channels".format(
+            self._out_features, self._out_feature_strides, self._out_feature_channels))
 
     @torch.jit.ignore
     def no_weight_decay(self):
@@ -889,13 +894,17 @@ class MRNB(nn.Module):
         PS = self.patch_size
         min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
 
-        if scale > 0:
-            x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
-        else:
+        if self.first_layer:
             x = self.patch_embed(im)
             pos = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, scale).to('cuda')
             pos = pos.repeat(B, 1, 1)
             x = x + self.pos_embed(pos[:, :, 1:])
+        else:
+            if self.do_upsample:
+                x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
+            else:
+                x = self.token_projection(features)
+                pos = features_pos
         pos, x = self.layers(pos, x, h=min_patched_im_size[0], w=min_patched_im_size[1], on_grid=False)
 
         outs = {}
@@ -921,15 +930,24 @@ class MixResNeighbour(MRNB, Backbone):
         print("Building MixResNeighbour model...")
         if layer_index == 0:
             in_chans = 3
+            first_layer = True
         else:
             in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
+            first_layer = False
         image_size = cfg.INPUT.CROP.SIZE
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         keep_old_scale = cfg.MODEL.MR.KEEP_OLD_SCALE
         add_image_data_to_all = cfg.MODEL.MR.ADD_IMAGE_DATA_TO_ALL
-        min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
-
-        patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
+        min_patch_size = cfg.MODEL.MR.PATCH_SIZES[n_scales - 1]
+        n_layers = len(cfg.MODEL.MR.EMBED_DIM)
+        if layer_index > n_scales - 1:
+            scale = n_layers - layer_index - 1
+            patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
+            down = True
+        else:
+            scale = layer_index
+            patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
+            down = False
         embed_dim = cfg.MODEL.MR.EMBED_DIM[layer_index]
         depths = cfg.MODEL.MR.DEPTHS[layer_index]
         num_heads = cfg.MODEL.MR.NUM_HEADS[layer_index]
@@ -963,20 +981,26 @@ class MixResNeighbour(MRNB, Backbone):
             min_patch_size=min_patch_size,
             upscale_ratio=upscale_ratio,
             keep_old_scale=keep_old_scale,
-            scale=layer_index,
-            add_image_data_to_all=add_image_data_to_all
+            scale=scale,
+            add_image_data_to_all=add_image_data_to_all,
+            first_layer=first_layer
         )
 
-        self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
-
-        self._in_features_channels = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
-
-        #self._out_feature_strides = { "res{}".format(layer_index+2): cfg.MODEL.MRNB.PATCH_SIZES[layer_index]}
-        self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in range(layer_index + 1)}
-        #print("backbone strides: {}".format(self._out_feature_strides))
-        #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
-        self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in range(layer_index + 1)}
-        #print("backbone channels: {}".format(self._out_feature_channels))
+        if down:
+            self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(n_layers - layer_index):]
+            self._in_features_channels = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
+            self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in
+                                         range(n_layers - layer_index)}
+            self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in range(n_layers - layer_index)}
+        else:
+            self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
+            self._in_features_channels = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
+            #self._out_feature_strides = { "res{}".format(layer_index+2): cfg.MODEL.MRNB.PATCH_SIZES[layer_index]}
+            self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in range(layer_index + 1)}
+            #print("backbone strides: {}".format(self._out_feature_strides))
+            #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
+            self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in range(layer_index + 1)}
+            #print("backbone channels: {}".format(self._out_feature_channels))
 
     def forward(self, x, scale, features, features_pos, upsampling_mask):
         """
@@ -998,41 +1022,6 @@ class MixResNeighbour(MRNB, Backbone):
             )
             for name in self._out_features
         }
-
-    def test_pos_cover_and_overlap(self, pos, im_h, im_w, scale_max):
-        print("Testing position cover and overlap in level {}".format(scale_max))
-        pos_true = torch.meshgrid(torch.arange(0, im_w), torch.arange(0, im_h), indexing='ij')
-        pos_true = torch.stack([pos_true[0], pos_true[1]]).permute(1, 2, 0).view(-1, 2).to(pos.device).half()
-
-        all_pos = []
-
-        for s in range(scale_max + 1):
-            n_scale_idx = torch.where(pos[:, 0] == s)
-            pos_at_scale = pos[n_scale_idx[0].long(), 1:]
-            pos_at_org_scale = pos_at_scale*self.min_patch_size
-            patch_size = self.patch_sizes[s]
-            new_coords = torch.stack(torch.meshgrid(torch.arange(0, patch_size), torch.arange(0, patch_size)))
-            new_coords = new_coords.view(2, -1).permute(1, 0).to(pos.device)
-            pos_at_org_scale = pos_at_org_scale.unsqueeze(1) + new_coords
-            pos_at_org_scale = pos_at_org_scale.reshape(-1, 2)
-            all_pos.append(pos_at_org_scale)
-
-        all_pos = torch.cat(all_pos).half()
-
-        print("Computing cover in level {}".format(scale_max))
-        cover = torch.tensor([all(torch.any(i == all_pos, dim=0)) for i in pos_true])
-        print("Finished computing cover in level {}".format(scale_max))
-        if not all(cover):
-            print("Total pos map is not covered in level {}, missing {} positions".format(scale_max, sum(~cover)))
-            missing = pos_true[~cover]
-            print("Missing positions: {}".format(missing))
-        print("Computing duplicates in level {}".format(scale_max))
-        dupli_unq, dupli_idx, dupli_counts = torch.unique(all_pos, dim=0, return_counts=True, return_inverse=True)
-        if len(dupli_counts) > len(all_pos):
-            print("Found {} duplicate posses in level {}".format(sum(dupli_counts > 1), scale_max))
-        print("Finished computing duplicates in level {}".format(scale_max))
-
-        return True
 
     def get_top_disagreement_mask_and_pos(self, dis_mask, dis_mask_pos, level):
         k_top = int(dis_mask.shape[0] * self.mask_predictors[level].backbone.upscale_ratio)

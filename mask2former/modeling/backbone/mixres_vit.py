@@ -231,16 +231,13 @@ class MRVIT(nn.Module):
             split_ratio=4,
             n_scales=2,
             min_patch_size=4,
-            upscale_ratio=0.5
+            upscale_ratio=0.0,
+            first_layer=True
     ):
         super().__init__()
         self.patch_size = patch_sizes[-1]
         self.patch_sizes = patch_sizes
-        self.patch_embed = OverlapPatchEmbedding(
-            self.patch_size,
-            d_model,
-            channels,
-        )
+
         self.patch_size = self.patch_size
         self.n_layers = n_layers
         self.d_model = d_model
@@ -250,12 +247,21 @@ class MRVIT(nn.Module):
         self.n_scales = n_scales
         self.min_patch_size = min_patch_size
         self.upscale_ratio = upscale_ratio
+        self.first_layer = first_layer
 
         num_features = d_model
         self.num_features = num_features
 
-        # Pos Embs
-        self.pe_layer = PositionEmbeddingSine(d_model // 2, normalize=True)
+        if self.first_layer:
+            # Pos Embs
+            self.pe_layer = PositionEmbeddingSine(d_model // 2, normalize=True)
+            self.patch_embed = OverlapPatchEmbedding(
+                self.patch_size,
+                d_model,
+                channels,
+            )
+        else:
+            self.token_projection = nn.Linear(channels, d_model)
         dim_ff = int(d_model * mlp_ratio)
         # transformer layers
         self.layers = TransformerLayer(n_layers, d_model, n_heads, dim_ff, dropout, drop_path_rate)
@@ -265,7 +271,7 @@ class MRVIT(nn.Module):
         self.norm_out = nn.LayerNorm(d_model)
         self.apply(init_weights)
 
-        print("Successfully built MixResViT model!")
+        print("Successfully built MixResViT model with {} out_features, {} strides and {} channels".format(self._out_features, self._out_feature_strides, self._out_feature_channels))
 
     @torch.jit.ignore
     def no_weight_decay(self):
@@ -278,16 +284,21 @@ class MRVIT(nn.Module):
     def forward(self, im, scale, features, features_pos, upsampling_mask):
         B, _, H, W = im.shape
         PS = self.patch_size
-        x = self.patch_embed(im)
-        patched_im_size = (H // PS, W // PS)
-        min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
 
-        pos = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, scale).to('cuda')
-        pos = pos.repeat(B, 1, 1)
-        #print("Encoder pos max x: {}, max y: {}, and all pos: {}".format(pos[:, :, 0].max(), pos[:, :, 1].max(), pos))
-        #self.test_pos_cover_and_overlap(pos[0], H, W, scale)
-        pos_embed = self.pe_layer(pos[:,:,1:])
-        x = x + pos_embed
+        if self.first_layer:
+            x = self.patch_embed(im)
+            patched_im_size = (H // PS, W // PS)
+            min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
+
+            pos = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, scale).to('cuda')
+            pos = pos.repeat(B, 1, 1)
+            #print("Encoder pos max x: {}, max y: {}, and all pos: {}".format(pos[:, :, 0].max(), pos[:, :, 1].max(), pos))
+            #self.test_pos_cover_and_overlap(pos[0], H, W, scale)
+            pos_embed = self.pe_layer(pos[:,:,1:])
+            x = x + pos_embed
+        else:
+            x = self.token_projection(features)
+            pos = features_pos
 
         x = self.layers(x)
 
@@ -305,12 +316,23 @@ class MRVIT(nn.Module):
 class MixResViT(MRVIT, Backbone):
     def __init__(self, cfg, layer_index):
         print("Building MixResViT model...")
-        in_chans = 3
+        if layer_index == 0:
+            in_chans = 3
+            first_layer = True
+        else:
+            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
+            first_layer = False
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
-        min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
-
-        #patch_size = cfg.MODEL.MR.PATCH_SIZES[layer_index]
-        patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
+        min_patch_size = cfg.MODEL.MR.PATCH_SIZES[n_scales - 1]
+        n_layers = len(cfg.MODEL.MR.EMBED_DIM)
+        if layer_index > n_scales - 1:
+            scale = n_layers - layer_index - 1
+            patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
+            down = True
+        else:
+            scale = layer_index
+            patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
+            down = False
         embed_dim = cfg.MODEL.MR.EMBED_DIM[layer_index]
         depths = cfg.MODEL.MR.DEPTHS[layer_index]
         mlp_ratio = cfg.MODEL.MR.MLP_RATIO[layer_index]
@@ -332,17 +354,27 @@ class MixResViT(MRVIT, Backbone):
             channels=in_chans,
             n_scales=n_scales,
             min_patch_size=min_patch_size,
-            upscale_ratio=upscale_ratio
+            upscale_ratio=upscale_ratio,
+            first_layer=first_layer
         )
 
-        self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
-        out_index = (n_scales - 1) + 2
-        self._out_feature_strides = {"res{}".format(out_index): cfg.MODEL.MR.PATCH_SIZES[layer_index]}
-        # self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in range(num_scales)}
-        # print("backbone strides: {}".format(self._out_feature_strides))
-        # self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
-        self._out_feature_channels = {"res{}".format(out_index): embed_dim}
-        # print("backbone channels: {}".format(self._out_feature_channels))
+        if down:
+            self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(n_layers - layer_index):]
+            self._in_features_channels = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
+            self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in
+                                         range(n_layers - layer_index)}
+            self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in
+                                          range(n_layers - layer_index)}
+        else:
+            self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
+            out_index = (n_scales - 1) + 2
+            self._out_feature_strides = {"res{}".format(out_index): cfg.MODEL.MR.PATCH_SIZES[layer_index]}
+            # self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in range(num_scales)}
+            # print("backbone strides: {}".format(self._out_feature_strides))
+            # self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
+            self._out_feature_channels = {"res{}".format(out_index): embed_dim}
+            # print("backbone channels: {}".format(self._out_feature_channels))
+
 
     def forward(self, x, scale, features, features_pos, upsampling_mask):
         """
