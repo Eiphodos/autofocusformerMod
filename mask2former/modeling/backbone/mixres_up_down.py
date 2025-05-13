@@ -112,7 +112,7 @@ class MRUD(nn.Module):
             else:
                 upsampling_mask = None
 
-            if j < len(self.backbones) - 2:
+            if j < len(self.backbones) - 1:
                 all_pos = torch.cat(all_pos, dim=1)
                 all_scale = torch.cat(all_scale, dim=1)
                 features_pos = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
