@@ -80,6 +80,8 @@ class MRUD(nn.Module):
             all_scale = []
             all_pos = []
             all_ss = []
+            print("Backbone {} has {} out features".format(j, all_out_features))
+            print("Next Backbone {} has {} in features".format(j + 1, self.bb_in_feats[j + 1]))
             for i, f in enumerate(all_out_features):
                 feat = output[f]
                 feat_pos = output[f + '_pos']
