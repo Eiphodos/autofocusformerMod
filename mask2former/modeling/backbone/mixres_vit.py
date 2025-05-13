@@ -271,8 +271,6 @@ class MRVIT(nn.Module):
         self.norm_out = nn.LayerNorm(d_model)
         self.apply(init_weights)
 
-        print("Successfully built MixResViT model with {} out_features, {} strides and {} channels".format(self._out_features, self._out_feature_strides, self._out_feature_channels))
-
     @torch.jit.ignore
     def no_weight_decay(self):
         return {"pos_embed", "cls_token", "dist_token"}
@@ -374,6 +372,9 @@ class MixResViT(MRVIT, Backbone):
             # self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
             self._out_feature_channels = {"res{}".format(out_index): embed_dim}
             # print("backbone channels: {}".format(self._out_feature_channels))
+
+        print("Successfully built MixResViT model with {} out_features, {} strides and {} channels".format(
+            self._out_features, self._out_feature_strides, self._out_feature_channels))
 
 
     def forward(self, x, scale, features, features_pos, upsampling_mask):

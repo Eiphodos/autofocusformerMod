@@ -33,12 +33,11 @@ class MLP(nn.Module):
 
 
 class MRUD(nn.Module):
-    def __init__(self, backbones, backbone_dims, out_dim, oracle_teacher_ratio, all_out_features, n_scales, bb_in_feats):
+    def __init__(self, backbones, backbone_dims, out_dim, all_out_features, n_scales, bb_in_feats):
         super().__init__()
         self.backbones = nn.ModuleList(backbones)
         self.out_dim = out_dim
         self.backbone_dims = backbone_dims
-        self.oracle_teacher_ratio = oracle_teacher_ratio
         self.all_out_features = all_out_features
         self.all_out_features_scales = {k: len(all_out_features) - i - 1 for i, k in enumerate(all_out_features)}
         self.n_scales = n_scales
