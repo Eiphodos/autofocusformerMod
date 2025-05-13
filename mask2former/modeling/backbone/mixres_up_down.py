@@ -104,17 +104,20 @@ class MRUD(nn.Module):
                 upsampling_mask_oracle = self.generate_subsequent_oracle_upsampling_mask_edge(sem_seg_gt, all_pos[0],
                                                                                               scale, target_pad)
             if up:
-                upsampling_mask_pred = self.upsamplers[j](all_feat[0]).squeeze(-1)
+                upsampling_mask_pred = self.upsamplers[scale](all_feat[0]).squeeze(-1)
                 outs['upsampling_mask_pred_{}'.format(scale)] = upsampling_mask_pred
                 outs['upsampling_mask_oracle_{}'.format(scale)] = upsampling_mask_oracle
                 outs['upsampling_mask_pos_{}'.format(scale)] = torch.cat([all_scale[0].unsqueeze(2), all_pos[0]], dim=2)
+                upsampling_mask = upsampling_mask_pred
+            else:
+                upsampling_mask = None
 
-            upsampling_mask = upsampling_mask_pred
-            all_pos = torch.cat(all_pos, dim=1)
-            all_scale = torch.cat(all_scale, dim=1)
-            features_pos = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
-            features = torch.cat(all_feat, dim=1)
-            print("For bb level {}, feature shape is {}".format(j, features.shape))
+            if j < len(self.backbones) - 2:
+                all_pos = torch.cat(all_pos, dim=1)
+                all_scale = torch.cat(all_scale, dim=1)
+                features_pos = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
+                features = torch.cat(all_feat, dim=1)
+                print("For bb level {}, feature shape is {}".format(j, features.shape))
 
 
         outs['min_spatial_shape'] = output['min_spatial_shape']
