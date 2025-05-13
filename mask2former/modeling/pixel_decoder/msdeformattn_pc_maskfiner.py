@@ -556,10 +556,14 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             #print("Pos min for {}: {}".format(f, pos.min()))
             #print("Pos max for {}: {}".format(f, pos.max()))
             spatial_shape = features[f+"_spatial_shape"]
+            if torch.isnan(x).any():
+                print("NaNs detected in {} backbone feature".format(f))
             srcs.append(self.input_proj[idx](x))
             poss.append(pos)
             scaless.append(scales)
             fixed_pos = fix_pos_no_bias(pos, spatial_shape, min_spatial_shape)
+            if torch.isnan(fixed_pos).any():
+                print("NaNs detected in {} fixed pos".format(f))
             pos_embed.append(self.pe_layer(fixed_pos))
             spatial_shapes.append(spatial_shape)
             min_spatial_shapes.append(min_spatial_shape)
