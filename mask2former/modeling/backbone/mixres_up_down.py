@@ -72,8 +72,7 @@ class MRUD(nn.Module):
         features_pos = None
         outs = {}
         for j in range(len(self.backbones)):
-            if j == self.n_scales - 1:
-                up = False
+
             scale = self.bb_scales[j]
             output = self.backbones[j](im, scale, features, features_pos, upsampling_mask)
             all_out_features = self.backbones[j]._out_features
@@ -95,6 +94,8 @@ class MRUD(nn.Module):
                     all_pos.append(feat_pos)
                     all_scale.append(feat_scale)
                     all_ss.append(feat_ss)
+            if j == self.n_scales - 1:
+                up = False
             if scale == 0:
                 upsampling_mask_oracle = self.generate_initial_oracle_upsampling_mask_edge(sem_seg_gt, target_pad)
             elif up:
@@ -111,6 +112,8 @@ class MRUD(nn.Module):
             all_scale = torch.cat(all_scale, dim=1)
             features_pos = torch.cat([all_scale.unsqueeze(2), all_pos], dim=2)
             features = torch.cat(all_feat, dim=1)
+            print("For bb level {}, feature shape is {}".format(j, features.shape))
+
 
         outs['min_spatial_shape'] = output['min_spatial_shape']
         return outs
