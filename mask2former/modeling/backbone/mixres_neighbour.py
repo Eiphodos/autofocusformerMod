@@ -590,7 +590,7 @@ class MRNB(nn.Module):
         self.scale = scale
         self.add_image_data_to_all = add_image_data_to_all
         self.first_layer = first_layer
-        self.do_upsample = upscale_ratio == 0 or first_layer
+        self.do_upsample = not (upscale_ratio == 0 or first_layer)
 
         num_features = d_model
         self.num_features = num_features
