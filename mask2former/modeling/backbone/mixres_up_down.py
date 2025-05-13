@@ -127,7 +127,7 @@ class UpDownBackbone(MRUD, Backbone):
     def __init__(self, cfg, input_shape):
         print("Building UpDownBackbone model...")
         all_backbones = []
-        bb_in_feats = [[None], ["res5"], ["res5", "res4"], ["res5", "res4", "res3"], ["res5", "res4", "res3"], ["res5", "res4"], ["res5"]]
+        bb_in_feats = [[None], ["res5"], ["res5", "res4"], ["res5", "res4", "res3"], ["res5", "res4", "res3"], ["res5", "res4"], ["res5"], [None]]
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         for i in range(len(cfg.MODEL.MR.NAME)):
             bb = build_backbone_indexed(cfg, i)
