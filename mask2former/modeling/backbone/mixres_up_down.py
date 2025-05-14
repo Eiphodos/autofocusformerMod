@@ -134,8 +134,8 @@ class MRUD(nn.Module):
                 features = torch.cat(all_feat, dim=1)
                 #print("For bb level {}, feature shape is {}".format(j, features.shape))
 
-        for f in self.all_out_features:
-            outs[f] = outs[f][-1]
+        for i, f in enumerate(self.all_out_features):
+            outs[f] = torch.cat(outs[f][-(i + 1)], dim=2)
         outs['min_spatial_shape'] = output['min_spatial_shape']
         return outs
 
@@ -173,7 +173,7 @@ class UpDownBackbone(MRUD, Backbone):
         #self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
         #self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[i] for i in range(n_scales)}
         #self._out_feature_channels = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.EMBED_DIM[-1] for i in range(n_scales)}
-        self._out_feature_channels = {"res{}".format(i + 2): cfg.MODEL.MR.EMBED_DIM[n_scales + i - 1] for i in range(n_scales)}
+        self._out_feature_channels = {"res{}".format(i + 2): sum(cfg.MODEL.MR.EMBED_DIM[n_scales - 1:n_scales + i]) for i in range(n_scales)}
         #print("backbone channels: {}".format(self._out_feature_channels))
 
     def forward(self, x, sem_seg_gt, target_pad):
