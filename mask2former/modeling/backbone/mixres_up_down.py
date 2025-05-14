@@ -106,7 +106,7 @@ class MRUD(nn.Module):
                         out_feat = torch.cat(outs[f][-((j - self.n_scales + 1)*2 + 2):], dim=2)
                     else:
                         out_feat = feat
-                    print("For bb level {}, feature {} shape is {}".format(j, f, out_feat.shape))
+                    #print("For bb level {}, feature {} shape is {}".format(j, f, out_feat.shape))
                     all_feat.append(out_feat)
                     all_pos.append(feat_pos)
                     all_scale.append(feat_scale)
