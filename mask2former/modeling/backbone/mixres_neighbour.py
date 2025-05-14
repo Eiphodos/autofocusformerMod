@@ -943,7 +943,7 @@ class MixResNeighbour(MRNB, Backbone):
         add_image_data_to_all = cfg.MODEL.MR.ADD_IMAGE_DATA_TO_ALL
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[n_scales - 1]
         n_layers = len(cfg.MODEL.MR.EMBED_DIM)
-        if layer_index > n_scales - 1:
+        if layer_index == n_scales:
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True
@@ -1006,8 +1006,8 @@ class MixResNeighbour(MRNB, Backbone):
             self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in range(layer_index + 1)}
             #print("backbone channels: {}".format(self._out_feature_channels))
 
-        print("Successfully built MixResNeighbour model with {} out_features, {} strides and {} channels".format(
-            self._out_features, self._out_feature_strides, self._out_feature_channels))
+        print("Successfully built MixResNeighbour model with {} out_features, {} strides, {} out channels and {} in channels".format(
+            self._out_features, self._out_feature_strides, self._out_feature_channels, self._in_features_channels))
 
     def forward(self, x, scale, features, features_pos, upsampling_mask):
         """

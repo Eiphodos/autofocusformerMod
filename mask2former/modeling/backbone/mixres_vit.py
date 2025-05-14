@@ -378,8 +378,8 @@ class MixResViT(MRVIT, Backbone):
             self._out_feature_channels = {"res{}".format(out_index): embed_dim}
             # print("backbone channels: {}".format(self._out_feature_channels))
 
-        print("Successfully built MixResViT model with {} out_features, {} strides and {} channels".format(
-            self._out_features, self._out_feature_strides, self._out_feature_channels))
+        print("Successfully built MixResViT model with {} out_features, {} strides, {} out channels and {} in channels".format(
+            self._out_features, self._out_feature_strides, self._out_feature_channels, self._in_features_channels))
 
 
     def forward(self, x, scale, features, features_pos, upsampling_mask):
