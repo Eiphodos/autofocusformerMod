@@ -135,7 +135,7 @@ class MRUD(nn.Module):
                 #print("For bb level {}, feature shape is {}".format(j, features.shape))
 
         for i, f in enumerate(self.all_out_features):
-            outs[f] = torch.cat(outs[f][-(i + 1)], dim=2)
+            outs[f] = torch.cat(outs[f][-(i + 1):], dim=2)
         outs['min_spatial_shape'] = output['min_spatial_shape']
         return outs
 
