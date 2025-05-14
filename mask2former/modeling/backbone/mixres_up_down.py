@@ -75,14 +75,14 @@ class MRUD(nn.Module):
 
             scale = self.bb_scales[j]
             output = self.backbones[j](im, scale, features, features_pos, upsampling_mask)
-            all_out_features = self.backbones[j]._out_features
+            bb_out_features = self.backbones[j]._out_features
             all_feat = []
             all_scale = []
             all_pos = []
             all_ss = []
             #print("Backbone {} has {} out features".format(j, all_out_features))
             #print("Next Backbone {} has {} in features".format(j + 1, self.bb_in_feats[j + 1]))
-            for i, f in enumerate(all_out_features):
+            for i, f in enumerate(bb_out_features):
                 feat = output[f]
                 feat_pos = output[f + '_pos']
                 feat_scale = output[f + '_scale']
@@ -134,7 +134,8 @@ class MRUD(nn.Module):
                 features = torch.cat(all_feat, dim=1)
                 #print("For bb level {}, feature shape is {}".format(j, features.shape))
 
-
+        for f in self.all_out_features:
+            outs[f] = outs[f][-1]
         outs['min_spatial_shape'] = output['min_spatial_shape']
         return outs
 
