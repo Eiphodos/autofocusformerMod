@@ -327,7 +327,7 @@ class MixResViT(MRVIT, Backbone):
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[n_scales - 1]
         n_layers = len(cfg.MODEL.MR.EMBED_DIM)
-        if layer_index > n_scales - 1:
+        if layer_index >= n_scales:
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True

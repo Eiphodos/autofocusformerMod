@@ -943,7 +943,7 @@ class MixResNeighbour(MRNB, Backbone):
         add_image_data_to_all = cfg.MODEL.MR.ADD_IMAGE_DATA_TO_ALL
         min_patch_size = cfg.MODEL.MR.PATCH_SIZES[n_scales - 1]
         n_layers = len(cfg.MODEL.MR.EMBED_DIM)
-        if layer_index == n_scales:
+        if layer_index >= n_scales:
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True

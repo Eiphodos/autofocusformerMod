@@ -102,7 +102,7 @@ class MRUD(nn.Module):
                     outs[f + '_scale'] = feat_scale
                     outs[f + '_spatial_shape'] = feat_ss
                 if f in self.bb_in_feats[j + 1]:
-                    if j == self.n_scales - 1:
+                    if j >= self.n_scales:
                         out_feat = torch.cat(outs[f][-((j - self.n_scales + 1)*2 + 2):], dim=2)
                     else:
                         out_feat = feat
