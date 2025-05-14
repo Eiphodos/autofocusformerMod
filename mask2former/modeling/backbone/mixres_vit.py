@@ -331,7 +331,7 @@ class MixResViT(MRVIT, Backbone):
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True
-            in_chans = cfg.MODEL.MR.EMBED_DIM[-(layer_index + 1):-(n_layers - layer_index)]
+            in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
         else:
             scale = layer_index
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
@@ -363,7 +363,7 @@ class MixResViT(MRVIT, Backbone):
 
         if down:
             self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(n_layers - layer_index):]
-            self._in_features_channels = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
+            self._in_features_channels = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
             self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in
                                          range(n_layers - layer_index)}
             self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in
