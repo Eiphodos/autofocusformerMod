@@ -363,7 +363,7 @@ class MixResViT(MRVIT, Backbone):
 
         if down:
             self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(n_layers - layer_index):]
-            self._in_features_channels = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
+            self._in_features_channels = in_chans
             self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in
                                          range(n_layers - layer_index)}
             self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in
@@ -377,6 +377,7 @@ class MixResViT(MRVIT, Backbone):
             # self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
             self._out_feature_channels = {"res{}".format(out_index): embed_dim}
             # print("backbone channels: {}".format(self._out_feature_channels))
+            self._in_features_channels = in_chans
 
         print("Successfully built MixResViT model with {} out_features, {} strides, {} out channels and {} in channels".format(
             self._out_features, self._out_feature_strides, self._out_feature_channels, self._in_features_channels))
