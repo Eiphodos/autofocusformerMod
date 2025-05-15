@@ -170,6 +170,11 @@ class ClusterAttention(nn.Module):
         q = q * self.scale
         kv = self.kv(feat)  # b x n x 2c
 
+        if torch.isnan(kv).any():
+            print("NaNs detected in kv-proj in NeighbourAttn")
+        if torch.isnan(q).any():
+            print("NaNs detected in q-proj in NeighbourAttn")
+
         # get attention
         if not global_attn:
             nbhd_size = member_idx.shape[-1]
@@ -178,6 +183,8 @@ class ClusterAttention(nn.Module):
             kv = kv.view(b, n, h, 2, c_).permute(3, 0, 2, 1, 4)  # 2 x b x h x n x c_
             key, v = kv[0], kv[1]
             attn = CLUSTENQKFunction.apply(q, key, member_idx)  # b x h x n x m
+            if torch.isnan(attn).any():
+                print("NaNs detected in clusten-attn in NeighbourAttn")
             mask = cluster_mask
             if mask is not None:
                 mask = mask.reshape(b, 1, n, m)
@@ -198,6 +205,8 @@ class ClusterAttention(nn.Module):
         pos_embed = pe_table.gather(index=pe_idx.view(-1, 1).expand(-1, h), dim=0).reshape(*(pe_shape), h).permute(0, 3, 1, 2)
 
         attn = attn + pos_embed
+        if torch.isnan(attn).any():
+            print("NaNs detected in posemb-attn in NeighbourAttn")
 
         if mask is not None:
             attn = attn + (1-mask)*(-100)
@@ -206,6 +215,8 @@ class ClusterAttention(nn.Module):
         blank_attn = (q * self.blank_k.reshape(1, h, 1, c_)).sum(-1, keepdim=True)  # b x h x n x 1
         attn = torch.cat([attn, blank_attn], dim=-1)
         attn = self.softmax(attn)
+        if torch.isnan(attn).any():
+            print("NaNs detected in softmax-attn in NeighbourAttn")
         attn = self.attn_drop(attn)
 
         blank_attn = attn[..., -1:]
@@ -219,7 +230,8 @@ class ClusterAttention(nn.Module):
         else:
             feat = CLUSTENAVFunction.apply(attn, v, member_idx).permute(0, 2, 1, 3).reshape(b, n, c)
             feat = feat + blank_v.permute(0, 2, 1, 3).reshape(b, n, c)
-
+        if torch.isnan(feat).any():
+            print("NaNs detected in v-attn in NeighbourAttn")
         feat = self.proj(feat)
         feat = self.proj_drop(feat)
 
@@ -300,7 +312,8 @@ class ClusterTransformerBlock(nn.Module):
             feat = shortcut + self.drop_path(self.gamma1 * feat)
             feat_mlp = self.mlp(self.norm2(feat))
             feat = feat + self.drop_path(self.gamma2 * feat_mlp)
-
+        if torch.isnan(feat).any():
+            print("NaNs detected in ff-attn in NeighbourAttn")
         return feat
 
     def extra_repr(self) -> str:
@@ -904,10 +917,14 @@ class MRNB(nn.Module):
         else:
             if self.do_upsample:
                 x, pos = self.upsample_features(im, scale, features, features_pos, upsampling_mask)
+                if torch.isnan(x).any():
+                    print("NaNs detected in upsampled features in scale {}".format(scale))
             else:
                 features = self.token_norm(features)
                 x = self.token_projection(features)
                 pos = features_pos
+                if torch.isnan(x).any():
+                    print("NaNs detected in projected features in scale {}".format(scale))
         pos, x = self.layers(pos, x, h=min_patched_im_size[0], w=min_patched_im_size[1], on_grid=False)
 
         outs = {}

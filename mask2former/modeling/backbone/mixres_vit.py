@@ -103,10 +103,16 @@ class Attention(nn.Module):
         )
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
+        if torch.isnan(attn).any():
+            print("NaNs detected in q-k-attn in ViT")
         attn = attn.softmax(dim=-1)
+        if torch.isnan(attn).any():
+            print("NaNs detected in softmax-attn in ViT")
         attn = self.attn_drop(attn)
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        if torch.isnan(attn).any():
+            print("NaNs detected in v-attn in ViT")
         x = self.proj(x)
         x = self.proj_drop(x)
 
@@ -128,6 +134,8 @@ class Block(nn.Module):
             return attn
         x = x + self.drop_path(y)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
+        if torch.isnan(x).any():
+            print("NaNs detected in ff-attn in ViT")
         return x
 
 class DownSampleConvBlock(nn.Module):
@@ -297,10 +305,14 @@ class MRVIT(nn.Module):
             #self.test_pos_cover_and_overlap(pos[0], H, W, scale)
             pos_embed = self.pe_layer(pos[:,:,1:])
             x = x + pos_embed
+            if torch.isnan(x).any():
+                print("NaNs detected in patch-embedded features in ViT in scale {}".format(scale))
         else:
             features = self.token_norm(features)
             x = self.token_projection(features)
             pos = features_pos
+            if torch.isnan(x).any():
+                print("NaNs detected in projected features in ViT in scale {}".format(scale))
 
         x = self.layers(x)
 
