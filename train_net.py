@@ -17,6 +17,7 @@ import copy
 import itertools
 import logging
 import os
+import random
 
 from collections import OrderedDict
 from typing import Any, Dict, List, Set
@@ -320,6 +321,13 @@ def setup(args):
     return cfg
 
 
+def setup_determinism(seed):
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 def main(args):
     cfg = setup(args)
     if torch.distributed.is_initialized():
@@ -327,6 +335,7 @@ def main(args):
     import pykeops
     dirname = os.getenv('TMPDIR')
     pykeops.set_build_folder(dirname)
+    setup_determinism(1)
     if args.eval_only:
         model = Trainer.build_model(cfg)
         DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
