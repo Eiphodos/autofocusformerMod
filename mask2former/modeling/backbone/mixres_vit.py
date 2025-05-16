@@ -142,7 +142,7 @@ class DownSampleConvBlock(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.conv = nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1)
-        self.b_norm = nn.BatchNorm2d(out_dim)
+        self.g_norm = nn.GroupNorm(1, out_dim)
         self.relu = nn.LeakyReLU()
 
     def forward(self, x):
@@ -152,9 +152,9 @@ class DownSampleConvBlock(nn.Module):
         x = self.relu(x)
         if torch.isnan(x).any():
             print("NaNs detected after relu in PE in first ViT")
-        x = self.b_norm(x)
+        x = self.g_norm(x)
         if torch.isnan(x).any():
-            print("NaNs detected after batch_norm in PE in first ViT")
+            print("NaNs detected after group_norm in PE in first ViT")
 
         return x
 

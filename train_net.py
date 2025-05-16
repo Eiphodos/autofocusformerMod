@@ -279,7 +279,7 @@ class Trainer(DefaultTrainer):
             )
         elif optimizer_type == "ADAMW":
             optimizer = maybe_add_full_model_gradient_clipping(torch.optim.AdamW)(
-                params, cfg.SOLVER.BASE_LR
+                params, cfg.SOLVER.BASE_LR, betas=cfg.SOLVER.BETAS, eps=cfg.SOLVER.EPSILON
             )
         else:
             raise NotImplementedError(f"no optimizer type {optimizer_type}")
