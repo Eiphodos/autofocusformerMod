@@ -147,8 +147,14 @@ class DownSampleConvBlock(nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
+        if torch.isnan(x).any():
+            print("NaNs detected after conv in PE in first ViT")
         x = self.relu(x)
+        if torch.isnan(x).any():
+            print("NaNs detected after relu in PE in first ViT")
         x = self.b_norm(x)
+        if torch.isnan(x).any():
+            print("NaNs detected after batch_norm in PE in first ViT")
 
         return x
 
@@ -293,12 +299,16 @@ class MRVIT(nn.Module):
 
     def forward(self, im, scale, features, features_pos, upsampling_mask):
         B, _, H, W = im.shape
+        if torch.isnan(im).any():
+            print("NaNs detected in input image in ViT in scale {}".format(scale))
         PS = self.patch_size
         patched_im_size = (H // PS, W // PS)
         min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
 
         if self.first_layer:
             x = self.patch_embed(im)
+            if torch.isnan(x).any():
+                print("NaNs detected in patch-embedded features in ViT in scale {}".format(scale))
             pos = get_2dpos_of_curr_ps_in_min_ps(H, W, PS, self.min_patch_size, scale).to('cuda')
             pos = pos.repeat(B, 1, 1)
             #print("Encoder pos max x: {}, max y: {}, and all pos: {}".format(pos[:, :, 0].max(), pos[:, :, 1].max(), pos))
@@ -306,7 +316,7 @@ class MRVIT(nn.Module):
             pos_embed = self.pe_layer(pos[:,:,1:])
             x = x + pos_embed
             if torch.isnan(x).any():
-                print("NaNs detected in patch-embedded features in ViT in scale {}".format(scale))
+                print("NaNs detected in pos-embedded features in ViT in scale {}".format(scale))
         else:
             features = self.token_norm(features)
             x = self.token_projection(features)
