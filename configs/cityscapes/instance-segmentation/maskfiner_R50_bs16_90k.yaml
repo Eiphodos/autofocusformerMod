@@ -1,0 +1,51 @@
+_BASE_: Base-Cityscapes-InstanceSegmentation.yaml
+MODEL:
+  META_ARCHITECTURE: "MaskFiner"
+  MR_SEM_SEG_HEAD:
+    NAME: "MaskPredictor"
+    IGNORE_VALUE: 255
+    NUM_CLASSES: 8
+    LOSS_WEIGHT: 1.0
+    # pixel decoder
+    NORM: "GN"
+    CONVS_DIM: [128, 128, 128, 128]
+    PIXEL_DECODER_NAME: "MSDeformAttnPixelDecoderMaskFiner"
+    IN_FEATURES: ["res2", "res3", "res4", "res5"]
+    DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES: ["res3", "res4", "res5"]
+    COMMON_STRIDE: 4
+    TRANSFORMER_ENC_LAYERS: [2, 2, 2, 2]
+    MLP_RATIO: [ 4.0, 4.0, 4.0, 4.0 ]
+    NHEADS: [ 8, 8, 8, 8 ]
+    DROPOUT: 0.0
+  MASK_FINER:
+    TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoder"
+    TRANSFORMER_IN_FEATURE: "multi_scale_pixel_decoder"
+    DEEP_SUPERVISION: True
+    NO_OBJECT_WEIGHT: 0.1
+    CLASS_WEIGHT: 2.0
+    MASK_WEIGHT: 5.0
+    DICE_WEIGHT: 5.0
+    MASK_DIM: [ 128, 128, 128, 128 ]
+    HIDDEN_DIM: [128, 128, 128, 128]
+    NUM_OBJECT_QUERIES: [100, 100, 100, 100]
+    NHEADS: [8, 8, 8, 8]
+    DROPOUT: 0.0
+    DIM_FEEDFORWARD: [1024, 1024, 1024, 1024]
+    ENC_LAYERS: [0, 0, 0, 0]
+    NUM_RESOLUTION_SCALES: 4
+    PRE_NORM: False
+    ENFORCE_INPUT_PROJ: False
+    SIZE_DIVISIBILITY: 32
+    DEC_LAYERS: [4, 4, 4, 4]  # 9 decoder layers, add one for the loss on learnable query
+    DECODER_LEVELS: [1, 2, 3, 4]
+    TRAIN_NUM_POINTS: 12544
+    OVERSAMPLE_RATIO: 3.0
+    IMPORTANCE_SAMPLE_RATIO: 0.75
+    SHEPARD_POWER: 6.0
+    SHEPARD_POWER_LEARNABLE: True
+    TEST:
+      SEMANTIC_ON: False
+      INSTANCE_ON: True
+      PANOPTIC_ON: False
+      OVERLAP_THRESHOLD: 0.8
+      OBJECT_MASK_THRESHOLD: 0.8
