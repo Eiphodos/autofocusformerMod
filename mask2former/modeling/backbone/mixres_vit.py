@@ -116,13 +116,30 @@ class DropPath(nn.Module):
         return f'drop_prob={round(self.drop_prob,3):0.3f}'
 
 
+class DWConv(nn.Module):
+    def __init__(self, dim=768):
+        super(DWConv, self).__init__()
+        self.dwconv = nn.Conv2d(dim, dim, 3, 1, 1, bias=True, groups=dim)
+
+    def forward(self, x, H, W):
+        B, N, C = x.shape
+        x = x.transpose(1, 2).view(B, C, H, W)
+        x = self.dwconv(x)
+        x = x.flatten(2).transpose(1, 2)
+
+        return x
+
+
 class FeedForward(nn.Module):
-    def __init__(self, dim, hidden_dim, dropout, out_dim=None):
+    def __init__(self, dim, hidden_dim, dropout, dw_conv=False, out_dim=None):
         super().__init__()
         self.fc1 = nn.Linear(dim, hidden_dim)
         self.act = nn.GELU()
         if out_dim is None:
             out_dim = dim
+        if dw_conv:
+            self.dwconv = DWConv(dim)
+        self.dw_conv = dw_conv
         self.fc2 = nn.Linear(hidden_dim, out_dim)
         self.drop = nn.Dropout(dropout)
 
@@ -132,6 +149,8 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         x = self.fc1(x)
+        if self.dw_conv:
+            x = self.dwconv(x)
         x = self.act(x)
         x = self.drop(x)
         x = self.fc2(x)
