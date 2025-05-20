@@ -161,6 +161,7 @@ class FeedForward(nn.Module):
 class Attention(nn.Module):
     def __init__(self, dim, num_heads, qkv_bias=True, attn_drop=0., proj_drop=0.):
         super().__init__()
+        self.dim = dim
         self.num_heads = num_heads
         head_dim = dim // num_heads
         self.scale = head_dim ** -0.5
