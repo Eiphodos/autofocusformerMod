@@ -34,6 +34,7 @@ from detectron2.engine import (
     default_argument_parser,
     default_setup,
     launch,
+    HookBase,
 )
 from detectron2.evaluation import (
     CityscapesInstanceEvaluator,
@@ -64,6 +65,21 @@ from mask2former import (
     SemanticSegmentorWithTTA,
     add_maskformer2_config,
 )
+
+class NanCheckHook(HookBase):
+    def after_step(self):
+        logger = logging.getLogger("detectron2.trainer")
+        for name, p in self.trainer.model.named_parameters():
+            if torch.isnan(p).any():
+                logger.info("NaN in: {}".format(name))
+            if torch.isinf(p).any():
+                logger.info("Inf in: {}".format(name))
+            st = self.trainer.optimizer.state.get(p, None)
+            if st and 'exp_avg_sq' in st:
+                if torch.isinf(st['exp_avg_sq']).any():
+                    logger.info("exp-avg_sq has Inf in: {}".format(p.shape))
+                if torch.isnan(st['exp_avg_sq']).any():
+                    logger.info("exp-avg_sq has NaN in: {}".format(p.shape))
 
 
 class Trainer(DefaultTrainer):
