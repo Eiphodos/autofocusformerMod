@@ -242,19 +242,17 @@ class RoPEAttention(Attention):
         #w = h = math.sqrt(x.shape[1] - 1)
         if self.rope_mixed:
             t_x, t_y = self.freqs_t_x, self.freqs_t_y
-            if self.freqs_t_x.shape[0] != x.shape[1] - 1:
+            if self.freqs_t_x.shape[0] != x.shape[1]:
                 t_x, t_y = init_t_xy(end_x=w, end_y=h)
                 t_x, t_y = t_x.to(x.device), t_y.to(x.device)
             freqs_cis = self.compute_cis(self.freqs, t_x, t_y)
         else:
             freqs_cis = self.freqs_cis
-            if self.freqs_cis.shape[0] != x.shape[1] - 1:
+            if self.freqs_cis.shape[0] != x.shape[1]:
                 freqs_cis = self.compute_cis(end_x=w, end_y=h)
             freqs_cis = freqs_cis.to(x.device)
 
-        q_rope, k_rope = apply_rotary_emb(q[:, :, 1:], k[:, :, 1:], freqs_cis=freqs_cis)
-        q = torch.cat((q[:, :, :1], q_rope), dim=2)
-        k = torch.cat((k[:, :, :1], k_rope), dim=2)
+        q, k = apply_rotary_emb(q, k, freqs_cis=freqs_cis)
         #########
 
         attn = (q * self.scale) @ k.transpose(-2, -1)
