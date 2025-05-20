@@ -176,7 +176,7 @@ class Attention(nn.Module):
     def unwrapped(self):
         return self
 
-    def forward(self, x):
+    def forward(self, x, h, w):
         B, N, C = x.shape
         qkv = (
             self.qkv(x)
@@ -233,13 +233,13 @@ class RoPEAttention(Attention):
             freqs_cis = self.compute_cis(end_x=14, end_y=14)
             self.freqs_cis = freqs_cis
 
-    def forward(self, x):
+    def forward(self, x, h, w):
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         ###### Apply rotary position embedding
-        w = h = math.sqrt(x.shape[1] - 1)
+        #w = h = math.sqrt(x.shape[1] - 1)
         if self.rope_mixed:
             t_x, t_y = self.freqs_t_x, self.freqs_t_y
             if self.freqs_t_x.shape[0] != x.shape[1] - 1:
@@ -277,8 +277,8 @@ class Block(nn.Module):
         self.mlp = FeedForward(dim, mlp_dim, dropout)
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
-    def forward(self, x):
-        y = self.attn(self.norm1(x))
+    def forward(self, x, h, w):
+        y = self.attn(self.norm1(x), h, w)
         x = x + self.drop_path(y)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
         if torch.isnan(x).any():
@@ -372,9 +372,9 @@ class TransformerLayer(nn.Module):
             [Block(dim, n_heads, dim_ff, dropout, dpr[i]) for i in range(n_blocks)]
         )
 
-    def forward(self, x):
+    def forward(self, x, h, w):
         for blk_idx in range(len(self.blocks)):
-            x = self.blocks[blk_idx](x)
+            x = self.blocks[blk_idx](x, h, w)
         return x
 
 
@@ -471,7 +471,7 @@ class MRVIT(nn.Module):
             if torch.isnan(x).any():
                 print("NaNs detected in projected features in ViT in scale {}".format(scale))
 
-        x = self.layers(x)
+        x = self.layers(x, h=patched_im_size[0], w=patched_im_size[1])
 
         outs = {}
         out_name = self._out_features[0]
