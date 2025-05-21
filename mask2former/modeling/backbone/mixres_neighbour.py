@@ -978,7 +978,7 @@ class MixResNeighbour(MRNB, Backbone):
         mlp_ratio = cfg.MODEL.MR.MLP_RATIO[layer_index]
         cluster_size = cfg.MODEL.MR.CLUSTER_SIZE[layer_index]
         nbhd_size = cfg.MODEL.MR.NBHD_SIZE[layer_index]
-        upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index],
+        upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
         layer_scale = cfg.MODEL.MR.LAYER_SCALE
 
         drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE
