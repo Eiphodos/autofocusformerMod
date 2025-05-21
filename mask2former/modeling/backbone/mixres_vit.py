@@ -123,7 +123,7 @@ class DWConv(nn.Module):
 
     def forward(self, x, H, W):
         B, N, C = x.shape
-        x = x.transpose(1, 2).view(B, C, H, W)
+        x = rearrange(x.transpose(1, 2), 'b c (h w) -> b c h w', b=B, c=C, h=H, w=W).contiguous()
         x = self.dwconv(x)
         x = x.flatten(2).transpose(1, 2)
 
@@ -138,7 +138,7 @@ class FeedForward(nn.Module):
         if out_dim is None:
             out_dim = dim
         if dw_conv:
-            self.dwconv = DWConv(dim)
+            self.dwconv = DWConv(hidden_dim)
         self.dw_conv = dw_conv
         self.fc2 = nn.Linear(hidden_dim, out_dim)
         self.drop = nn.Dropout(dropout)
@@ -147,10 +147,10 @@ class FeedForward(nn.Module):
     def unwrapped(self):
         return self
 
-    def forward(self, x):
+    def forward(self, x, h, w):
         x = self.fc1(x)
         if self.dw_conv:
-            x = self.dwconv(x)
+            x = self.dwconv(x, h, w)
         x = self.act(x)
         x = self.drop(x)
         x = self.fc2(x)
@@ -271,14 +271,14 @@ class Block(nn.Module):
         super().__init__()
         self.norm1 = nn.LayerNorm(dim)
         self.norm2 = nn.LayerNorm(dim)
-        self.attn = RoPEAttention(dim, heads)
+        self.attn = Attention(dim, heads)
         self.mlp = FeedForward(dim, mlp_dim, dropout)
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
     def forward(self, x, h, w):
         y = self.attn(self.norm1(x), h, w)
         x = x + self.drop_path(y)
-        x = x + self.drop_path(self.mlp(self.norm2(x)))
+        x = x + self.drop_path(self.mlp(self.norm2(x), h, w))
         if torch.isnan(x).any():
             print("NaNs detected in ff-attn in ViT")
         return x
