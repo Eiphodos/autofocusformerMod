@@ -569,7 +569,7 @@ class MRNB(nn.Module):
             d_model,
             n_heads,
             dropout=0.0,
-            drop_path_rate=0.0,
+            drop_path_rate=[0.0],
             attn_drop_rate=0.0,
             channels=1,
             mlp_ratio=4.0,
@@ -614,7 +614,6 @@ class MRNB(nn.Module):
 
 
         # stochastic depth
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, n_layers)]
         norm_layer = nn.LayerNorm
 
 
@@ -627,7 +626,7 @@ class MRNB(nn.Module):
                                mlp_ratio=mlp_ratio,
                                drop=dropout,
                                attn_drop=attn_drop_rate,
-                               drop_path=dpr,
+                               drop_path=drop_path_rate,
                                norm_layer=norm_layer,
                                layer_scale=layer_scale,
                                )
@@ -974,7 +973,6 @@ class MixResNeighbour(MRNB, Backbone):
         depths = cfg.MODEL.MR.DEPTHS[layer_index]
         num_heads = cfg.MODEL.MR.NUM_HEADS[layer_index]
         drop_rate = cfg.MODEL.MR.DROP_RATE[layer_index]
-        drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE[layer_index]
         attn_drop_rate = cfg.MODEL.MR.ATTN_DROP_RATE[layer_index]
         split_ratio = cfg.MODEL.MR.SPLIT_RATIO[layer_index]
         mlp_ratio = cfg.MODEL.MR.MLP_RATIO[layer_index]
@@ -983,7 +981,9 @@ class MixResNeighbour(MRNB, Backbone):
         upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index],
         layer_scale = cfg.MODEL.MR.LAYER_SCALE
 
-
+        drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(cfg.MODEL.MR.DEPTHS))]
+        drop_path = dpr[sum(cfg.MODEL.MR.DEPTHS[:layer_index]):sum(cfg.MODEL.MR.DEPTHS[:layer_index + 1])]
 
 
         super().__init__(
@@ -993,7 +993,7 @@ class MixResNeighbour(MRNB, Backbone):
             d_model=embed_dim,
             n_heads=num_heads,
             dropout=drop_rate,
-            drop_path_rate=drop_path_rate,
+            drop_path_rate=drop_path,
             attn_drop_rate=attn_drop_rate,
             mlp_ratio=mlp_ratio,
             split_ratio=split_ratio,

@@ -371,15 +371,14 @@ class TransformerLayer(nn.Module):
             n_heads,
             dim_ff,
             dropout=0.0,
-            drop_path_rate=0.0,
+            drop_path_rate=[0.0],
             layer_scale=0.0
     ):
         super().__init__()
 
         # transformer blocks
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, n_blocks)]
         self.blocks = nn.ModuleList(
-            [Block(dim, n_heads, dim_ff, dropout, dpr[i], layer_scale) for i in range(n_blocks)]
+            [Block(dim, n_heads, dim_ff, dropout, drop_path_rate[i], layer_scale) for i in range(n_blocks)]
         )
 
     def forward(self, x, h, w):
@@ -397,7 +396,7 @@ class MRVIT(nn.Module):
             n_heads,
             mlp_ratio=4.0,
             dropout=0.0,
-            drop_path_rate=0.0,
+            drop_path_rate=[0.0],
             channels=3,
             split_ratio=4,
             n_scales=2,
@@ -521,10 +520,13 @@ class MixResViT(MRVIT, Backbone):
         mlp_ratio = cfg.MODEL.MR.MLP_RATIO[layer_index]
         num_heads = cfg.MODEL.MR.NUM_HEADS[layer_index]
         drop_rate = cfg.MODEL.MR.DROP_RATE[layer_index]
-        drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE[layer_index]
         split_ratio = cfg.MODEL.MR.SPLIT_RATIO[layer_index]
         upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
         layer_scale = cfg.MODEL.MR.LAYER_SCALE
+
+        drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(cfg.MODEL.MR.DEPTHS))]
+        drop_path = dpr[sum(cfg.MODEL.MR.DEPTHS[:layer_index]):sum(cfg.MODEL.MR.DEPTHS[:layer_index + 1])]
 
         super().__init__(
             patch_sizes=patch_sizes,
@@ -533,7 +535,7 @@ class MixResViT(MRVIT, Backbone):
             n_heads=num_heads,
             mlp_ratio=mlp_ratio,
             dropout=drop_rate,
-            drop_path_rate=drop_path_rate,
+            drop_path_rate=drop_path,
             split_ratio=split_ratio,
             channels=in_chans,
             n_scales=n_scales,

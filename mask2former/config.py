@@ -241,7 +241,7 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MR.MLP_RATIO = [4., 4., 4., 4.]
     cfg.MODEL.MR.UPSCALE_RATIO = [0.25, 0.25, 0.25, 0.25]
     cfg.MODEL.MR.DROP_RATE = [0.0, 0.0, 0.0, 0.0]
-    cfg.MODEL.MR.DROP_PATH_RATE = [0.3, 0.3, 0.3, 0.3]
+    cfg.MODEL.MR.DROP_PATH_RATE = 0.0
     cfg.MODEL.MR.ATTN_DROP_RATE = [0.0, 0.0, 0.0, 0.0]
     cfg.MODEL.MR.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
     cfg.MODEL.MR.CLUSTER_SIZE = [8, 8, 8, 8]
