@@ -210,7 +210,10 @@ class UpDownBackbone(MRUD, Backbone):
             disagreement = self.count_edges_per_patch_masked(edge_mask, patch_size=patch_size)
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
+        #disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
+        q25 = torch.quantile(disagreement_map, 0.25, dim=1, keepdim=True)
+        q75 = torch.quantile(disagreement_map, 0.75, dim=1, keepdim=True)
+        disagreement_map = ((disagreement_map - q25) / (q75 - q25 + 1e-6)).clamp(-1, 1)
         #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map
 
@@ -250,8 +253,10 @@ class UpDownBackbone(MRUD, Backbone):
             #print("disagreement is shape {} and has nan: {}".format(disagreement.shape, (disagreement.isnan()).any()))
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
-
+        #disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
+        q25 = torch.quantile(disagreement_map, 0.25, dim=1, keepdim=True)
+        q75 = torch.quantile(disagreement_map, 0.75, dim=1, keepdim=True)
+        disagreement_map = ((disagreement_map - q25) / (q75 - q25 + 1e-6)).clamp(-1, 1)
         #print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map
 
