@@ -267,7 +267,7 @@ class RoPEAttention(Attention):
 
 
 class Block(nn.Module):
-    def __init__(self, dim, heads, mlp_dim, dropout, drop_path):
+    def __init__(self, dim, heads, mlp_dim, dropout, drop_path, layer_scale=0.0):
         super().__init__()
         self.norm1 = nn.LayerNorm(dim)
         self.norm2 = nn.LayerNorm(dim)
@@ -275,10 +275,21 @@ class Block(nn.Module):
         self.mlp = FeedForward(dim, mlp_dim, dropout)
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
 
+        # layer_scale code copied from https://github.com/SHI-Labs/Neighborhood-Attention-Transformer/blob/a2cfef599fffd36d058a5a4cfdbd81c008e1c349/classification/nat.py
+        self.layer_scale = False
+        if layer_scale is not None and type(layer_scale) in [int, float] and layer_scale > 0:
+            self.layer_scale = True
+            self.gamma1 = nn.Parameter(layer_scale * torch.ones(dim), requires_grad=True)
+            self.gamma2 = nn.Parameter(layer_scale * torch.ones(dim), requires_grad=True)
+
     def forward(self, x, h, w):
         y = self.attn(self.norm1(x), h, w)
-        x = x + self.drop_path(y)
-        x = x + self.drop_path(self.mlp(self.norm2(x), h, w))
+        if not self.layer_scale:
+            x = x + self.drop_path(y)
+            x = x + self.drop_path(self.mlp(self.norm2(x), h, w))
+        else:
+            x = x + self.drop_path(self.gamma1 * y)
+            x = x + self.drop_path(self.gamma2 * self.mlp(self.norm2(x), h, w))
         if torch.isnan(x).any():
             print("NaNs detected in ff-attn in ViT")
         return x
@@ -361,13 +372,14 @@ class TransformerLayer(nn.Module):
             dim_ff,
             dropout=0.0,
             drop_path_rate=0.0,
+            layer_scale=0.0
     ):
         super().__init__()
 
         # transformer blocks
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, n_blocks)]
         self.blocks = nn.ModuleList(
-            [Block(dim, n_heads, dim_ff, dropout, dpr[i]) for i in range(n_blocks)]
+            [Block(dim, n_heads, dim_ff, dropout, dpr[i], layer_scale) for i in range(n_blocks)]
         )
 
     def forward(self, x, h, w):
@@ -391,7 +403,8 @@ class MRVIT(nn.Module):
             n_scales=2,
             min_patch_size=4,
             upscale_ratio=0.0,
-            first_layer=True
+            first_layer=True,
+            layer_scale=0.0
     ):
         super().__init__()
         self.patch_size = patch_sizes[-1]
@@ -427,7 +440,7 @@ class MRVIT(nn.Module):
                 self.token_projection = nn.Identity()
         dim_ff = int(d_model * mlp_ratio)
         # transformer layers
-        self.layers = TransformerLayer(n_layers, d_model, n_heads, dim_ff, dropout, drop_path_rate)
+        self.layers = TransformerLayer(n_layers, d_model, n_heads, dim_ff, dropout, drop_path_rate, layer_scale)
 
         #nn.init.trunc_normal_(self.pos_embed, std=0.02)
         self.pre_logits = nn.Identity()
@@ -511,6 +524,7 @@ class MixResViT(MRVIT, Backbone):
         drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE[layer_index]
         split_ratio = cfg.MODEL.MR.SPLIT_RATIO[layer_index]
         upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
+        layer_scale = cfg.MODEL.MR.LAYER_SCALE
 
         super().__init__(
             patch_sizes=patch_sizes,
@@ -525,7 +539,8 @@ class MixResViT(MRVIT, Backbone):
             n_scales=n_scales,
             min_patch_size=min_patch_size,
             upscale_ratio=upscale_ratio,
-            first_layer=first_layer
+            first_layer=first_layer,
+            layer_scale=layer_scale
         )
 
         if down:

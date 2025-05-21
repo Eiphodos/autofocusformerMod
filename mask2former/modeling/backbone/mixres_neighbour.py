@@ -213,6 +213,7 @@ class ClusterAttention(nn.Module):
 
         # blank token
         blank_attn = (q * self.blank_k.reshape(1, h, 1, c_)).sum(-1, keepdim=True)  # b x h x n x 1
+        blank_attn = torch.clamp(blank_attn, -5, 5)
         attn = torch.cat([attn, blank_attn], dim=-1)
         attn = self.softmax(attn)
         if torch.isnan(attn).any():
@@ -979,7 +980,8 @@ class MixResNeighbour(MRNB, Backbone):
         mlp_ratio = cfg.MODEL.MR.MLP_RATIO[layer_index]
         cluster_size = cfg.MODEL.MR.CLUSTER_SIZE[layer_index]
         nbhd_size = cfg.MODEL.MR.NBHD_SIZE[layer_index]
-        upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
+        upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index],
+        layer_scale = cfg.MODEL.MR.LAYER_SCALE
 
 
 
@@ -1004,7 +1006,8 @@ class MixResNeighbour(MRNB, Backbone):
             keep_old_scale=keep_old_scale,
             scale=scale,
             add_image_data_to_all=add_image_data_to_all,
-            first_layer=first_layer
+            first_layer=first_layer,
+            layer_scale=layer_scale
         )
 
         if down:

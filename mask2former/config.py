@@ -248,4 +248,4 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MR.NBHD_SIZE = [48, 48, 48, 48]
     cfg.MODEL.MR.KEEP_OLD_SCALE = False
     cfg.MODEL.MR.ADD_IMAGE_DATA_TO_ALL = False
-
+    cfg.MODEL.MR.LAYER_SCALE = 0.0
