@@ -370,6 +370,8 @@ def main(args):
                    settings=wandb.Settings(start_method="thread", console="off"))
 
     trainer = Trainer(cfg)
+    nan_check_hook = NanCheckHook()
+    trainer.register_hooks([nan_check_hook])
     if args.resume:
         trainer.resume_or_load(resume=args.resume)
     res = trainer.train()
