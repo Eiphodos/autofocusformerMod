@@ -154,7 +154,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
         losses = ["labels", "masks"]
 
         criterion = SetCriterionMixOracle(
-            cfg.MODEL.SEM_SEG_HEAD.NUM_CLASSES,
+            cfg.MODEL.MR_SEM_SEG_HEAD.NUM_CLASSES,
             matcher=matcher,
             weight_dict=weight_dict,
             eos_coef=no_object_weight,
