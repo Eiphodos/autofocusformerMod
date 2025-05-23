@@ -199,6 +199,8 @@ class UpDownBackbone(MRUD, Backbone):
 
 
     def generate_initial_oracle_upsampling_mask_edge(self, targets, targets_pad):
+        if targets is None:
+            return None
         patch_size = self.backbones[0].patch_size
         disagreement_map = []
         for batch in range(len(targets)):
@@ -219,6 +221,8 @@ class UpDownBackbone(MRUD, Backbone):
 
 
     def generate_subsequent_oracle_upsampling_mask_edge(self, targets, pos, level, targets_pad):
+        if targets is None:
+            return None
         B,N,C = pos.shape
         patch_size = self.backbones[level].patch_size
         initial_patch_size = self.backbones[0].patch_size

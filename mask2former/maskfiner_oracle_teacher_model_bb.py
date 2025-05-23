@@ -220,16 +220,20 @@ class MaskFinerOracleTeacherBB(nn.Module):
         images = [x["image"].to(self.device) for x in batched_inputs]
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
-        if "sem_seg" in batched_inputs[0]:
-            key = "sem_seg"
-        elif "instances" in batched_inputs[0]:
-            key = "instances"
-        elif "panoptic_seg" in batched_inputs[0]:
-            key = "panoptic_seg"
+        if self.training:
+            if "sem_seg" in batched_inputs[0]:
+                key = "sem_seg"
+            elif "instances" in batched_inputs[0]:
+                key = "instances"
+            elif "panoptic_seg" in batched_inputs[0]:
+                key = "panoptic_seg"
+            else:
+                raise Exception("No label key found in batched inputs")
+            sem_seg_gt = [x[key].to(self.device) for x in batched_inputs]
+            sem_seg_gt, target_pad = self.prepare_oracle_targets(sem_seg_gt, images, key)
         else:
-            raise Exception("No label key found in batched inputs")
-        sem_seg_gt = [x[key].to(self.device) for x in batched_inputs]
-        sem_seg_gt, target_pad = self.prepare_oracle_targets(sem_seg_gt, images, key)
+            sem_seg_gt = None
+            target_pad = None
 
         features = self.backbone(images.tensor, sem_seg_gt, target_pad)
         outputs = self.sem_seg_head(features)
@@ -301,18 +305,20 @@ class MaskFinerOracleTeacherBB(nn.Module):
                 for level, dmp in enumerate(disagreement_masks_pred):
                     dis_mask = dmp["disagreement_mask_pred_{}".format(level)][i]
                     dis_mask_pos = dmp["disagreement_mask_pred_pos_{}".format(level)][i]
-                    top_scale = int(dis_mask_pos[:,0].max())
-                    disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1], device=dis_mask.device)
-                    disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, top_scale)
-                    processed_results[-1]["disagreement_mask_pred_{}".format(level)] = disagreement_map.cpu()
+                    if not dis_mask is None:
+                        top_scale = int(dis_mask_pos[:,0].max())
+                        disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1], device=dis_mask.device)
+                        disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, top_scale)
+                        processed_results[-1]["disagreement_mask_pred_{}".format(level)] = disagreement_map.cpu()
 
                 for level, dmp in enumerate(disagreement_masks_oracle):
                     dis_mask = dmp["disagreement_mask_oracle_{}".format(level)][i]
                     dis_mask_pos = dmp["disagreement_mask_oracle_pos_{}".format(level)][i]
-                    top_scale = int(dis_mask_pos[:,0].max())
-                    disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1], device=dis_mask.device)
-                    disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, top_scale)
-                    processed_results[-1]["disagreement_mask_oracle_{}".format(level)] = disagreement_map.cpu()
+                    if not dis_mask is None:
+                        top_scale = int(dis_mask_pos[:,0].max())
+                        disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1], device=dis_mask.device)
+                        disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, top_scale)
+                        processed_results[-1]["disagreement_mask_oracle_{}".format(level)] = disagreement_map.cpu()
 
                 i += 1
 
