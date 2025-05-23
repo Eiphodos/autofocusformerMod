@@ -220,9 +220,16 @@ class MaskFinerOracleTeacherBB(nn.Module):
         images = [x["image"].to(self.device) for x in batched_inputs]
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
-
-        sem_seg_gt = [x["sem_seg"].to(self.device) for x in batched_inputs]
-        sem_seg_gt, target_pad = self.prepare_oracle_targets(sem_seg_gt, images)
+        if "sem_seg" in batched_inputs[0]:
+            key = "sem_seg"
+        elif "instances" in batched_inputs[0]:
+            key = "instances"
+        elif "panoptic_seg" in batched_inputs[0]:
+            key = "panoptic_seg"
+        else:
+            raise Exception("No label key found in batched inputs")
+        sem_seg_gt = [x[key].to(self.device) for x in batched_inputs]
+        sem_seg_gt, target_pad = self.prepare_oracle_targets(sem_seg_gt, images, key)
 
         features = self.backbone(images.tensor, sem_seg_gt, target_pad)
         outputs = self.sem_seg_head(features)
@@ -351,22 +358,31 @@ class MaskFinerOracleTeacherBB(nn.Module):
         return new_targets
 
 
-    def prepare_oracle_targets(self, targets, images):
+    def prepare_oracle_targets(self, targets, images, key):
         h_pad, w_pad = images.tensor.shape[-2:]
         new_targets = []
         pad_height_width = []
         #print("image shape for preparation is: {}".format(images.tensor.shape))
         for targets_per_image in targets:
-            h_pad_n = h_pad - targets_per_image.shape[0]
-            w_pad_n = w_pad - targets_per_image.shape[1]
-            pad_height_width.append((h_pad_n, w_pad_n))
-            # pad gt
-            #print("target shape for preparation is: {}".format(targets_per_image.shape))
-            padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype, device=targets_per_image.device)
-            padded_masks = padded_masks + 254
-            padded_masks[: targets_per_image.shape[0], : targets_per_image.shape[1]] = targets_per_image
+            if key == 'sem_seg':
+                h_pad_n = h_pad - targets_per_image.shape[0]
+                w_pad_n = w_pad - targets_per_image.shape[1]
+                padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype,
+                                           device=targets_per_image.device)
+                padded_masks = padded_masks + 254
+                padded_masks[: targets_per_image.shape[0], : targets_per_image.shape[1]] = targets_per_image
+
+            elif key == 'instances':
+                gt_masks = targets_per_image.gt_masks
+                h_pad_n = h_pad - gt_masks.shape[1]
+                w_pad_n = w_pad - gt_masks.shape[2]
+                padded_masks = torch.zeros((gt_masks.shape[0], h_pad, w_pad), dtype=gt_masks.dtype,
+                                           device=gt_masks.device)
+                padded_masks = padded_masks + 254
+                padded_masks[:, : gt_masks.shape[1], : gt_masks.shape[2]] = gt_masks
+                padded_masks = padded_masks.int().argmax(dim=0)
             new_targets.append(padded_masks)
-            #print("padded shape is {}".format(padded_masks.shape))
+            pad_height_width.append((h_pad_n, w_pad_n))
         return new_targets, pad_height_width
 
     def semantic_inference(self, mask_cls, mask_pred):
