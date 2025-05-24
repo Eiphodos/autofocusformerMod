@@ -405,7 +405,7 @@ class SingleScaleMaskFinerTransformerDecoder(nn.Module):
 
         ret["num_classes"] = cfg.MODEL.MR_SEM_SEG_HEAD.NUM_CLASSES
         ret["hidden_dim"] = cfg.MODEL.MASK_FINER.HIDDEN_DIM[layer_index]
-        ret["num_queries"] = cfg.MODEL.MASK_FINER.NUM_OBJECT_QUERIES[layer_index]
+        ret["num_queries"] = cfg.MODEL.MASK_FINER.NUM_OBJECT_QUERIES
         # Transformer parameters:
         ret["nheads"] = cfg.MODEL.MASK_FINER.NHEADS[layer_index]
         ret["dim_feedforward"] = cfg.MODEL.MASK_FINER.DIM_FEEDFORWARD[layer_index]
