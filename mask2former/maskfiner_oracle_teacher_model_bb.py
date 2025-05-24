@@ -303,18 +303,18 @@ class MaskFinerOracleTeacherBB(nn.Module):
 
 
                 for level, dmp in enumerate(disagreement_masks_pred):
-                    dis_mask = dmp["disagreement_mask_pred_{}".format(level)][i]
-                    dis_mask_pos = dmp["disagreement_mask_pred_pos_{}".format(level)][i]
-                    if not dis_mask is None:
+                    if not dmp["disagreement_mask_pred_{}".format(level)] is None:
+                        dis_mask = dmp["disagreement_mask_pred_{}".format(level)][i]
+                        dis_mask_pos = dmp["disagreement_mask_pred_pos_{}".format(level)][i]
                         top_scale = int(dis_mask_pos[:,0].max())
                         disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1], device=dis_mask.device)
                         disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, top_scale)
                         processed_results[-1]["disagreement_mask_pred_{}".format(level)] = disagreement_map.cpu()
 
                 for level, dmp in enumerate(disagreement_masks_oracle):
-                    dis_mask = dmp["disagreement_mask_oracle_{}".format(level)][i]
-                    dis_mask_pos = dmp["disagreement_mask_oracle_pos_{}".format(level)][i]
-                    if not dis_mask is None:
+                    if not dmp["disagreement_mask_oracle_{}".format(level)] is None:
+                        dis_mask = dmp["disagreement_mask_oracle_{}".format(level)][i]
+                        dis_mask_pos = dmp["disagreement_mask_oracle_pos_{}".format(level)][i]
                         top_scale = int(dis_mask_pos[:,0].max())
                         disagreement_map = torch.zeros(images.tensor.shape[-2], images.tensor.shape[-1], device=dis_mask.device)
                         disagreement_map = self.create_disagreement_map(disagreement_map, dis_mask, dis_mask_pos, level, top_scale)
