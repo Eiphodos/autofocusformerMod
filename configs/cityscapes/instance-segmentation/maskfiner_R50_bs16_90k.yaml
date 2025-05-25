@@ -20,6 +20,7 @@ MODEL:
   MASK_FINER:
     TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoder"
     TRANSFORMER_IN_FEATURE: "multi_scale_pixel_decoder"
+    MASK_DECODER_ALL_LEVELS: False
     DEEP_SUPERVISION: True
     NO_OBJECT_WEIGHT: 0.1
     CLASS_WEIGHT: 2.0
