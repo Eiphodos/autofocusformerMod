@@ -93,7 +93,7 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
     """
     b, n_, d = database.shape
     if torch.isnan(database).any():
-        print("Inf detected in database")
+        print("Nan detected in database")
     if torch.isinf(database).any():
         print("Inf detected in database")
     n = query.shape[1]
@@ -107,7 +107,7 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
     if (nn_idx >= database.shape[1]).any() or (nn_idx < 0).any():
         print("Index out of bounds in nn_idx")
     if torch.isnan(nn_idx).any():
-        print("Inf detected in nn_idx")
+        print("Nan detected in nn_idx")
     if torch.isinf(nn_idx).any():
         print("Inf detected in nn_idx")
     nn_pos = database.gather(index=nn_idx.view(b, -1, 1).expand(-1, -1, 2), dim=1).reshape(b, n, k, d)
