@@ -92,6 +92,10 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
         up_features - b x n x c, interpolated features at queries
     """
     b, n_, d = database.shape
+    if torch.isnan(database).any():
+        print("Inf detected in database")
+    if torch.isinf(database).any():
+        print("Inf detected in database")
     n = query.shape[1]
     if (n == n_) and (query == database).all():
         return feature
@@ -100,13 +104,21 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
     else:
         k = min(k, n_)
         nn_idx = knn_keops(query, database, k=k, return_dist=False)
-    if (nn_idx >= database.shape[1]).any():
+    if (nn_idx >= database.shape[1]).any() or (nn_idx < 0).any():
         print("Index out of bounds in nn_idx")
+    if torch.isnan(nn_idx).any():
+        print("Inf detected in nn_idx")
+    if torch.isinf(nn_idx).any():
+        print("Inf detected in nn_idx")
     nn_pos = database.gather(index=nn_idx.view(b, -1, 1).expand(-1, -1, 2), dim=1).reshape(b, n, k, d)
     if torch.isnan(query).any():
         print("NaNs detected in query")
     if torch.isnan(nn_pos).any():
         print("NaNs detected in nn_pos")
+    if torch.isinf(query).any():
+        print("Inf detected in query")
+    if torch.isinf(nn_pos).any():
+        print("Inf detected in nn_pos")
     nn_dist = (query.unsqueeze(2) - nn_pos).pow(2).sum(-1)  # b x n x k
 
     nn_weights = shepard_decay_weights(nn_dist, power=power)  # b x n x k, weights of the samples
