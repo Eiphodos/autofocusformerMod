@@ -422,7 +422,8 @@ class MRVIT(nn.Module):
             min_patch_size=4,
             upscale_ratio=0.0,
             first_layer=True,
-            layer_scale=0.0
+            layer_scale=0.0,
+            num_register_tokens=0,
     ):
         super().__init__()
         self.patch_size = patch_sizes[-1]
@@ -438,6 +439,7 @@ class MRVIT(nn.Module):
         self.min_patch_size = min_patch_size
         self.upscale_ratio = upscale_ratio
         self.first_layer = first_layer
+        self.num_register_tokens = num_register_tokens
 
         num_features = d_model
         self.num_features = num_features
@@ -453,13 +455,17 @@ class MRVIT(nn.Module):
         else:
             self.token_norm = nn.LayerNorm(channels)
             if channels != d_model:
-                #self.token_projection = nn.Linear(channels, d_model)
-                self.token_projection = Mlp(in_features=channels, out_features=d_model, hidden_features=channels)
+                self.token_projection = nn.Linear(channels, d_model)
+                #self.token_projection = Mlp(in_features=channels, out_features=d_model, hidden_features=channels)
             else:
                 self.token_projection = nn.Identity()
         dim_ff = int(d_model * mlp_ratio)
         # transformer layers
         self.layers = TransformerLayer(n_layers, d_model, n_heads, dim_ff, dropout, drop_path_rate, layer_scale)
+
+        self.register_tokens = (
+            nn.Parameter(torch.zeros(1, num_register_tokens, d_model)) if num_register_tokens else None
+        )
 
         #nn.init.trunc_normal_(self.pos_embed, std=0.02)
         self.pre_logits = nn.Identity()
@@ -501,7 +507,10 @@ class MRVIT(nn.Module):
             if torch.isnan(x).any():
                 print("NaNs detected in projected features in ViT in scale {}".format(scale))
 
+        if self.register_tokens is not None:
+            x = torch.cat([self.register_tokens.expand(B, -1, -1), x], dim=1)
         x = self.layers(x, h=patched_im_size[0], w=patched_im_size[1])
+        x = x[:, self.num_register_tokens + 1:]
 
         outs = {}
         out_name = self._out_features[0]
@@ -530,8 +539,8 @@ class MixResViT(MRVIT, Backbone):
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True
-            #in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
-            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1] + cfg.MODEL.MR.EMBED_DIM[n_layers - layer_index -1]
+            in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
+            #in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1] + cfg.MODEL.MR.EMBED_DIM[n_layers - layer_index -1]
         else:
             scale = layer_index
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
@@ -544,6 +553,7 @@ class MixResViT(MRVIT, Backbone):
         split_ratio = cfg.MODEL.MR.SPLIT_RATIO[layer_index]
         upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
         layer_scale = cfg.MODEL.MR.LAYER_SCALE
+        num_register_tokens = cfg.MODEL.MR.NUM_REGISTER_TOKENS
 
         drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(cfg.MODEL.MR.DEPTHS))]
@@ -563,7 +573,8 @@ class MixResViT(MRVIT, Backbone):
             min_patch_size=min_patch_size,
             upscale_ratio=upscale_ratio,
             first_layer=first_layer,
-            layer_scale=layer_scale
+            layer_scale=layer_scale,
+            num_register_tokens=num_register_tokens
         )
 
         if down:
