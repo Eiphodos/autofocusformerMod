@@ -662,7 +662,8 @@ class MRNB(nn.Module):
 
             self.token_norm = nn.LayerNorm(channels)
             if channels != d_model:
-                self.token_projection = nn.Linear(channels, d_model)
+                #self.token_projection = nn.Linear(channels, d_model)
+                self.token_projection = Mlp(in_features=channels, out_features=d_model, hidden_features=channels)
             else:
                 self.token_projection = nn.Identity()
 
@@ -964,7 +965,8 @@ class MixResNeighbour(MRNB, Backbone):
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True
-            in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
+            #in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
+            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1] + cfg.MODEL.MR.EMBED_DIM[n_layers - layer_index -1]
         else:
             scale = layer_index
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]

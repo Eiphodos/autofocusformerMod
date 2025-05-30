@@ -101,6 +101,25 @@ def drop_path(x, drop_prob: float = 0., training: bool = False, scale_by_keep: b
     return x * random_tensor
 
 
+class Mlp(nn.Module):
+    def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
+        super().__init__()
+        out_features = out_features or in_features
+        hidden_features = hidden_features or in_features
+        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.act = act_layer()
+        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.drop = nn.Dropout(drop)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.drop(x)
+        x = self.fc2(x)
+        x = self.drop(x)
+        return x
+
+
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
     """
@@ -434,7 +453,8 @@ class MRVIT(nn.Module):
         else:
             self.token_norm = nn.LayerNorm(channels)
             if channels != d_model:
-                self.token_projection = nn.Linear(channels, d_model)
+                #self.token_projection = nn.Linear(channels, d_model)
+                self.token_projection = Mlp(in_features=channels, out_features=d_model, hidden_features=channels)
             else:
                 self.token_projection = nn.Identity()
         dim_ff = int(d_model * mlp_ratio)
@@ -510,7 +530,8 @@ class MixResViT(MRVIT, Backbone):
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True
-            in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
+            #in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
+            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1] + cfg.MODEL.MR.EMBED_DIM[n_layers - layer_index -1]
         else:
             scale = layer_index
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
