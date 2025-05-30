@@ -510,7 +510,7 @@ class MRVIT(nn.Module):
         if self.register_tokens is not None:
             x = torch.cat([self.register_tokens.expand(B, -1, -1), x], dim=1)
         x = self.layers(x, h=patched_im_size[0], w=patched_im_size[1])
-        x = x[:, self.num_register_tokens + 1:]
+        x = x[:, self.num_register_tokens:]
 
         outs = {}
         out_name = self._out_features[0]
