@@ -122,6 +122,10 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
     nn_dist = (query.unsqueeze(2) - nn_pos).pow(2).sum(-1)  # b x n x k
 
     nn_weights = shepard_decay_weights(nn_dist, power=power)  # b x n x k, weights of the samples
+    if torch.isinf(nn_weights).any():
+        print("Inf detected in nn_weights")
+    if torch.isnan(nn_weights).any():
+        print("NaNs detected in nn_weights")
     if return_weight_only:
         return nn_weights
 
@@ -135,7 +139,10 @@ def upsample_feature_shepard(query, database, feature, database_idx=None, k=4, p
 
     if database_idx is not None:
          up_features.scatter_(dim=1, index=database_idx.long().expand(-1, -1, c), src=feature)
-
+    if torch.isinf(up_features).any():
+        print("Inf detected in up_features")
+    if torch.isnan(up_features).any():
+        print("NaNs detected in up_features")
     return up_features
 
 
