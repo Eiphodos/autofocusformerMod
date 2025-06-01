@@ -69,8 +69,9 @@ def shepard_decay_weights(dist, power=3):
     Returns:
         weights - b x n x k, normalized weights
     """
+    dist = dist.clamp(min=1e-2)
     ipd = 1.0/(dist.pow(power)+1e-6)
-    weights = ipd / ipd.sum(dim=2, keepdim=True)
+    weights = ipd / (ipd.sum(dim=2, keepdim=True) + 1e-6)
     return weights
 
 
