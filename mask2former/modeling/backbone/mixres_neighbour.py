@@ -637,7 +637,7 @@ class MRNB(nn.Module):
         else:
             if self.do_upsample:
                 # Split layers
-                self.split = nn.Linear(channels, channels * self.split_ratio)
+                #self.split = nn.Linear(channels, channels * self.split_ratio)
 
                 self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
                 self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
