@@ -652,7 +652,7 @@ class MRNB(nn.Module):
                         proj = nn.Linear(in_dim, channels)
                         image_projectors.append(proj)
                     self.image_patch_projectors = nn.ModuleList(image_projectors)
-                #else:
+                else:
                     #input_dim = max(channels, 3 * self.patch_size ** 2)
                     self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), channels)
                 self.high_res_norm1 = nn.LayerNorm(channels)
