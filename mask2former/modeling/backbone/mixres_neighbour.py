@@ -637,7 +637,7 @@ class MRNB(nn.Module):
         else:
             if self.do_upsample:
                 # Split layers
-                #self.split = nn.Linear(channels, channels * self.split_ratio)
+                self.split = nn.Linear(channels, channels * self.split_ratio)
 
                 self.rel_pos_emb = nn.Parameter(torch.randn(1, self.split_ratio, channels))
                 self.scale_emb = nn.Parameter(torch.randn(1, 1, channels))
@@ -653,10 +653,10 @@ class MRNB(nn.Module):
                         image_projectors.append(proj)
                     self.image_patch_projectors = nn.ModuleList(image_projectors)
                 #else:
-                #    #input_dim = max(channels, 3 * self.patch_size ** 2)
-                #    self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), channels)
-                #self.high_res_norm1 = nn.LayerNorm(channels)
-                self.high_res_mlp = Mlp(in_features=3 * (self.patch_size**2), out_features=channels, hidden_features=channels)
+                    #input_dim = max(channels, 3 * self.patch_size ** 2)
+                    self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), channels)
+                self.high_res_norm1 = nn.LayerNorm(channels)
+                self.high_res_mlp = Mlp(in_features=channels, out_features=channels, hidden_features=channels)
                 self.high_res_norm2 = nn.LayerNorm(channels)
                 #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
@@ -752,9 +752,9 @@ class MRNB(nn.Module):
 
 
     def split_features(self, tokens_to_split):
-        #x_splitted = self.split(tokens_to_split)
-        #x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        x_splitted = tokens_to_split.unsqueeze(2).repeat(1, 1, self.split_ratio, 1)
+        x_splitted = self.split(tokens_to_split)
+        x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
+        #x_splitted = tokens_to_split.unsqueeze(2).repeat(1, 1, self.split_ratio, 1)
         x_splitted = x_splitted + self.rel_pos_emb + self.scale_emb
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
@@ -791,9 +791,9 @@ class MRNB(nn.Module):
         b_ = torch.arange(b).unsqueeze(-1).expand(-1, pos_patches.shape[1])
         im_high = im[b_, :, y_pos, x_pos]
         im_high = rearrange(im_high, 'b (n p) c -> b n (p c)', b=b, n=n, c=3)
-        #im_high = self.image_patch_projection(im_high)
-        #im_high = nn.functional.gelu(im_high)
-        #im_high = self.high_res_norm1(im_high)
+        im_high = self.image_patch_projection(im_high)
+        im_high = nn.functional.gelu(im_high)
+        im_high = self.high_res_norm1(im_high)
         im_high = self.high_res_mlp(im_high)
         im_high = self.high_res_norm2(im_high)
         tokens = tokens + im_high
