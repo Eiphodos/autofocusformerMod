@@ -499,8 +499,6 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         output = self.query_feat.weight.unsqueeze(1).repeat(1, b, 1)
         predictions_class = []
         predictions_mask = []
-        if torch.isnan(finest_pos).any():
-            print("NaNs detected in finest_pos")
         #mask_features = upsample_feature_shepard(finest_pos, mf_pos_scaled, mask_features)
         #outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
@@ -576,8 +574,6 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         # must use bool type
         # If a BoolTensor is provided, positions with ``True`` are not allowed to attend while ``False`` values will be unchanged.
         if masked_attn:
-            if torch.isnan(target_pos).any():
-                print("NaNs detected in target_pos")
             attn_mask = upsample_feature_shepard(target_pos, mf_pos, outputs_mask.permute(0, 2, 1)).permute(0, 2, 1)  # b x q x n
             attn_mask = (attn_mask.sigmoid().unsqueeze(1).repeat(1, self.num_heads, 1, 1).flatten(0, 1) < 0.5).bool()  # b*h x q x n
             attn_mask = attn_mask.detach()

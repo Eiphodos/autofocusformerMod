@@ -76,9 +76,10 @@ class NanCheckHook(HookBase):
                 logger.info("Inf in: {}".format(name))
             st = self.trainer.optimizer.state.get(p, None)
             if st and 'exp_avg_sq' in st:
-                if torch.isinf(st['exp_avg_sq']).any():
+                v = st['exp_avg_sq']
+                if torch.isinf(v).any():
                     logger.info("exp-avg_sq has Inf in: {}".format(p.shape))
-                if torch.isnan(st['exp_avg_sq']).any():
+                if torch.isnan(v).any():
                     logger.info("exp-avg_sq has NaN in: {}".format(p.shape))
 
 
@@ -370,8 +371,9 @@ def main(args):
                    settings=wandb.Settings(start_method="thread", console="off"))
 
     trainer = Trainer(cfg)
-    nan_check_hook = NanCheckHook()
-    trainer.register_hooks([nan_check_hook])
+    #nan_check_hook = NanCheckHook()
+    #trainer.register_hooks([nan_check_hook])
+    torch.autograd.set_detect_anomaly(False)
     if args.resume:
         trainer.resume_or_load(resume=args.resume)
     res = trainer.train()
