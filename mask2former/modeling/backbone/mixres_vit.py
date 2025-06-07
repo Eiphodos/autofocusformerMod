@@ -329,6 +329,10 @@ def init_weights(m):
         nn.init.constant_(m.weight, 1.0)
     elif isinstance(m, nn.Parameter):
         nn.init.trunc_normal_(m, std=0.02)
+    elif isinstance(m, nn.Conv2d):
+        nn.init.kaiming_normal_(m.weight, a=0.2, mode='fan_out', nonlinearity='leaky_relu')
+        if m.bias is not None:
+            nn.init.zeros_(m.bias)
 
 class PatchEmbedding(nn.Module):
     def __init__(self, patch_size, embed_dim, channels):
