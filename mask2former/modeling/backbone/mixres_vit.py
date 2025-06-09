@@ -519,8 +519,8 @@ class MixResViT(MRVIT, Backbone):
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True
-            #in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
-            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1] + cfg.MODEL.MR.EMBED_DIM[n_layers - layer_index - 1]
+            in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
+            #in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1] + cfg.MODEL.MR.EMBED_DIM[n_layers - layer_index - 1]
         else:
             scale = layer_index
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
