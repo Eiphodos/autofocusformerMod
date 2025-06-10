@@ -630,7 +630,7 @@ class MRNB(nn.Module):
                 #self.high_res_patcher = nn.Conv2d(3, channels, kernel_size=self.patch_size, stride=self.patch_size)
                 #self.high_res_patcher = OverlapPatchEmbedding(patch_size=self.patch_size, embed_dim=channels, channels=3)
                 if self.add_image_data_to_all:
-                    #input_dim = channels
+                    input_dim = channels
                     image_projectors = []
                     for i in range(self.scale + 1):
                         in_dim = 3 * (self.patch_sizes[i]**2)
@@ -638,7 +638,8 @@ class MRNB(nn.Module):
                         image_projectors.append(proj)
                     self.image_patch_projectors = nn.ModuleList(image_projectors)
                 else:
-                    input_dim = max(channels, 3 * self.patch_size ** 2)
+                    #input_dim = max(channels, 3 * self.patch_size ** 2)
+                    input_dim = channels
                     self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
                 self.high_res_norm1 = nn.LayerNorm(input_dim)
                 self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels)
@@ -946,8 +947,8 @@ class MixResNeighbour(MRNB, Backbone):
             scale = n_layers - layer_index - 1
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
             down = True
-            in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
-            #in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1] + cfg.MODEL.MR.EMBED_DIM[n_layers - layer_index - 1]
+            #in_chans = sum(cfg.MODEL.MR.EMBED_DIM[-(layer_index+1):-(n_layers - layer_index)])
+            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1] + cfg.MODEL.MR.EMBED_DIM[n_layers - layer_index - 1]
         else:
             scale = layer_index
             patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
