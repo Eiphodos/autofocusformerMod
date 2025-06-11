@@ -150,7 +150,7 @@ class DWConv(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, dim, hidden_dim, dropout, dw_conv=True, out_dim=None):
+    def __init__(self, dim, hidden_dim, dropout, dw_conv=False, out_dim=None):
         super().__init__()
         self.fc1 = nn.Linear(dim, hidden_dim)
         self.act = nn.GELU()

@@ -18,11 +18,16 @@ def analyze(input, patch_sizes):
     img = torch.from_numpy(img)
     img, pad_h_w = pad_to_nearest_multiple(img, patch_sizes[0])
     upsample_ratio_per_scale = {}
+    prev_upsample_ratio = 1
     for ps in patch_sizes:
         edge_map = count_edges_in_patch(img, pad_h_w, ps)
         needs_upsampling = edge_map.nonzero().shape[0]
-        upsample_ratio = needs_upsampling / edge_map.shape[0]
+        if prev_upsample_ratio == 0:
+            upsample_ratio = 0
+        else:
+            upsample_ratio = needs_upsampling / (edge_map.shape[0] * prev_upsample_ratio)
         upsample_ratio_per_scale[ps] = upsample_ratio
+        prev_upsample_ratio *= upsample_ratio
 
     return upsample_ratio_per_scale
 
