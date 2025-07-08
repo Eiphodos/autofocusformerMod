@@ -124,6 +124,8 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
         self._cpu_device = torch.device("cpu")
         meta = MetadataCatalog.get(dataset_name)
         self._num_classes = len(meta.stuff_classes)
+        self._inf_dir = os.path.join(self._output_dir, 'inference_instance_output')
+        os.makedirs(self._inf_dir, exist_ok=True)
 
     def process(self, inputs, outputs):
         from cityscapesscripts.helpers.labels import name2label
@@ -133,7 +135,7 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
 
             file_name = input["file_name"]
             basename = os.path.splitext(os.path.basename(file_name))[0]
-            pred_txt = os.path.join(self._temp_dir, basename + "_pred.txt")
+            pred_txt = os.path.join(self._inf_dir, basename + "_pred.txt")
 
             if "instances" in output:
                 output = output["instances"].to(self._cpu_device)
@@ -146,7 +148,7 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
                         score = output.scores[i]
                         mask = output.pred_masks[i].numpy().astype("uint8")
                         png_filename = os.path.join(
-                            self._temp_dir, basename + "_{}_{}.png".format(i, classes)
+                            self._inf_dir, basename + "_{}_{}.png".format(i, classes)
                         )
 
                         Image.fromarray(mask * 255).save(png_filename)
@@ -199,11 +201,11 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
         return ret
 
     def save_disagreement_masks(self, inp, outp):
-        inference_out_dir = os.path.join(self._output_dir, 'inference_output')
-        os.makedirs(inference_out_dir, exist_ok=True)
+
         fp = inp['file_name']
         fn = os.path.splitext(os.path.basename(fp))[0]
 
+        '''
         scores = outp["instances"].scores
         ss = outp["instances"].pred_classes.gather(dim=0, index=scores.argmax(dim=0).long().unsqueeze(0)).to(self._cpu_device).squeeze(0)
         ss = np.array(ss, dtype=int)
@@ -220,9 +222,9 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
 
         image.save(os.path.join(inference_out_dir, fn + '_sem_seg.png'))
         np.save(os.path.join(inference_out_dir, fn + '_sem_seg_raw.npy'), ss)
+        '''
 
         disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
         for k, v in disagreement_masks_only_dict.items():
             ml_out = outp[k]
-            scale = k[-1]
-            plt.imsave(os.path.join(inference_out_dir, fn + '_' + k + '.png'), np.asarray(ml_out), cmap='afmhot')
+            plt.imsave(os.path.join(self._inf_dir, fn + '_' + k + '.png'), np.asarray(ml_out), cmap='afmhot')
