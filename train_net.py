@@ -156,7 +156,7 @@ class Trainer(DefaultTrainer):
                 torch.cuda.device_count() > comm.get_rank()
             ), "CityscapesEvaluator currently do not work with multiple machines."
             if "MaskFiner" in cfg.MODEL.META_ARCHITECTURE:
-                return MaskFinerCityscapesInstanceEvaluator(dataset_name, distributed=True, output_dir=output_folder)
+                return MaskFinerCityscapesInstanceEvaluator(dataset_name, output_dir=output_folder)
             else:
                 return CityscapesInstanceEvaluator(dataset_name)
         if evaluator_type == "cityscapes_sem_seg":
