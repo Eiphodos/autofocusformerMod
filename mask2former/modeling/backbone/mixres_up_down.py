@@ -28,7 +28,7 @@ class MLP(nn.Module):
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
-            x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
+            x = F.leaky_relu(layer(x)) if i < self.num_layers - 1 else layer(x)
         return x
 
 
@@ -47,7 +47,7 @@ class MRUD(nn.Module):
 
         upsamplers = []
         for i in range(self.n_scales - 1):
-            upsample_out = MLP(backbone_dims[i], backbone_dims[i], 1, num_layers=3)
+            upsample_out = MLP(backbone_dims[i], backbone_dims[i], 1, num_layers=4)
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
 
@@ -63,6 +63,8 @@ class MRUD(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
+        elif isinstance(m, nn.Parameter):
+            nn.init.trunc_normal_(m, std=0.02)
 
 
     def forward(self, im, sem_seg_gt, target_pad):
