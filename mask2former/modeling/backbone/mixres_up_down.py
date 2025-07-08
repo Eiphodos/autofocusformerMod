@@ -47,7 +47,7 @@ class MRUD(nn.Module):
 
         upsamplers = []
         for i in range(self.n_scales - 1):
-            upsample_out = MLP(backbone_dims[i], backbone_dims[i], 1, num_layers=4)
+            upsample_out = MLP(backbone_dims[i], backbone_dims[i]*2, 1, num_layers=3)
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
 
