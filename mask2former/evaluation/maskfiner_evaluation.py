@@ -5,6 +5,7 @@ from detectron2.utils import comm
 from detectron2.utils.file_io import PathManager
 import numpy as np
 import random
+import torch
 import glob
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -116,6 +117,13 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
         * It contains a synchronization, therefore has to be used on all ranks.
         * Only the main process runs evaluation.
     """
+
+    def __init__(self, dataset_name, output_dir=None):
+        super(MaskFinerCityscapesInstanceEvaluator, self).__init__(dataset_name)
+        self._output_dir = output_dir
+        self._cpu_device = torch.device("cpu")
+        meta = MetadataCatalog.get(dataset_name)
+        self._num_classes = len(meta.stuff_classes)
 
     def process(self, inputs, outputs):
         from cityscapesscripts.helpers.labels import name2label
