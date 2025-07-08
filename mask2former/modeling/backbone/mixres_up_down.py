@@ -16,6 +16,33 @@ from detectron2.modeling import BACKBONE_REGISTRY, Backbone, ShapeSpec, build_ba
 
 from ..backbone.build import build_backbone_indexed
 
+class MLPBlock(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.linear = nn.Linear(in_dim, out_dim)
+        self.norm = nn.LayerNorm(out_dim)
+
+    def forward(self, x):
+        x = self.linear(x)
+        x = nn.functional.gelu(x)
+        x = self.norm(x)
+        return x
+
+class MLPDeepNorm(nn.Module):
+
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers):
+        super().__init__()
+        self.num_layers = num_layers
+        h = [hidden_dim] * (num_layers - 1)
+        layers = []
+        for n, k in zip([input_dim] + h, h + [output_dim]):
+            layers.append(MLPBlock(n, k))
+        self.layers = nn.ModuleList(layers)
+
+    def forward(self, x):
+        for i, layer in enumerate(self.layers):
+            x = layer(x)
+        return x
 
 class MLP(nn.Module):
     """ Very simple multi-layer perceptron (also called FFN)"""
@@ -47,7 +74,7 @@ class MRUD(nn.Module):
 
         upsamplers = []
         for i in range(self.n_scales - 1):
-            upsample_out = MLP(backbone_dims[i], backbone_dims[i]*2, 1, num_layers=3)
+            upsample_out = MLPDeepNorm(backbone_dims[i], backbone_dims[i], 1, num_layers=3)
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
 
