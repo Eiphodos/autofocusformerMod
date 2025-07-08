@@ -205,7 +205,7 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
         fn = os.path.splitext(os.path.basename(fp))[0]
 
         scores = outp["instances"].scores
-        ss = outp["instances"].classes.gather(dim=0, index=scores.argmax(dim=0).long().unsqueeze(0)).to(self._cpu_device).squeeze(0)
+        ss = outp["instances"].pred_classes.gather(dim=0, index=scores.argmax(dim=0).long().unsqueeze(0)).to(self._cpu_device).squeeze(0)
         ss = np.array(ss, dtype=int)
 
         hsv_colors = [(i / self._num_classes, 0.75, 0.75) for i in range(self._num_classes)]
