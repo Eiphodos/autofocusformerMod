@@ -37,10 +37,14 @@ class MLPDeepNorm(nn.Module):
         self.num_layers = num_layers
         h = [hidden_dim] * (num_layers - 1)
         layers = []
+        i = 1
+        final = False
         for n, k in zip([input_dim] + h, h + [output_dim]):
-            layers.append(MLPBlock(n, k))
+            if i == num_layers:
+                final = True
+            layers.append(MLPBlock(n, k, final))
+            i += 1
         self.layers = nn.ModuleList(layers)
-        self.layers[-1].final = True
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
