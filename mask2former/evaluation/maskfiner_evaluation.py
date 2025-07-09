@@ -135,7 +135,7 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
 
             file_name = input["file_name"]
             basename = os.path.splitext(os.path.basename(file_name))[0]
-            pred_txt = os.path.join(self._inf_dir, basename + "_pred.txt")
+            pred_txt = os.path.join(self._temp_dir, basename + "_pred.txt")
 
             if "instances" in output:
                 output = output["instances"].to(self._cpu_device)
@@ -148,7 +148,7 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
                         score = output.scores[i]
                         mask = output.pred_masks[i].numpy().astype("uint8")
                         png_filename = os.path.join(
-                            self._inf_dir, basename + "_{}_{}.png".format(i, classes)
+                            self._temp_dir, basename + "_{}_{}.png".format(i, classes)
                         )
 
                         Image.fromarray(mask * 255).save(png_filename)
@@ -170,14 +170,14 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
             return
         import cityscapesscripts.evaluation.evalInstanceLevelSemanticLabeling as cityscapes_eval, cityscapesscripts.evaluation.evalInstanceLevelSemanticLabeling
 
-        self._logger.info("Evaluating results under {} ...".format(self._inf_dir))
+        self._logger.info("Evaluating results under {} ...".format(self._temp_dir))
 
         # set some global states in cityscapes evaluation API, before evaluating
-        cityscapes_eval.args.predictionPath = os.path.abspath(self._inf_dir)
+        cityscapes_eval.args.predictionPath = os.path.abspath(self._temp_dir)
         cityscapes_eval.args.predictionWalk = None
         cityscapes_eval.args.JSONOutput = False
         cityscapes_eval.args.colorized = False
-        cityscapes_eval.args.gtInstancesFile = os.path.join(self._inf_dir, "gtInstances.json")
+        cityscapes_eval.args.gtInstancesFile = os.path.join(self._temp_dir, "gtInstances.json")
 
         # These lines are adopted from
         # https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/evaluation/evalInstanceLevelSemanticLabeling.py # noqa
