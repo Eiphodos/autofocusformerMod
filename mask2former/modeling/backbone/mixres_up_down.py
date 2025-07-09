@@ -20,7 +20,8 @@ class MLPBlock(nn.Module):
     def __init__(self, in_dim, out_dim, final=False):
         super().__init__()
         self.linear = nn.Linear(in_dim, out_dim)
-        self.norm = nn.LayerNorm(out_dim)
+        if not final:
+            self.norm = nn.LayerNorm(out_dim)
         self.final = final
 
     def forward(self, x):
