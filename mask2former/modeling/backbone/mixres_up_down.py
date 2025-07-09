@@ -17,15 +17,17 @@ from detectron2.modeling import BACKBONE_REGISTRY, Backbone, ShapeSpec, build_ba
 from ..backbone.build import build_backbone_indexed
 
 class MLPBlock(nn.Module):
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_dim, out_dim, final=False):
         super().__init__()
         self.linear = nn.Linear(in_dim, out_dim)
         self.norm = nn.LayerNorm(out_dim)
+        self.final = final
 
     def forward(self, x):
         x = self.linear(x)
-        x = nn.functional.gelu(x)
-        x = self.norm(x)
+        if not self.final:
+            x = nn.functional.gelu(x)
+            x = self.norm(x)
         return x
 
 class MLPDeepNorm(nn.Module):
@@ -38,6 +40,7 @@ class MLPDeepNorm(nn.Module):
         for n, k in zip([input_dim] + h, h + [output_dim]):
             layers.append(MLPBlock(n, k))
         self.layers = nn.ModuleList(layers)
+        self.layers[-1].final = True
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
