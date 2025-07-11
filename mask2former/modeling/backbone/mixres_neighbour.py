@@ -738,9 +738,9 @@ class MRNB(nn.Module):
 
 
     def split_features(self, tokens_to_split):
-        x_splitted = self.split(tokens_to_split)
-        x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
-        #x_splitted = tokens_to_split.unsqueeze(2).repeat(1, 1, self.split_ratio, 1)
+        #x_splitted = self.split(tokens_to_split)
+        #x_splitted = rearrange(x_splitted, 'b n (s d) -> b n s d', s=self.split_ratio).contiguous()
+        x_splitted = tokens_to_split.unsqueeze(2).repeat(1, 1, self.split_ratio, 1)
         x_splitted = x_splitted + self.rel_pos_emb + self.scale_emb
         x_splitted = rearrange(x_splitted, 'b n s d -> b (n s) d', s=self.split_ratio).contiguous()
         return x_splitted
