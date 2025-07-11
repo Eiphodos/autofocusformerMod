@@ -642,8 +642,8 @@ class MRNB(nn.Module):
                     input_dim = channels
                     self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
                 self.high_res_norm1 = nn.LayerNorm(input_dim)
-                self.high_res_mlp = MLPDeepNorm(in_features=input_dim, out_features=channels, hidden_features=channels)
-                #self.high_res_norm2 = nn.LayerNorm(channels)
+                self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels)
+                self.high_res_norm2 = nn.LayerNorm(channels)
                 #self.old_token_weighting = nn.Parameter(torch.tensor([1.0], requires_grad=True, dtype=torch.float32))
 
             self.token_norm = nn.LayerNorm(channels)
@@ -781,7 +781,7 @@ class MRNB(nn.Module):
         im_high = nn.functional.gelu(im_high)
         im_high = self.high_res_norm1(im_high)
         im_high = self.high_res_mlp(im_high)
-        #im_high = self.high_res_norm2(im_high)
+        im_high = self.high_res_norm2(im_high)
         tokens = tokens + im_high
 
         return tokens
