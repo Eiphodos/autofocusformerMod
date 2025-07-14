@@ -6,11 +6,11 @@ MODEL:
   MR:
     NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResViT" ]
     EMBED_DIM: [512,256,128,64,128,256,512]
-    DEPTHS: [1, 1, 1, 1, 1, 1, 1]
+    DEPTHS: [1, 1, 1, 4, 4, 16, 4]
     NUM_HEADS: [ 16, 8, 4, 2, 4, 8, 16 ]
     PATCH_SIZES: [32, 16, 8, 4, 8, 16, 32]
     DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    DROP_PATH_RATE: 0.0
+    DROP_PATH_RATE: 0.3
     ATTN_DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     UPSCALE_RATIO: [0.0, 0.5, 0.5, 0.35, 0.0, 0.0, 0.0]
     SPLIT_RATIO: [4, 4, 4, 4, 4, 4, 4]
