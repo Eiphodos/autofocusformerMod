@@ -34,10 +34,10 @@ SOLVER:
   AMP:
     ENABLED: False
 INPUT:
-  MIN_SIZE_TRAIN: [1024]
+  MIN_SIZE_TRAIN: !!python/object/apply:eval ["[int(x * 0.1 * 1024) for x in range(10, 21)]"]
   MIN_SIZE_TRAIN_SAMPLING: "choice"
   MIN_SIZE_TEST: 1024
-  MAX_SIZE_TRAIN: 2048
+  MAX_SIZE_TRAIN: 4096
   MAX_SIZE_TEST: 2048
   CROP:
     ENABLED: True
@@ -45,7 +45,7 @@ INPUT:
     SIZE: (1024, 2048)
     SINGLE_CATEGORY_MAX_AREA: 1.0
   COLOR_AUG_SSD: True
-  SIZE_DIVISIBILITY: 1024
+  SIZE_DIVISIBILITY: -1
   FORMAT: "RGB"
   DATASET_MAPPER_NAME: "mask_former_semantic"
 TEST:
