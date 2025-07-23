@@ -1,0 +1,51 @@
+_BASE_: ../maskfiner_R50_bs16_50ep.yaml
+MODEL:
+  META_ARCHITECTURE: "MaskFinerOracleTeacherBB"
+  BACKBONE:
+    NAME: "UpDownBackbone"
+  MR:
+    NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResViT" ]
+    EMBED_DIM: [512,256,128,64,128,256,512]
+    DEPTHS: [1, 1, 1, 4, 4, 16, 4]
+    NUM_HEADS: [ 16, 8, 4, 2, 4, 8, 16 ]
+    PATCH_SIZES: [32, 16, 8, 4, 8, 16, 32]
+    DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    DROP_PATH_RATE: 0.3
+    ATTN_DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    UPSCALE_RATIO: [0.0, 0.5, 0.5, 0.35, 0.0, 0.0, 0.0]
+    SPLIT_RATIO: [4, 4, 4, 4, 4, 4, 4]
+    MLP_RATIO: [3., 3., 3., 3., 3., 3., 3.]
+    CLUSTER_SIZE: [8, 8, 8, 8, 8, 8, 8]
+    NBHD_SIZE: [48,48,48,48,48,48,48]
+    OUT_FEATURES: ["res2", "res3", "res4", "res5"]
+    KEEP_OLD_SCALE: True
+    ADD_IMAGE_DATA_TO_ALL: False
+  WEIGHTS: "aff_mini.pkl"
+  PIXEL_MEAN: [123.675, 116.280, 103.530]
+  PIXEL_STD: [58.395, 57.120, 57.375]
+  MR_SEM_SEG_HEAD:
+    PIXEL_DECODER_NAME: ["ProjMaskFinerOracleTeacher", "ProjMaskFinerOracleTeacher", "ProjMaskFinerOracleTeacher", "MSDeformAttnPixelDecoderMaskFiner"]
+    NAME: "MaskPredictorOracleTeacher"
+    CONVS_DIM: [256,256,256,256]
+    TRANSFORMER_ENC_LAYERS: [2, 2, 4, 6]
+    NHEADS: [8, 8, 8, 8]
+  SEM_SEG_HEAD:
+    NAME: "MaskFinerOTHead"
+  MASK_FINER:
+    TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoderOracleTeacher"
+    DECODER_LEVELS: [1, 2, 3, 3]
+    DEC_LAYERS: [3,3,4,10]
+    DIM_FEEDFORWARD: [1024,1024,1024,2048]
+    HIDDEN_DIM: [256,256,256,256]
+    MASK_DIM: [256,256,256,256]
+    NHEADS: [8, 8, 8, 8]
+    ORACLE_TEACHER_RATIO: 0.0
+    UPSAMPLING_WEIGHT: 10
+SOLVER:
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.0002
+  CHECKPOINT_PERIOD: 5000
+  MAX_ITER: 118000
+  STEPS: (104784, 113634)
+TEST:
+  EVAL_PERIOD: 5000
