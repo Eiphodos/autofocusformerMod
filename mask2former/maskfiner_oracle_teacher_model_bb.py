@@ -380,13 +380,16 @@ class MaskFinerOracleTeacherBB(nn.Module):
 
             elif key == 'instances':
                 gt_masks = targets_per_image.gt_masks
-                h_pad_n = h_pad - gt_masks.shape[1]
-                w_pad_n = w_pad - gt_masks.shape[2]
-                padded_masks = torch.zeros((gt_masks.shape[0], h_pad, w_pad), dtype=gt_masks.dtype,
-                                           device=gt_masks.device)
-                padded_masks = padded_masks + 254
-                padded_masks[:, : gt_masks.shape[1], : gt_masks.shape[2]] = gt_masks
-                padded_masks = padded_masks.int().argmax(dim=0)
+                if gt_masks.shape[0] == 0:
+                    padded_masks = torch.zeros((1, h_pad, w_pad), dtype=gt_masks.dtype, device=gt_masks.device)
+                else:
+                    h_pad_n = h_pad - gt_masks.shape[1]
+                    w_pad_n = w_pad - gt_masks.shape[2]
+                    padded_masks = torch.zeros((gt_masks.shape[0], h_pad, w_pad), dtype=gt_masks.dtype,
+                                               device=gt_masks.device)
+                    padded_masks = padded_masks + 254
+                    padded_masks[:, : gt_masks.shape[1], : gt_masks.shape[2]] = gt_masks
+                    padded_masks = padded_masks.int().argmax(dim=0)
             new_targets.append(padded_masks)
             pad_height_width.append((h_pad_n, w_pad_n))
         return new_targets, pad_height_width
