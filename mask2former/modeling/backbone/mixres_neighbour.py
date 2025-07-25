@@ -568,7 +568,9 @@ class MRNB(nn.Module):
             keep_old_scale=False,
             scale=1,
             add_image_data_to_all=False,
-            first_layer=False
+            first_layer=False,
+            dynamic_up_ratios=False,
+            dynamic_up_threshold=0.0
     ):
         super().__init__()
         self.patch_size = patch_sizes[-1]
@@ -590,6 +592,8 @@ class MRNB(nn.Module):
         self.add_image_data_to_all = add_image_data_to_all
         self.first_layer = first_layer
         self.do_upsample = not (upscale_ratio == 0 or first_layer)
+        self.dynamic_up_ratios = dynamic_up_ratios
+        self.dynamic_up_threshold = dynamic_up_threshold
 
         num_features = d_model
         self.num_features = num_features
@@ -690,7 +694,10 @@ class MRNB(nn.Module):
 
     def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, importance_scores):
         B, N, C = feat_at_curr_scale.shape
-        k_split = int(N * self.upscale_ratio)
+        if self.dynamic_up_ratios:
+            k_split = min(((importance_scores > self.dynamic_up_threshold).sum(-1) / N).max(), self.upscale_ratio)
+        else:
+            k_split = int(N * self.upscale_ratio)
 
         _, sorted_indices = torch.sort(importance_scores, dim=1, descending=False)
         bottomk_idx = sorted_indices[:, :-k_split]
@@ -964,6 +971,8 @@ class MixResNeighbour(MRNB, Backbone):
         nbhd_size = cfg.MODEL.MR.NBHD_SIZE[layer_index]
         upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
         layer_scale = cfg.MODEL.MR.LAYER_SCALE
+        dynamic_up_ratios = cfg.MODEL.MR.DYNAMIC_UPSAMPLING_RATIOS
+        dynamic_up_threshold = cfg.MODEL.MR.DYNAMIC_UPSAMPLING_THRESHOLD[layer_index]
 
         drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(cfg.MODEL.MR.DEPTHS))]
@@ -991,7 +1000,9 @@ class MixResNeighbour(MRNB, Backbone):
             scale=scale,
             add_image_data_to_all=add_image_data_to_all,
             first_layer=first_layer,
-            layer_scale=layer_scale
+            layer_scale=layer_scale,
+            dynamic_up_ratios=dynamic_up_ratios,
+            dynamic_up_threshold=dynamic_up_threshold
         )
 
         if down:

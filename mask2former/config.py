@@ -250,3 +250,5 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MR.ADD_IMAGE_DATA_TO_ALL = False
     cfg.MODEL.MR.LAYER_SCALE = 0.0
     cfg.MODEL.MR.NUM_REGISTER_TOKENS = 0
+    cfg.MODEL.MR.DYNAMIC_UPSAMPLING_RATIOS = False
+    cfg.MODEL.MR.DYNAMIC_UPSAMPLING_THRESHOLD = [0.0, 0.01, 0.02, 0.1, 0.0, 0.0, 0.0]
