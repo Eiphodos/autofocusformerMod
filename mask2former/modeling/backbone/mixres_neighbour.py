@@ -696,6 +696,7 @@ class MRNB(nn.Module):
         B, N, C = feat_at_curr_scale.shape
         if self.dynamic_up_ratios:
             dyn_ratio = min(((importance_scores > self.dynamic_up_threshold).sum(-1) / N).max(), self.upscale_ratio)
+            dyn_ratio = max(dyn_ratio, 0.1)
             k_split = int(N * dyn_ratio)
         else:
             k_split = int(N * self.upscale_ratio)
