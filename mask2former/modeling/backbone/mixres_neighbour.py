@@ -695,7 +695,8 @@ class MRNB(nn.Module):
     def divide_tokens_to_split_and_keep(self, feat_at_curr_scale, pos_at_curr_scale, importance_scores):
         B, N, C = feat_at_curr_scale.shape
         if self.dynamic_up_ratios:
-            k_split = min(((importance_scores > self.dynamic_up_threshold).sum(-1) / N).max(), self.upscale_ratio)
+            dyn_ratio = min(((importance_scores > self.dynamic_up_threshold).sum(-1) / N).max(), self.upscale_ratio)
+            k_split = int(N * dyn_ratio)
         else:
             k_split = int(N * self.upscale_ratio)
 
