@@ -221,16 +221,16 @@ class MaskFinerOracleTeacherBB(nn.Module):
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
         if self.training:
-            if "sem_seg" in batched_inputs[0]:
+            if self.semantic_on:
                 key = "sem_seg"
-            elif "instances" in batched_inputs[0]:
+            elif self.instance_on:
                 key = "instances"
-            elif "panoptic_seg" in batched_inputs[0]:
+            elif self.panoptic_on:
                 key = "panoptic_seg"
             else:
                 raise Exception("No label key found in batched inputs")
             sem_seg_gt = [x[key].to(self.device) for x in batched_inputs]
-            sem_seg_gt, target_pad = self.prepare_oracle_targets(sem_seg_gt, images, key)
+            sem_seg_gt, target_pad = self.prepare_oracle_targets(sem_seg_gt, images)
         else:
             sem_seg_gt = None
             target_pad = None
@@ -364,13 +364,13 @@ class MaskFinerOracleTeacherBB(nn.Module):
         return new_targets
 
 
-    def prepare_oracle_targets(self, targets, images, key):
+    def prepare_oracle_targets(self, targets, images):
         h_pad, w_pad = images.tensor.shape[-2:]
         new_targets = []
         pad_height_width = []
         #print("image shape for preparation is: {}".format(images.tensor.shape))
         for targets_per_image in targets:
-            if key == 'sem_seg':
+            if self.semantic_on:
                 h_pad_n = h_pad - targets_per_image.shape[0]
                 w_pad_n = w_pad - targets_per_image.shape[1]
                 padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype,
@@ -378,7 +378,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
                 padded_masks = padded_masks + 254
                 padded_masks[: targets_per_image.shape[0], : targets_per_image.shape[1]] = targets_per_image
 
-            elif key == 'instances':
+            elif self.instance_on:
                 gt_masks = targets_per_image.gt_masks
                 h_pad_n = h_pad - gt_masks.shape[1]
                 w_pad_n = w_pad - gt_masks.shape[2]

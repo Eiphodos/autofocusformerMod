@@ -68,7 +68,7 @@ class MLP(nn.Module):
 
 
 class MRUD(nn.Module):
-    def __init__(self, backbones, backbone_dims, out_dim, all_out_features, n_scales, bb_in_feats):
+    def __init__(self, backbones, backbone_dims, out_dim, all_out_features, n_scales, bb_in_feats, dynamic_up_ratios):
         super().__init__()
         self.backbones = nn.ModuleList(backbones)
         self.out_dim = out_dim
@@ -79,6 +79,7 @@ class MRUD(nn.Module):
         self.bb_in_feats = bb_in_feats
         scales = list(range(self.n_scales))
         self.bb_scales = scales + scales[-2::-1]
+        self.dynamic_up_ratios = dynamic_up_ratios
 
         upsamplers = []
         for i in range(self.n_scales - 1):
@@ -201,7 +202,8 @@ class UpDownBackbone(MRUD, Backbone):
             out_dim=out_dim,
             all_out_features=cfg.MODEL.MR.OUT_FEATURES,
             n_scales=n_scales,
-            bb_in_feats=bb_in_feats
+            bb_in_feats=bb_in_feats,
+            dynamic_up_ratios=cfg.MODEL.MR.DYNAMIC_UPSAMPLING_RATIOS
         )
 
         self._out_features = cfg.MODEL.MR.OUT_FEATURES
@@ -254,9 +256,11 @@ class UpDownBackbone(MRUD, Backbone):
             disagreement = self.count_edges_per_patch_masked(edge_mask, patch_size=patch_size)
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
+        if self.dynamic_up_ratios:
+            disagreement_map = disagreement_map / patch_size ** 2
+        else:
+            disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
         #disagreement_map = disagreement_map / (disagreement_map.max() + 1e-6)
-        #disagreement_map = disagreement_map / patch_size**2
         #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map
 
@@ -298,8 +302,10 @@ class UpDownBackbone(MRUD, Backbone):
             #print("disagreement is shape {} and has nan: {}".format(disagreement.shape, (disagreement.isnan()).any()))
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
-        #disagreement_map = disagreement_map / patch_size ** 2
+        if self.dynamic_up_ratios:
+            disagreement_map = disagreement_map / patch_size ** 2
+        else:
+            disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
         #disagreement_map = disagreement_map / (disagreement_map.max() + 1e-6)
         #print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map
