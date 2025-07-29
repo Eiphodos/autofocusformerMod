@@ -3,7 +3,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 
 import os
-import glob
 from pathlib import Path
 import matplotlib.pyplot as plt
 
@@ -13,15 +12,12 @@ from PIL import Image
 import torch
 
 
-def analyze(input, patch_sizes, task):
+def analyze(input, patch_sizes):
     img = np.asarray(Image.open(input))
     img = torch.from_numpy(img)
     img, pad_h_w = pad_to_nearest_multiple(img, patch_sizes[0])
     upsample_ratio_per_scale = {}
     prev_upsample_ratio = 1
-    if task == 'instance':
-        img[img < 34] = 0
-
     for ps in patch_sizes:
         edge_map = count_edges_in_patch(img, pad_h_w, ps)
         needs_upsampling = (edge_map > 1).nonzero().shape[0]
@@ -54,14 +50,14 @@ def pad_to_nearest_multiple(img, patch_size):
 
 def count_edges_in_patch(targets, targets_pad, patch_size=32):
     targets_batch = targets.squeeze()
-    #targets_shifted = (targets_batch.byte() + 2).long()
+    targets_shifted = (targets_batch.byte() + 2).long()
     pad_h, pad_w = targets_pad
-    #border_mask = get_ignore_mask(targets_shifted, pad_h, pad_w)
-    edge_mask = compute_edge_mask(targets_batch)
+    border_mask = get_ignore_mask(targets_shifted, pad_h, pad_w)
+    edge_mask = compute_edge_mask_with_ignores(targets_shifted, border_mask)
     edges = count_edges_per_patch_masked(edge_mask, patch_size=patch_size)
     return edges
 
-def get_ignore_mask(label_map, pad_h, pad_w, border_size=0):
+def get_ignore_mask(label_map, pad_h, pad_w, border_size=5):
     H, W = label_map.shape
     usable_h = H - pad_h
     usable_w = W - pad_w
@@ -78,29 +74,29 @@ def get_ignore_mask(label_map, pad_h, pad_w, border_size=0):
     return ignore_mask
 
 
-def compute_edge_mask(label_map):
+def compute_edge_mask_with_ignores(label_map, ignore_mask):
     H, W = label_map.shape
     edge_mask = torch.zeros_like(label_map, dtype=torch.bool)
 
     # Top neighbor (i, j) vs (i-1, j)
-    #valid = (~ignore_mask[1:, :]) & (~ignore_mask[:-1, :])
+    valid = (~ignore_mask[1:, :]) & (~ignore_mask[:-1, :])
     diff = label_map[1:, :] != label_map[:-1, :]
-    edge_mask[1:, :] = diff
+    edge_mask[1:, :] |= valid & diff
 
     # Bottom neighbor
-    #valid = (~ignore_mask[:-1, :]) & (~ignore_mask[1:, :])
+    valid = (~ignore_mask[:-1, :]) & (~ignore_mask[1:, :])
     diff = label_map[:-1, :] != label_map[1:, :]
-    edge_mask[:-1, :] = diff
+    edge_mask[:-1, :] |= valid & diff
 
     # Left neighbor
-    #valid = (~ignore_mask[:, 1:]) & (~ignore_mask[:, :-1])
+    valid = (~ignore_mask[:, 1:]) & (~ignore_mask[:, :-1])
     diff = label_map[:, 1:] != label_map[:, :-1]
-    edge_mask[:, 1:] = diff
+    edge_mask[:, 1:] |= valid & diff
 
     # Right neighbor
-    #valid = (~ignore_mask[:, :-1]) & (~ignore_mask[:, 1:])
+    valid = (~ignore_mask[:, :-1]) & (~ignore_mask[:, 1:])
     diff = label_map[:, :-1] != label_map[:, 1:]
-    edge_mask[:, :-1] = diff
+    edge_mask[:, :-1] |= valid & diff
 
     return edge_mask
 
@@ -121,29 +117,25 @@ def find_pos_org_order(pos_org, pos_shuffled):
 
 
 if __name__ == "__main__":
-    dataset_dir = Path(os.getenv("DETECTRON2_DATASETS", "datasets")) / "cityscapes"
-    annotation_dir = dataset_dir / "gtFine" / "train"
-    task = "semantic"
-    if task == "semantic":
-        files = glob.glob(os.path.join(annotation_dir, '*/*_labelIds.png'))
-    else:
-        files = glob.glob(os.path.join(annotation_dir, '*/*_instanceIds.png'))
-    patch_sizes = [32, 16, 8]
-    print_freq = 1000
-    i = 1
-    all_upsample_ratios = {ps: [] for ps in patch_sizes}
-    for file in tqdm.tqdm(files):
-        upsample_ratios_per_scale = analyze(file, patch_sizes, task)
-        if i % print_freq == 0:
-            print("For file {} upsample ratios are: {}".format(file, upsample_ratios_per_scale))
+    dataset_dir = Path(os.getenv("DETECTRON2_DATASETS", "datasets")) / "ADEChallengeData2016"
+    for name in ["training"]:
+        annotation_dir = dataset_dir / "annotations_detectron2" / name
+        patch_sizes = [32, 16, 8]
+        print_freq = 1000
+        i = 1
+        all_upsample_ratios = {ps: [] for ps in patch_sizes}
+        for file in tqdm.tqdm(list(annotation_dir.iterdir())):
+            upsample_ratios_per_scale = analyze(file, patch_sizes)
+            if i % print_freq == 0:
+                print("For file {} upsample ratios are: {}".format(file, upsample_ratios_per_scale))
+            for ps in patch_sizes:
+                all_upsample_ratios[ps].append(upsample_ratios_per_scale[ps])
+            i += 1
         for ps in patch_sizes:
-            all_upsample_ratios[ps].append(upsample_ratios_per_scale[ps])
-        i += 1
-    for ps in patch_sizes:
-        upsample_ratios = all_upsample_ratios[ps]
-        upsample_ratios = np.asarray(upsample_ratios)
-        print("Patch_size {}. Mean: {}. Median: {}. Min: {}. Max: {}".format(ps, upsample_ratios.mean(), np.median(upsample_ratios), upsample_ratios.min(), upsample_ratios.max()))
-        plt.figure()
-        plt.title('Histogram for upsample ratios of {} patch size'.format(ps))
-        plt.hist(upsample_ratios, bins=10)
-        plt.show()
+            upsample_ratios = all_upsample_ratios[ps]
+            upsample_ratios = np.asarray(upsample_ratios)
+            print("Patch_size {}. Mean: {}. Median: {}. Min: {}. Max: {}".format(ps, upsample_ratios.mean(), np.median(upsample_ratios), upsample_ratios.min(), upsample_ratios.max()))
+            plt.figure()
+            plt.title('Histogram for upsample ratios of {} patch size'.format(ps))
+            plt.hist(upsample_ratios, bins=10)
+            plt.show()
