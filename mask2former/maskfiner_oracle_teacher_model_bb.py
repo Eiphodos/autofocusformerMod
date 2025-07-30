@@ -540,10 +540,17 @@ class MaskFinerOracleTeacherBB(nn.Module):
         return dis_mask_at_scale, dis_pos_at_scale
 
     def get_top_disagreement_mask_and_pos(self, dis_mask, dis_mask_pos, level):
-        if level == len(self.backbone.backbones) - 1:
-            k_top = int(dis_mask.shape[0] * self.backbone.backbones[0].upscale_ratio)
+        N = dis_mask.shape[0]
+        upscale_ratio = self.backbone.backbones[level + 1].upscale_ratio
+        if self.backbone.dynamic_up_ratios:
+            up_trshld = self.backbone.backbones[level + 1].dynamic_up_threshold
+            if not self.training:
+                upscale_ratio = 1.0
+            dyn_ratio = min(((dis_mask > up_trshld).sum(-1) / N).max(), upscale_ratio)
+            dyn_ratio = max(dyn_ratio, 0.1)
+            k_top = int(N * dyn_ratio)
         else:
-            k_top = int(dis_mask.shape[0] * self.backbone.backbones[level + 1].upscale_ratio)
+            k_top = int(N * upscale_ratio)
         sorted_scores, sorted_indices = torch.sort(dis_mask, dim=0, descending=False)
         top_indices = sorted_indices[-k_top:]
         top_dis_mask = dis_mask.gather(dim=0, index=top_indices)
