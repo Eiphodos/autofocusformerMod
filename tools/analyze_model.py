@@ -11,7 +11,7 @@ from fvcore.nn import flop_count_table  # can also try flop_count_str
 
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import CfgNode, LazyConfig, get_cfg, instantiate
-from detectron2.data import build_detection_test_loader
+from detectron2.data import build_detection_test_loader, build_detection_train_loader
 from detectron2.engine import default_argument_parser
 from detectron2.modeling import build_model
 from detectron2.projects.deeplab import add_deeplab_config
@@ -29,7 +29,7 @@ import sys
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 # fmt: on
 
-from mask2former import add_maskformer2_config
+from mask2former import add_maskformer2_config, MaskFormerSemanticDatasetMapper
 
 logger = logging.getLogger("detectron2")
 
@@ -58,7 +58,11 @@ def setup(args):
 
 def do_flop(cfg):
     if isinstance(cfg, CfgNode):
-        data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0])
+        if args.use_fixed_input_size:
+            mapper = MaskFormerSemanticDatasetMapper(cfg, True)
+            data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0], mapper=mapper)
+        else:
+            data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0])
         model = build_model(cfg)
         DetectionCheckpointer(model).load(cfg.MODEL.WEIGHTS)
     else:
@@ -71,10 +75,10 @@ def do_flop(cfg):
     counts = Counter()
     total_flops = []
     for idx, data in zip(tqdm.trange(args.num_inputs), data_loader):  # noqa
-        if args.use_fixed_input_size and isinstance(cfg, CfgNode):
-            import torch
-            crop_size = cfg.INPUT.CROP.SIZE[0]
-            data[0]["image"] = torch.zeros((3, crop_size, crop_size))
+        #if args.use_fixed_input_size and isinstance(cfg, CfgNode):
+        #    import torch
+        #    crop_size = cfg.INPUT.CROP.SIZE[0]
+        #    data[0]["image"] = torch.zeros((3, crop_size, crop_size))
         flops = FlopCountAnalysis(model, data)
         if idx > 0:
             flops.unsupported_ops_warnings(False).uncalled_modules_warnings(False)
