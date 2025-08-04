@@ -382,8 +382,8 @@ def main(args):
     trainer = Trainer(cfg)
     #nan_check_hook = NanCheckHook()
     #trainer.register_hooks([nan_check_hook])
-    empty_cuda_hook = EmptyCudaCacheHook()
-    trainer.register_hooks([empty_cuda_hook])
+    #empty_cuda_hook = EmptyCudaCacheHook()
+    #trainer.register_hooks([empty_cuda_hook])
     torch.autograd.set_detect_anomaly(False)
     if args.resume:
         trainer.resume_or_load(resume=args.resume)
