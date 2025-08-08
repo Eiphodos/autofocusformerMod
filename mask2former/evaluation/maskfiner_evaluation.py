@@ -310,7 +310,7 @@ class MaskFinerCityscapesSemSegEvaluator(CityscapesEvaluator):
         image = Image.fromarray(rgb_image)
 
         image.save(os.path.join(self._inf_dir, fn + '_sem_seg.png'))
-        np.save(os.path.join(self._inf_dir, fn + '_sem_seg_raw.npy'), ss)
+        #np.save(os.path.join(self._inf_dir, fn + '_sem_seg_raw.npy'), ss)
 
         disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
         for k, v in disagreement_masks_only_dict.items():
