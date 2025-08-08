@@ -169,18 +169,18 @@ class Trainer(DefaultTrainer):
             assert (
                 torch.cuda.device_count() > comm.get_rank()
             ), "CityscapesEvaluator currently do not work with multiple machines."
-            return MaskFinerCityscapesSemSegEvaluator(dataset_name)
+            return MaskFinerCityscapesSemSegEvaluator(dataset_name, output_dir=output_folder)
         if evaluator_type == "cityscapes_panoptic_seg":
             if cfg.MODEL.MASK_FORMER.TEST.SEMANTIC_ON:
                 assert (
                     torch.cuda.device_count() > comm.get_rank()
                 ), "CityscapesEvaluator currently do not work with multiple machines."
-                evaluator_list.append(CityscapesSemSegEvaluator(dataset_name))
+                evaluator_list.append(MaskFinerCityscapesSemSegEvaluator(dataset_name, output_dir=output_folder))
             if cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON:
                 assert (
                     torch.cuda.device_count() > comm.get_rank()
                 ), "CityscapesEvaluator currently do not work with multiple machines."
-                evaluator_list.append(CityscapesInstanceEvaluator(dataset_name))
+                evaluator_list.append(MaskFinerCityscapesInstanceEvaluator(dataset_name, output_dir=output_folder))
         # ADE20K
         if evaluator_type == "ade20k_panoptic_seg" and cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON:
             evaluator_list.append(InstanceSegEvaluator(dataset_name, output_dir=output_folder))
