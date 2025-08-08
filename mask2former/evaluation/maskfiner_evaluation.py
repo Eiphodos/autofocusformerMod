@@ -223,7 +223,7 @@ class MaskFinerCityscapesSemSegEvaluator(CityscapesEvaluator):
     """
 
     def __init__(self, dataset_name, output_dir=None):
-        super(MaskFinerCityscapesInstanceEvaluator, self).__init__(dataset_name)
+        super(MaskFinerCityscapesSemSegEvaluator, self).__init__(dataset_name)
         self._output_dir = output_dir
         self._cpu_device = torch.device("cpu")
         meta = MetadataCatalog.get(dataset_name)
