@@ -33,4 +33,5 @@ from .evaluation.instance_evaluation import InstanceSegEvaluator
 from .evaluation.meta_loss_evaluation import MetaLossSemSegEvaluator
 from .evaluation.maskfiner_evaluation import MaskFinerSemSegEvaluator
 from .evaluation.maskfiner_evaluation import MaskFinerCityscapesInstanceEvaluator
+from .evaluation.maskfiner_evaluation import MaskFinerCityscapesSemSegEvaluator
 from .evaluation.semseg_evaluation import SemSegEvaluatorSave

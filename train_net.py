@@ -59,6 +59,7 @@ from mask2former import (
     MetaLossSemSegEvaluator,
     MaskFinerSemSegEvaluator,
     MaskFinerCityscapesInstanceEvaluator,
+    MaskFinerCityscapesSemSegEvaluator,
     SemSegEvaluatorSave,
     MaskFormerInstanceDatasetMapper,
     MaskFormerPanopticDatasetMapper,

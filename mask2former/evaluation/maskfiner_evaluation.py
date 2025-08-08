@@ -135,7 +135,7 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
 
             file_name = input["file_name"]
             basename = os.path.splitext(os.path.basename(file_name))[0]
-            pred_txt = os.path.join(self._temp_dir, basename + "_pred.txt")
+            pred_txt = os.path.join(self._inf_dir, basename + "_pred.txt")
 
             if "instances" in output:
                 output = output["instances"].to(self._cpu_device)
@@ -148,7 +148,7 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
                         score = output.scores[i]
                         mask = output.pred_masks[i].numpy().astype("uint8")
                         png_filename = os.path.join(
-                            self._temp_dir, basename + "_{}_{}.png".format(i, classes)
+                            self._inf_dir, basename + "_{}_{}.png".format(i, classes)
                         )
 
                         Image.fromarray(mask * 255).save(png_filename)
@@ -170,14 +170,14 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
             return
         import cityscapesscripts.evaluation.evalInstanceLevelSemanticLabeling as cityscapes_eval, cityscapesscripts.evaluation.evalInstanceLevelSemanticLabeling
 
-        self._logger.info("Evaluating results under {} ...".format(self._temp_dir))
+        self._logger.info("Evaluating results under {} ...".format(self._inf_dir))
 
         # set some global states in cityscapes evaluation API, before evaluating
-        cityscapes_eval.args.predictionPath = os.path.abspath(self._temp_dir)
+        cityscapes_eval.args.predictionPath = os.path.abspath(self._inf_dir)
         cityscapes_eval.args.predictionWalk = None
         cityscapes_eval.args.JSONOutput = False
         cityscapes_eval.args.colorized = False
-        cityscapes_eval.args.gtInstancesFile = os.path.join(self._temp_dir, "gtInstances.json")
+        cityscapes_eval.args.gtInstancesFile = os.path.join(self._inf_dir, "gtInstances.json")
 
         # These lines are adopted from
         # https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/evaluation/evalInstanceLevelSemanticLabeling.py # noqa
@@ -201,28 +201,100 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
         return ret
 
     def save_disagreement_masks(self, inp, outp):
-
+        dis_path = os.path.join(self._inf_dir, "disagreement_masks")
+        os.makedirs(dis_path, exist_ok=True)
         fp = inp['file_name']
         fn = os.path.splitext(os.path.basename(fp))[0]
 
-        '''
-        scores = outp["instances"].scores
-        ss = outp["instances"].pred_classes.gather(dim=0, index=scores.argmax(dim=0).long().unsqueeze(0)).to(self._cpu_device).squeeze(0)
-        ss = np.array(ss, dtype=int)
+        disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
+        for k, v in disagreement_masks_only_dict.items():
+            ml_out = outp[k]
+            plt.imsave(os.path.join(dis_path, fn + '_' + k + '.png'), np.asarray(ml_out), cmap='afmhot')
 
-        hsv_colors = [(i / self._num_classes, 0.75, 0.75) for i in range(self._num_classes)]
-        random.Random(1337).shuffle(hsv_colors)
-        rgb_colors = [mcolors.hsv_to_rgb(hsv) for hsv in hsv_colors]
-        color_map = (np.array(rgb_colors) * 255).astype(np.uint8)
-        H, W = ss.shape
-        rgb_image = np.zeros((H, W, 3), dtype=np.uint8)
-        for label in range(self._num_classes):
-            rgb_image[ss == label] = color_map[label]
-        image = Image.fromarray(rgb_image)
 
-        image.save(os.path.join(inference_out_dir, fn + '_sem_seg.png'))
-        np.save(os.path.join(inference_out_dir, fn + '_sem_seg_raw.npy'), ss)
-        '''
+class MaskFinerCityscapesSemSegEvaluator(CityscapesEvaluator):
+    """
+    Evaluate semantic segmentation results on cityscapes dataset using cityscapes API.
+
+    Note:
+        * It does not work in multi-machine distributed training.
+        * It contains a synchronization, therefore has to be used on all ranks.
+        * Only the main process runs evaluation.
+    """
+
+    def __init__(self, dataset_name, output_dir=None):
+        super(MaskFinerCityscapesInstanceEvaluator, self).__init__(dataset_name)
+        self._output_dir = output_dir
+        self._cpu_device = torch.device("cpu")
+        meta = MetadataCatalog.get(dataset_name)
+        self._num_classes = len(meta.stuff_classes)
+        self._inf_dir = os.path.join(self._output_dir, 'inference_output')
+        os.makedirs(self._inf_dir, exist_ok=True)
+
+    def process(self, inputs, outputs):
+        from cityscapesscripts.helpers.labels import trainId2label
+
+        for input, output in zip(inputs, outputs):
+
+            self.save_disagreement_masks(input, output)
+
+            file_name = input["file_name"]
+            basename = os.path.splitext(os.path.basename(file_name))[0]
+            pred_filename = os.path.join(self._inf_dir, basename + "_pred.png")
+
+            output = output["sem_seg"].argmax(dim=0).to(self._cpu_device).numpy()
+            pred = 255 * np.ones(output.shape, dtype=np.uint8)
+            for train_id, label in trainId2label.items():
+                if label.ignoreInEval:
+                    continue
+                pred[output == train_id] = label.id
+            Image.fromarray(pred).save(pred_filename)
+
+    def evaluate(self):
+        comm.synchronize()
+        if comm.get_rank() > 0:
+            return
+        # Load the Cityscapes eval script *after* setting the required env var,
+        # since the script reads CITYSCAPES_DATASET into global variables at load time.
+        import cityscapesscripts.evaluation.evalPixelLevelSemanticLabeling as cityscapes_eval, cityscapesscripts.evaluation.evalPixelLevelSemanticLabeling
+
+        self._logger.info("Evaluating results under {} ...".format(self._inf_dir))
+
+        # set some global states in cityscapes evaluation API, before evaluating
+        cityscapes_eval.args.predictionPath = os.path.abspath(self._inf_dir)
+        cityscapes_eval.args.predictionWalk = None
+        cityscapes_eval.args.JSONOutput = False
+        cityscapes_eval.args.colorized = False
+
+        # These lines are adopted from
+        # https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/evaluation/evalPixelLevelSemanticLabeling.py # noqa
+        gt_dir = PathManager.get_local_path(self._metadata.gt_dir)
+        groundTruthImgList = glob.glob(os.path.join(gt_dir, "*", "*_gtFine_labelIds.png"))
+        assert len(
+            groundTruthImgList
+        ), "Cannot find any ground truth images to use for evaluation. Searched for: {}".format(
+            cityscapes_eval.args.groundTruthSearch
+        )
+        predictionImgList = []
+        for gt in groundTruthImgList:
+            predictionImgList.append(cityscapes_eval.getPrediction(cityscapes_eval.args, gt))
+        results = cityscapes_eval.evaluateImgLists(
+            predictionImgList, groundTruthImgList, cityscapes_eval.args
+        )
+        ret = OrderedDict()
+        ret["sem_seg"] = {
+            "IoU": 100.0 * results["averageScoreClasses"],
+            "iIoU": 100.0 * results["averageScoreInstClasses"],
+            "IoU_sup": 100.0 * results["averageScoreCategories"],
+            "iIoU_sup": 100.0 * results["averageScoreInstCategories"],
+        }
+        self._working_dir.cleanup()
+        return ret
+
+    def save_disagreement_masks(self, inp, outp):
+
+        fp = inp['file_name']
+        fn = os.path.splitext(os.path.basename(fp))[0]
 
         disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
         for k, v in disagreement_masks_only_dict.items():
