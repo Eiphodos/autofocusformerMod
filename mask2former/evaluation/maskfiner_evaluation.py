@@ -240,7 +240,7 @@ class MaskFinerCityscapesSemSegEvaluator(CityscapesEvaluator):
 
             file_name = input["file_name"]
             basename = os.path.splitext(os.path.basename(file_name))[0]
-            pred_filename = os.path.join(self._inf_dir, basename + "_pred.png")
+            pred_filename = os.path.join(self._temp_dir, basename + "_pred.png")
 
             output = output["sem_seg"].argmax(dim=0).to(self._cpu_device).numpy()
             pred = 255 * np.ones(output.shape, dtype=np.uint8)
@@ -258,10 +258,10 @@ class MaskFinerCityscapesSemSegEvaluator(CityscapesEvaluator):
         # since the script reads CITYSCAPES_DATASET into global variables at load time.
         import cityscapesscripts.evaluation.evalPixelLevelSemanticLabeling as cityscapes_eval, cityscapesscripts.evaluation.evalPixelLevelSemanticLabeling
 
-        self._logger.info("Evaluating results under {} ...".format(self._inf_dir))
+        self._logger.info("Evaluating results under {} ...".format(self._temp_dir))
 
         # set some global states in cityscapes evaluation API, before evaluating
-        cityscapes_eval.args.predictionPath = os.path.abspath(self._inf_dir)
+        cityscapes_eval.args.predictionPath = os.path.abspath(self._temp_dir)
         cityscapes_eval.args.predictionWalk = None
         cityscapes_eval.args.JSONOutput = False
         cityscapes_eval.args.colorized = False
@@ -295,6 +295,22 @@ class MaskFinerCityscapesSemSegEvaluator(CityscapesEvaluator):
 
         fp = inp['file_name']
         fn = os.path.splitext(os.path.basename(fp))[0]
+
+        ss = outp["sem_seg"].argmax(dim=0).to(self._cpu_device)
+        ss = np.array(ss, dtype=int)
+
+        hsv_colors = [(i / self._num_classes, 0.75, 0.75) for i in range(self._num_classes)]
+        random.Random(1337).shuffle(hsv_colors)
+        rgb_colors = [mcolors.hsv_to_rgb(hsv) for hsv in hsv_colors]
+        color_map = (np.array(rgb_colors) * 255).astype(np.uint8)
+        H, W = ss.shape
+        rgb_image = np.zeros((H, W, 3), dtype=np.uint8)
+        for label in range(self._num_classes):
+            rgb_image[ss == label] = color_map[label]
+        image = Image.fromarray(rgb_image)
+
+        image.save(os.path.join(self._inf_dir, fn + '_sem_seg.png'))
+        np.save(os.path.join(self._inf_dir, fn + '_sem_seg_raw.npy'), ss)
 
         disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
         for k, v in disagreement_masks_only_dict.items():
