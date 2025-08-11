@@ -222,7 +222,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
         images = ImageList.from_tensors(images, self.size_divisibility)
         if self.training:
             if self.panoptic_on:
-                key = "sem_seg"
+                key = "instances"
             elif self.semantic_on:
                 key = "sem_seg"
             elif self.instance_on:
@@ -370,15 +370,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
         pad_height_width = []
         #print("image shape for preparation is: {}".format(images.tensor.shape))
         for targets_per_image in targets:
-            if self.panoptic_on or self.semantic_on:
-                h_pad_n = h_pad - targets_per_image.shape[0]
-                w_pad_n = w_pad - targets_per_image.shape[1]
-                padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype,
-                                           device=targets_per_image.device)
-                padded_masks = padded_masks + 254
-                padded_masks[: targets_per_image.shape[0], : targets_per_image.shape[1]] = targets_per_image
-
-            elif self.instance_on:
+            if self.panoptic_on or self.instance_on:
                 gt_masks = targets_per_image.gt_masks
                 h_pad_n = h_pad - gt_masks.shape[1]
                 w_pad_n = w_pad - gt_masks.shape[2]
@@ -390,6 +382,13 @@ class MaskFinerOracleTeacherBB(nn.Module):
                     padded_masks = padded_masks + 254
                     padded_masks[:, : gt_masks.shape[1], : gt_masks.shape[2]] = gt_masks
                     padded_masks = padded_masks.int().argmax(dim=0)
+            elif self.semantic_on:
+                h_pad_n = h_pad - targets_per_image.shape[0]
+                w_pad_n = w_pad - targets_per_image.shape[1]
+                padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype,
+                                           device=targets_per_image.device)
+                padded_masks = padded_masks + 254
+                padded_masks[: targets_per_image.shape[0], : targets_per_image.shape[1]] = targets_per_image
             new_targets.append(padded_masks)
             pad_height_width.append((h_pad_n, w_pad_n))
         return new_targets, pad_height_width
