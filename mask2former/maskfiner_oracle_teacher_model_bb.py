@@ -221,12 +221,12 @@ class MaskFinerOracleTeacherBB(nn.Module):
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
         if self.training:
-            if self.semantic_on:
+            if self.panoptic_on:
+                key = "sem_seg"
+            elif self.semantic_on:
                 key = "sem_seg"
             elif self.instance_on:
                 key = "instances"
-            elif self.panoptic_on:
-                key = "panoptic_seg"
             else:
                 raise Exception("No label key found in batched inputs")
             sem_seg_gt = [x[key].to(self.device) for x in batched_inputs]
@@ -370,7 +370,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
         pad_height_width = []
         #print("image shape for preparation is: {}".format(images.tensor.shape))
         for targets_per_image in targets:
-            if self.semantic_on:
+            if self.panoptic_on or self.semantic_on:
                 h_pad_n = h_pad - targets_per_image.shape[0]
                 w_pad_n = w_pad - targets_per_image.shape[1]
                 padded_masks = torch.zeros((h_pad, w_pad), dtype=targets_per_image.dtype,
