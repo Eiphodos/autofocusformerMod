@@ -287,7 +287,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
             mask_pred_results = F.interpolate(
                 mask_pred_results,
                 size=(images.tensor.shape[-2], images.tensor.shape[-1]),
-                mode="bilinear",
+                mode="nearest",
                 align_corners=False,
             )
 
