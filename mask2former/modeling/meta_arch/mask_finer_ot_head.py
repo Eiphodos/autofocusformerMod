@@ -70,7 +70,10 @@ class MaskFinerOTHead(nn.Module):
         feature_channels = [v.channels for k, v in input_shape]
 
         self.ignore_value = ignore_value
-        self.common_stride = 4
+        if len(feature_strides) == 4:
+            self.common_stride = 4
+        elif len(feature_strides) == 5:
+            self.common_stride = 2
         self.loss_weight = loss_weight
 
         self.pixel_decoder = pixel_decoder
@@ -88,7 +91,7 @@ class MaskFinerOTHead(nn.Module):
 
         return {
             "input_shape": {
-                k: v for k, v in input_shape.items() if k in cfg.MODEL.SEM_SEG_HEAD.IN_FEATURES
+                k: v for k, v in input_shape.items() if k in cfg.MODEL.MR_SEM_SEG_HEAD.IN_FEATURES
             },
             "loss_weight": cfg.MODEL.MR_SEM_SEG_HEAD.LOSS_WEIGHT,
             "ignore_value": cfg.MODEL.MR_SEM_SEG_HEAD.IGNORE_VALUE,

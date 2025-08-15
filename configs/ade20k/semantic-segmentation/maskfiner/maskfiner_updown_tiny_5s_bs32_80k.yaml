@@ -1,0 +1,52 @@
+_BASE_: ../maskfiner_R50_bs16_160k.yaml
+MODEL:
+  META_ARCHITECTURE: "MaskFinerOracleTeacherBB"
+  BACKBONE:
+    NAME: "UpDownBackbone"
+  MR:
+    NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResViT" ]
+    EMBED_DIM: [512,256,128,64,32,64,128,256,512]
+    DEPTHS: [1, 1, 1, 1, 4, 4, 4, 16, 4]
+    NUM_HEADS: [ 16, 8, 4, 2, 1, 2, 4, 8, 16 ]
+    PATCH_SIZES: [32, 16, 8, 4, 2, 4, 8, 16, 32]
+    DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    DROP_PATH_RATE: 0.3
+    ATTN_DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    UPSCALE_RATIO: [0.0, 0.85, 0.65, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
+    SPLIT_RATIO: [4, 4, 4, 4, 4, 4, 4, 4, 4]
+    MLP_RATIO: [3., 3., 3., 3., 3., 3., 3., 3., 3.]
+    CLUSTER_SIZE: [8, 8, 8, 8, 8, 8, 8, 8, 8]
+    NBHD_SIZE: [48,48,48,48,48,48,48,48,48]
+    OUT_FEATURES: ["res2", "res3", "res4", "res5", "res6"]
+    KEEP_OLD_SCALE: True
+    ADD_IMAGE_DATA_TO_ALL: False
+  WEIGHTS: "aff_mini.pkl"
+  PIXEL_MEAN: [123.675, 116.280, 103.530]
+  PIXEL_STD: [58.395, 57.120, 57.375]
+  MR_SEM_SEG_HEAD:
+    PIXEL_DECODER_NAME: ["ProjMaskFinerOracleTeacher", "ProjMaskFinerOracleTeacher", "ProjMaskFinerOracleTeacher", "MSDeformAttnPixelDecoderMaskFiner", "MSDeformAttnPixelDecoderMaskFiner"]
+    NAME: "MaskPredictorOracleTeacher"
+    CONVS_DIM: [256,256,256,256,256]
+    TRANSFORMER_ENC_LAYERS: [2, 2, 4, 6, 6]
+    DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES: ["res3", "res4", "res5"]
+    NHEADS: [8, 8, 8, 8, 8]
+    MLP_RATIO: [ 4.0, 4.0, 4.0, 4.0, 4.0 ]
+    IN_FEATURES: ["res2", "res3", "res4", "res5", "res6"]
+  SEM_SEG_HEAD:
+    NAME: "MaskFinerOTHead"
+  MASK_FINER:
+    TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoder5S"
+    DECODER_LEVELS: [1, 2, 3, 3, 3]
+    DEC_LAYERS: [3,3,4,10,10]
+    ENC_LAYERS: [0, 0, 0, 0, 0]
+    DIM_FEEDFORWARD: [1024,1024,1024,2048,2048]
+    HIDDEN_DIM: [256,256,256,256,256]
+    MASK_DIM: [256,256,256,256,256]
+    NHEADS: [8, 8, 8, 8, 8]
+    ORACLE_TEACHER_RATIO: 0.0
+    UPSAMPLING_WEIGHT: 10
+    NUM_RESOLUTION_SCALES: 5
+SOLVER:
+  IMS_PER_BATCH: 32
+  BASE_LR: 0.0002
+  MAX_ITER: 80000
