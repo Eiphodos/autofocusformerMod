@@ -9,9 +9,9 @@ MODEL:
     DEPTHS: [1, 1, 1, 1, 4, 4, 4, 16, 4]
     NUM_HEADS: [ 16, 8, 4, 2, 1, 2, 4, 8, 16 ]
     PATCH_SIZES: [32, 16, 8, 4, 2, 4, 8, 16, 32]
-    DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     DROP_PATH_RATE: 0.3
-    ATTN_DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    ATTN_DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     UPSCALE_RATIO: [0.0, 0.85, 0.65, 0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
     SPLIT_RATIO: [4, 4, 4, 4, 4, 4, 4, 4, 4]
     MLP_RATIO: [3., 3., 3., 3., 3., 3., 3., 3., 3.]
@@ -20,6 +20,7 @@ MODEL:
     OUT_FEATURES: ["res2", "res3", "res4", "res5", "res6"]
     KEEP_OLD_SCALE: True
     ADD_IMAGE_DATA_TO_ALL: False
+    DYNAMIC_UPSAMPLING_THRESHOLD: [0.0, 0.001, 0.02, 0.04, 0.08, 0.0, 0.0, 0.0, 0.0]
   WEIGHTS: "aff_mini.pkl"
   PIXEL_MEAN: [123.675, 116.280, 103.530]
   PIXEL_STD: [58.395, 57.120, 57.375]
@@ -32,6 +33,7 @@ MODEL:
     NHEADS: [8, 8, 8, 8, 8]
     MLP_RATIO: [ 4.0, 4.0, 4.0, 4.0, 4.0 ]
     IN_FEATURES: ["res2", "res3", "res4", "res5", "res6"]
+    COMMON_STRIDE: 2
   SEM_SEG_HEAD:
     NAME: "MaskFinerOTHead"
   MASK_FINER:
