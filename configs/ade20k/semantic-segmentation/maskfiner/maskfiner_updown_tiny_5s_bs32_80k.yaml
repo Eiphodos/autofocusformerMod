@@ -29,7 +29,7 @@ MODEL:
     NAME: "MaskPredictorOracleTeacher"
     CONVS_DIM: [256,256,256,256,256]
     TRANSFORMER_ENC_LAYERS: [2, 2, 4, 6, 6]
-    DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES: ["res3", "res4", "res5"]
+    DEFORMABLE_TRANSFORMER_ENCODER_IN_FEATURES: ["res4", "res5", "res6"]
     NHEADS: [8, 8, 8, 8, 8]
     MLP_RATIO: [ 4.0, 4.0, 4.0, 4.0, 4.0 ]
     IN_FEATURES: ["res2", "res3", "res4", "res5", "res6"]
