@@ -126,7 +126,9 @@ class MRUD(nn.Module):
                 feat_scale = output[f + '_scale']
                 feat_ss = output[f + '_spatial_shape']
                 B, N, C = feat.shape
+                # If feature has already been processed
                 if f + '_pos' in outs:
+                    # Features in the same resolution need to be ordered in the same way
                     pos_indices = self.find_pos_org_order(outs[f + '_pos'], feat_pos)
                     b_ = torch.arange(B).unsqueeze(-1).expand(-1, N)
                     feat = feat[b_, pos_indices]
@@ -135,11 +137,14 @@ class MRUD(nn.Module):
                     assert (outs[f + '_pos'] == feat_pos).all()
                     outs[f].append(feat)
                 else:
+                    # Save feature and metadata to outputs
                     outs[f] = [feat]
                     outs[f + '_pos'] = feat_pos
                     outs[f + '_scale'] = feat_scale
                     outs[f + '_spatial_shape'] = feat_ss
+                # If feature is an input to the next layer
                 if f in self.bb_in_feats[j + 1]:
+                    # We only do residual connections if we are on the right side in the U-Net
                     if j >= self.n_scales - 1:
                         #out_feat = torch.cat(outs[f][-((j - self.n_scales + 1)*2 + 2):], dim=2)
                         res = outs[f][-((j - self.n_scales + 1)*2 + 2)]
@@ -147,6 +152,7 @@ class MRUD(nn.Module):
                     else:
                         out_feat = feat
                     #print("For bb level {}, feature {} shape is {}".format(j, f, out_feat.shape))
+                    # Add feature and metadata to next layer input
                     all_feat.append(out_feat)
                     all_pos.append(feat_pos)
                     all_scale.append(feat_scale)
@@ -167,6 +173,7 @@ class MRUD(nn.Module):
             else:
                 upsampling_mask = None
 
+            # Gather all input to the next layer
             if j < len(self.backbones) - 1:
                 all_pos = torch.cat(all_pos, dim=1)
                 all_scale = torch.cat(all_scale, dim=1)
