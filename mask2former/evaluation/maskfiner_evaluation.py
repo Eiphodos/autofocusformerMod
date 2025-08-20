@@ -118,20 +118,23 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
         * Only the main process runs evaluation.
     """
 
-    def __init__(self, dataset_name, output_dir=None):
+    def __init__(self, dataset_name, maskfiner=False,  output_dir=None):
         super(MaskFinerCityscapesInstanceEvaluator, self).__init__(dataset_name)
         self._output_dir = output_dir
         self._cpu_device = torch.device("cpu")
         meta = MetadataCatalog.get(dataset_name)
         self._num_classes = len(meta.stuff_classes)
+        self.maskfiner = maskfiner
         self._inf_dir = os.path.join(self._output_dir, 'inference_instance_output')
         os.makedirs(self._inf_dir, exist_ok=True)
+
 
     def process(self, inputs, outputs):
         from cityscapesscripts.helpers.labels import name2label
 
         for input, output in zip(inputs, outputs):
-            self.save_disagreement_masks(input, output)
+            if self.maskfiner:
+                self.save_disagreement_masks(input, output)
 
             file_name = input["file_name"]
             basename = os.path.splitext(os.path.basename(file_name))[0]
@@ -222,12 +225,13 @@ class MaskFinerCityscapesSemSegEvaluator(CityscapesEvaluator):
         * Only the main process runs evaluation.
     """
 
-    def __init__(self, dataset_name, output_dir=None):
+    def __init__(self, dataset_name, maskfiner=False, output_dir=None):
         super(MaskFinerCityscapesSemSegEvaluator, self).__init__(dataset_name)
         self._output_dir = output_dir
         self._cpu_device = torch.device("cpu")
         meta = MetadataCatalog.get(dataset_name)
         self._num_classes = len(meta.stuff_classes)
+        self.maskfiner = maskfiner
         self._inf_dir = os.path.join(self._output_dir, 'inference_output')
         os.makedirs(self._inf_dir, exist_ok=True)
 
@@ -312,7 +316,8 @@ class MaskFinerCityscapesSemSegEvaluator(CityscapesEvaluator):
         image.save(os.path.join(self._inf_dir, fn + '_sem_seg.png'))
         #np.save(os.path.join(self._inf_dir, fn + '_sem_seg_raw.npy'), ss)
 
-        disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
-        for k, v in disagreement_masks_only_dict.items():
-            ml_out = outp[k]
-            plt.imsave(os.path.join(self._inf_dir, fn + '_' + k + '.png'), np.asarray(ml_out), cmap='afmhot')
+        if self.maskfiner:
+            disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
+            for k, v in disagreement_masks_only_dict.items():
+                ml_out = outp[k]
+                plt.imsave(os.path.join(self._inf_dir, fn + '_' + k + '.png'), np.asarray(ml_out), cmap='afmhot')

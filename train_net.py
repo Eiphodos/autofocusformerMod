@@ -162,14 +162,17 @@ class Trainer(DefaultTrainer):
                 torch.cuda.device_count() > comm.get_rank()
             ), "CityscapesEvaluator currently do not work with multiple machines."
             if "MaskFiner" in cfg.MODEL.META_ARCHITECTURE:
-                return MaskFinerCityscapesInstanceEvaluator(dataset_name, output_dir=output_folder)
+                return MaskFinerCityscapesInstanceEvaluator(dataset_name, maskfiner=True, output_dir=output_folder)
             else:
-                return CityscapesInstanceEvaluator(dataset_name)
+                return MaskFinerCityscapesInstanceEvaluator(dataset_name, maskfiner=False, output_dir=output_folder)
         if evaluator_type == "cityscapes_sem_seg":
             assert (
                 torch.cuda.device_count() > comm.get_rank()
             ), "CityscapesEvaluator currently do not work with multiple machines."
-            return MaskFinerCityscapesSemSegEvaluator(dataset_name, output_dir=output_folder)
+            if "MaskFiner" in cfg.MODEL.META_ARCHITECTURE:
+                return MaskFinerCityscapesSemSegEvaluator(dataset_name, maskfiner=True, output_dir=output_folder)
+            else:
+                return MaskFinerCityscapesSemSegEvaluator(dataset_name, maskfiner=False, output_dir=output_folder)
         if evaluator_type == "cityscapes_panoptic_seg":
             if cfg.MODEL.MASK_FORMER.TEST.SEMANTIC_ON:
                 assert (
@@ -386,8 +389,8 @@ def main(args):
     #empty_cuda_hook = EmptyCudaCacheHook()
     #trainer.register_hooks([empty_cuda_hook])
     torch.autograd.set_detect_anomaly(False)
-    if args.resume:
-        trainer.resume_or_load(resume=args.resume)
+    #if args.resume:
+    trainer.resume_or_load(resume=args.resume)
     res = trainer.train()
     if torch.distributed.is_initialized():
         torch.distributed.barrier()
