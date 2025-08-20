@@ -196,7 +196,7 @@ class MaskFinerCityscapesInstanceEvaluator(CityscapesEvaluator):
         )["averages"]
 
         ret = OrderedDict()
-        ret["segm"] = {"AP": results["allAp"] * 100, "AP50": results["allAp50%"] * 100}
+        ret["segm"] = {"AP": results["allAp"] * 100, "AP50": results["allAp50%"] * 100, "AP75": results["allAp75%"] * 100}
         self._working_dir.cleanup()
         return ret
 
