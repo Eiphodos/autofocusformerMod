@@ -452,8 +452,8 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         finest_inp_feat_shape = input_shapes[-1]
 
         tokens_per_scale = [tx.shape[1] for tx in x]
-        #mask_features, finest_pos = hierarchical_upsample_ordered(mask_features, torch.cat(all_pos, dim=1), tokens_per_scale, finest_input_shape)
-        #mask_features = mask_features + self.pe_layer(finest_pos)
+        mask_features, finest_pos = hierarchical_upsample_ordered(mask_features, torch.cat(all_pos, dim=1), tokens_per_scale, finest_input_shape)
+        mask_features = mask_features + self.pe_layer(finest_pos)
 
         x = x[:self.num_feature_levels]
         pos = all_pos[:self.num_feature_levels]
@@ -501,13 +501,13 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         #finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
         #finest_pos = finest_pos.to(mf_pos.device).repeat(b, 1, 1)
         #mask_features = upsample_feature_shepard(finest_pos, mf_pos_scaled, mask_features)
-        #outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
-        outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+        outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+        #outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         #pos_indices = find_pos_indices_in_pos(finest_pos, mf_pos_scaled)
         #outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, outputs_mask.permute(0, 2, 1))
         #outputs_mask, finest_pos = hierarchical_upsample_ordered(outputs_mask.permute(0, 2, 1), torch.cat(all_pos, dim=1), tokens_per_scale, finest_input_shape)
         #outputs_mask = outputs_mask.permute(0, 2, 1)
-        outputs_mask = point2img(outputs_mask, mf_pos_scaled)
+        outputs_mask = point2img(outputs_mask, finest_pos)
         predictions_class.append(outputs_class)
         predictions_mask.append(outputs_mask)
 
@@ -536,12 +536,12 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
                 output
             )
 
-            #outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
-            outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+            outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
+            #outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[(i + 1) % self.num_feature_levels], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
             #outputs_mask = upsample_feature_shepard(finest_pos, mf_pos_scaled, outputs_mask.permute(0, 2, 1)).permute(0, 2, 1)
             #outputs_mask, finest_pos = hierarchical_upsample_ordered(outputs_mask.permute(0, 2, 1), torch.cat(all_pos, dim=1), tokens_per_scale, finest_input_shape)
             #outputs_mask = outputs_mask.permute(0, 2, 1)
-            outputs_mask = point2img(outputs_mask, mf_pos_scaled)
+            outputs_mask = point2img(outputs_mask, finest_pos)
             predictions_class.append(outputs_class)
             predictions_mask.append(outputs_mask)
 
