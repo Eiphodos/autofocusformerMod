@@ -579,15 +579,15 @@ class MSDeformAttnPixelDecoderMaskFinerHierUp(nn.Module):
             lateral_conv = self.lateral_convs[idx]
             output_conv = self.output_convs[idx]
             tokens_per_scale.append(x.shape[1])
+            x = lateral_conv(x)
             x, pos = hierarchical_upsample_ordered(torch.cat(out + [x], dim=1), torch.cat(poss + [pos], dim=1), tokens_per_scale, min_spatial_shape)
             poss.append(pos)
-            cur_fpn = lateral_conv(x)
             # Following FPN implementation, we use nearest upsampling here
             #last_pos = scale_pos(last_pos, last_ss, min_spatial_shape, no_bias=True)
             fixed_last_pos = fixed_poss[-1]
             fixed_pos = fix_pos_no_bias(pos, spatial_shape, min_spatial_shape)
             fixed_poss.append(fixed_pos)
-            y = cur_fpn + upsample_feature_shepard(fixed_pos, fixed_last_pos, out[-1], custom_kernel=True)
+            y = x + upsample_feature_shepard(fixed_pos, fixed_last_pos, out[-1], custom_kernel=True)
             y = output_conv((y, fixed_pos))
             last_pos = pos
             last_ss = spatial_shape
