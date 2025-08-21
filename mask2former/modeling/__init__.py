@@ -16,6 +16,7 @@ from .pixel_decoder.msdeformattn_pc_maskfiner_oracle_teacher import MSDeformAttn
 from .pixel_decoder.proj_maskfiner_oracle_teacher import ProjMaskFinerOracleTeacher
 from .pixel_decoder.msdeformattn_pc_maskfiner_proj import MSDeformAttnPixelDecoderMaskFinerProj
 from .pixel_decoder.msdeformattn_pc_maskfiner import MSDeformAttnPixelDecoderMaskFiner
+from .pixel_decoder.msdeformattn_pc_maskfiner_hierup import MSDeformAttnPixelDecoderMaskFinerHierUp
 from .pixel_decoder.msdeformattn_pc import MSDeformAttnPixelDecoder
 from .pixel_decoder.msdeformattn_up_pc import MSDeformAttnPixelDecoderUp
 from .meta_arch.mask_predictor import MaskPredictor
