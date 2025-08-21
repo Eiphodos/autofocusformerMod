@@ -87,7 +87,7 @@ def point2img(x, pos, mask_size=None):
 class SelfAttentionLayer(nn.Module):
 
     def __init__(self, d_model, nhead, dropout=0.0,
-                 activation="lrelu", normalize_before=False):
+                 activation="relu", normalize_before=False):
         super().__init__()
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
 
@@ -145,7 +145,7 @@ class SelfAttentionLayer(nn.Module):
 class CrossAttentionLayer(nn.Module):
 
     def __init__(self, d_model, nhead, dropout=0.0,
-                 activation="lrelu", normalize_before=False):
+                 activation="relu", normalize_before=False):
         super().__init__()
         self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
 
@@ -208,7 +208,7 @@ class CrossAttentionLayer(nn.Module):
 class FFNLayer(nn.Module):
 
     def __init__(self, d_model, dim_feedforward=2048, dropout=0.0,
-                 activation="lrelu", normalize_before=False):
+                 activation="relu", normalize_before=False):
         super().__init__()
         # Implementation of Feedforward model
         self.linear1 = nn.Linear(d_model, dim_feedforward)
@@ -452,8 +452,8 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         finest_inp_feat_shape = input_shapes[-1]
 
         tokens_per_scale = [tx.shape[1] for tx in x]
-        mask_features, finest_pos = hierarchical_upsample_ordered(mask_features, torch.cat(pos, dim=1), tokens_per_scale, finest_input_shape)
-        mask_features = mask_features + self.pe_layer(finest_pos)
+        #mask_features, finest_pos = hierarchical_upsample_ordered(mask_features, torch.cat(pos, dim=1), tokens_per_scale, finest_input_shape)
+        #mask_features = mask_features + self.pe_layer(finest_pos)
 
         x = x[:self.num_feature_levels]
         pos = pos[:self.num_feature_levels]
@@ -498,9 +498,9 @@ class MultiScaleMaskFinerTransformerDecoderOracleTeacher(nn.Module):
         output = self.query_feat.weight.unsqueeze(1).repeat(1, b, 1)
         predictions_class = []
         predictions_mask = []
-        #finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
-        #finest_pos = finest_pos.to(mf_pos.device).repeat(b, 1, 1)
-        #mask_features = upsample_feature_shepard(finest_pos, mf_pos_scaled, mask_features)
+        finest_pos = torch.stack(torch.meshgrid(torch.arange(0, finest_inp_feat_shape[1]), torch.arange(0, finest_inp_feat_shape[0]), indexing='ij')).permute(1, 2, 0).transpose(0, 1).reshape(-1, 2)
+        finest_pos = finest_pos.to(mf_pos.device).repeat(b, 1, 1)
+        mask_features = upsample_feature_shepard(finest_pos, mf_pos_scaled, mask_features)
         outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, finest_pos, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         #outputs_class, outputs_mask, attn_mask = self.forward_prediction_heads(output, mask_features, mf_pos_scaled, poss_scaled[0], masked_attn)  # b x q x nc, b x q x n, b*h x q x n
         #pos_indices = find_pos_indices_in_pos(finest_pos, mf_pos_scaled)

@@ -13,7 +13,6 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn.init import xavier_uniform_, constant_, normal_
 from torch.cuda.amp import autocast
-from einops import rearrange
 
 from detectron2.config import configurable
 from detectron2.layers import ShapeSpec
@@ -82,7 +81,7 @@ def scale_pos(last_pos, last_ss, cur_ss, no_bias=False):
 class MSDeformAttnTransformerEncoderOnlyPc(nn.Module):
     def __init__(self, d_model=256, nhead=8,
                  num_encoder_layers=6, dim_feedforward=1024, dropout=0.1,
-                 activation="lrelu",
+                 activation="relu",
                  num_feature_levels=3, enc_n_points=4,
                  shepard_power=3.0, shepard_power_learnable=True
                  ):
@@ -235,7 +234,7 @@ class MSDeformAttnPc(nn.Module):
 class MSDeformAttnTransformerEncoderLayerPc(nn.Module):
     def __init__(self,
                  d_model=256, d_ffn=1024,
-                 dropout=0.1, activation="lrelu",
+                 dropout=0.1, activation="relu",
                  n_levels=4, n_heads=8, n_points=4,
                  shepard_power=3.0, shepard_power_learnable=True):
         super().__init__()
@@ -394,7 +393,7 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
         transformer_in_channels = [v.channels for k, v in transformer_input_shape]
         self.transformer_feature_strides = [v.stride for k, v in transformer_input_shape]  # to decide extra FPN layers
 
-        force_proj = True
+        force_proj = False
         self.transformer_num_feature_levels = len(self.transformer_in_features)
         if self.transformer_num_feature_levels > 1:
             input_proj_list = []
@@ -568,8 +567,6 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
 
         # append `out` with extra FPN levels
         # Reverse feature maps into top-down order (from low to high resolution) only res2
-        #for i, o in enumerate(out):
-        #    print("Before Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
         for idx, f in enumerate(self.in_features[:self.num_fpn_levels][::-1]):
             x = features[f].float()
             pos = features[f+"_pos"].float()
@@ -581,27 +578,16 @@ class MSDeformAttnPixelDecoderMaskFiner(nn.Module):
             lateral_conv = self.lateral_convs[idx]
             output_conv = self.output_convs[idx]
             cur_fpn = lateral_conv(x)
-            #print("Upsample curr_fpn shape: {} for {}".format(cur_fpn.shape, f))
-            #print("Upsample last pos shape: {} for {}".format(last_pos.shape, f))
             # Following FPN implementation, we use nearest upsampling here
             #last_pos = scale_pos(last_pos, last_ss, min_spatial_shape, no_bias=True)
-            #print("Upsample last pos max: {} for {}".format(last_pos.max(), f))
-            #print("Upsample last_ss: {} for {}".format(last_ss, f))
-            #print("Upsample pos shape: {} for {}".format(pos.shape, f))
+            fixed_last_pos = fixed_poss[-1]
             fixed_pos = fix_pos_no_bias(pos, spatial_shape, min_spatial_shape)
             fixed_poss.append(fixed_pos)
-            fixed_last_pos = fix_pos_no_bias(last_pos, last_ss, min_spatial_shape)
-            upfeat = upsample_feature_shepard(fixed_pos, fixed_last_pos, out[-1], custom_kernel=True)
-            #print("Upsampled feature shape: {} for {}".format(upfeat.shape, f))
-            y = cur_fpn + upfeat
+            y = cur_fpn + upsample_feature_shepard(fixed_pos, fixed_last_pos, out[-1], custom_kernel=True)
             y = output_conv((y, fixed_pos))
             last_pos = pos
-            #print("Pos min for {}: {}".format(f, last_pos.min()))
-            #print("Pos max for {}: {}".format(f, last_pos.max()))
             last_ss = spatial_shape
             out.append(y)
-        #for i, o in enumerate(out):
-        #    print("After Upsample - Feature map {} from msdeformpoint has shape: {}".format(i, o.shape))
         '''
         num_cur_levels = 0
         for o in out:
