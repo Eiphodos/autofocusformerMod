@@ -29,7 +29,7 @@ SOLVER:
   CLIP_GRADIENTS:
     ENABLED: True
     CLIP_TYPE: "full_model"
-    CLIP_VALUE: 0.01
+    CLIP_VALUE: 1.0
     NORM_TYPE: 2.0
   AMP:
     ENABLED: False
