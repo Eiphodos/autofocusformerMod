@@ -7,7 +7,7 @@ MODEL:
     NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResViT" ]
     EMBED_DIM: [256,192,128,64,128,192,256]
     DEPTHS: [1, 1, 1, 4, 2, 5, 2]
-    NUM_HEADS: [ 16, 8, 4, 2, 4, 8, 16 ]
+    NUM_HEADS: [ 8, 6, 4, 2, 4, 6, 8 ]
     PATCH_SIZES: [32, 16, 8, 4, 8, 16, 32]
     DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     DROP_PATH_RATE: 0.0
