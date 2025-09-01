@@ -646,10 +646,10 @@ class MRNB(nn.Module):
                     input_dim = channels
                     self.image_patch_projection = nn.Linear(3 * (self.patch_size**2), input_dim)
                 self.high_res_norm1 = nn.LayerNorm(input_dim)
-                self.high_res_mlp = Mlp(in_features=input_dim, out_features=channels, hidden_features=channels)
+                self.high_res_mlp = MLPDeepNorm(in_features=input_dim, out_features=channels, hidden_features=channels)
                 self.high_res_norm2 = nn.LayerNorm(channels)
-                #self.image_feat_importance = nn.Parameter(torch.ones(1))
-                #self.old_feat_importance = nn.Parameter(torch.ones(1))
+                self.image_feat_importance = nn.Parameter(torch.ones(1))
+                self.old_feat_importance = nn.Parameter(torch.ones(1))
 
             self.token_norm = nn.LayerNorm(channels)
             if channels != d_model:
@@ -796,8 +796,8 @@ class MRNB(nn.Module):
         im_high = self.high_res_norm1(im_high)
         im_high = self.high_res_mlp(im_high)
         im_high = self.high_res_norm2(im_high)
-        #tokens = self.old_feat_importance * tokens + self.image_feat_importance * im_high
-        tokens = tokens + im_high
+        tokens = self.old_feat_importance * tokens + self.image_feat_importance * im_high
+        #tokens = tokens + im_high
 
         return tokens
 
