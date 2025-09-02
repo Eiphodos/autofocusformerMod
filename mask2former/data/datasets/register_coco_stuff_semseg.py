@@ -182,7 +182,8 @@ COCO_CATEGORIES = [
 def _get_coco_stuff_meta():
     # Id 0 is reserved for ignore_label, we change ignore_label for 0
     # to 255 in our pre-processing.
-    stuff_ids = [k["id"] for k in COCO_CATEGORIES]
+    # Using Caffe-compatible labels which makes the indexes shifted by -1
+    stuff_ids = [k["id"] - 1 for k in COCO_CATEGORIES]
     assert len(stuff_ids) == 171, len(stuff_ids)
 
     # For semantic segmentation, this mapping maps from contiguous stuff id

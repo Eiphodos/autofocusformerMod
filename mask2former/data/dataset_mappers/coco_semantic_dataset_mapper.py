@@ -58,21 +58,21 @@ class COCOSemanticDatasetMapper:
         self.data_id_to_cont_id = data_id_to_cont_id
 
         # Fix ignore label and "no class"
-        self.data_id_to_cont_id[0] = self.ignore_label
         self.data_id_to_cont_id[self.ignore_label] = self.ignore_label
 
         # Fix removed classes
-        self.data_id_to_cont_id[12] = self.ignore_label #street sign
-        self.data_id_to_cont_id[26] = self.ignore_label #hat
-        self.data_id_to_cont_id[29] = self.ignore_label #shoe
-        self.data_id_to_cont_id[30] = self.ignore_label #eye glasses
-        self.data_id_to_cont_id[45] = self.ignore_label #plate
-        self.data_id_to_cont_id[66] = self.ignore_label #mirror
-        self.data_id_to_cont_id[68] = self.ignore_label #window
-        self.data_id_to_cont_id[69] = self.ignore_label #desk
-        self.data_id_to_cont_id[71] = self.ignore_label #door
-        self.data_id_to_cont_id[83] = self.ignore_label #blender
-        self.data_id_to_cont_id[91] = self.ignore_label #hair brush
+        # Using Caffe-compatible labels which makes the indexes shifted by -1
+        self.data_id_to_cont_id[11] = self.ignore_label #street sign
+        self.data_id_to_cont_id[25] = self.ignore_label #hat
+        self.data_id_to_cont_id[28] = self.ignore_label #shoe
+        self.data_id_to_cont_id[29] = self.ignore_label #eye glasses
+        self.data_id_to_cont_id[44] = self.ignore_label #plate
+        self.data_id_to_cont_id[65] = self.ignore_label #mirror
+        self.data_id_to_cont_id[67] = self.ignore_label #window
+        self.data_id_to_cont_id[68] = self.ignore_label #desk
+        self.data_id_to_cont_id[70] = self.ignore_label #door
+        self.data_id_to_cont_id[82] = self.ignore_label #blender
+        self.data_id_to_cont_id[90] = self.ignore_label #hair brush
 
         logger = logging.getLogger(__name__)
         mode = "training" if is_train else "inference"
