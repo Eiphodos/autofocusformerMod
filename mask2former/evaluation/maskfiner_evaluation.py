@@ -113,39 +113,32 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
         self,
         dataset_name,
         distributed=True,
-        output_dir=None,
-        *,
-        sem_seg_loading_fn,
-        num_classes=None,
-        ignore_label=None,
+        output_dir=None
     ):
         super().__init__(
             dataset_name,
             distributed=distributed,
-            output_dir=output_dir,
-            sem_seg_loading_fn=sem_seg_loading_fn,
-            num_classes=num_classes,
-            ignore_label=ignore_label,
+            output_dir=output_dir
         )
         meta = MetadataCatalog.get(dataset_name)
         self.data_id_to_cont_id = meta.stuff_dataset_id_to_contiguous_id
 
         # Fix ignore label and "no class"
-        self.data_id_to_cont_id[ignore_label] = ignore_label
+        self.data_id_to_cont_id[self.ignore_label] = self.ignore_label
 
         # Fix removed classes
         # Using Caffe-compatible labels which makes the indexes shifted by -1
-        self.data_id_to_cont_id[11] = ignore_label #street sign
-        self.data_id_to_cont_id[25] = ignore_label #hat
-        self.data_id_to_cont_id[28] = ignore_label #shoe
-        self.data_id_to_cont_id[29] = ignore_label #eye glasses
-        self.data_id_to_cont_id[44] = ignore_label #plate
-        self.data_id_to_cont_id[65] = ignore_label #mirror
-        self.data_id_to_cont_id[67] = ignore_label #window
-        self.data_id_to_cont_id[68] = ignore_label #desk
-        self.data_id_to_cont_id[70] = ignore_label #door
-        self.data_id_to_cont_id[82] = ignore_label #blender
-        self.data_id_to_cont_id[90] = ignore_label #hair brush
+        self.data_id_to_cont_id[11] = self.ignore_label #street sign
+        self.data_id_to_cont_id[25] = self.ignore_label #hat
+        self.data_id_to_cont_id[28] = self.ignore_label #shoe
+        self.data_id_to_cont_id[29] = self.ignore_label #eye glasses
+        self.data_id_to_cont_id[44] = self.ignore_label #plate
+        self.data_id_to_cont_id[65] = self.ignore_label #mirror
+        self.data_id_to_cont_id[67] = self.ignore_label #window
+        self.data_id_to_cont_id[68] = self.ignore_label #desk
+        self.data_id_to_cont_id[70] = self.ignore_label #door
+        self.data_id_to_cont_id[82] = self.ignore_label #blender
+        self.data_id_to_cont_id[90] = self.ignore_label #hair brush
 
     def process(self, inputs, outputs):
         """
