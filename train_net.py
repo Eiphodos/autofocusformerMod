@@ -54,6 +54,7 @@ import wandb
 # MaskFormer
 from mask2former import (
     COCOSemanticDatasetMapper,
+    COCOSemanticDatasetMapper2,
     COCOInstanceNewBaselineDatasetMapper,
     COCOPanopticNewBaselineDatasetMapper,
     InstanceSegEvaluator,
@@ -225,6 +226,9 @@ class Trainer(DefaultTrainer):
             return build_detection_train_loader(cfg, mapper=mapper)
         elif cfg.INPUT.DATASET_MAPPER_NAME == 'coco_semantic':
             mapper = COCOSemanticDatasetMapper(cfg, True)
+            return build_detection_train_loader(cfg, mapper=mapper)
+        elif cfg.INPUT.DATASET_MAPPER_NAME == 'coco_semantic2':
+            mapper = COCOSemanticDatasetMapper2(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
         else:
             mapper = None
