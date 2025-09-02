@@ -151,7 +151,7 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
                 segmentation prediction in the same format.
         """
         for input, output in zip(inputs, outputs):
-
+            self.save_disagreement_masks(input, output)
 
             output = output["sem_seg"].argmax(dim=0).to(self._cpu_device)
             pred = np.array(output, dtype=int)
@@ -163,7 +163,7 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
             mapped = np.array([self.data_id_to_cont_id[x] for x in dataset_classes]).astype("int")
             gt = mapped[inverse].reshape(gt.shape)
 
-            self.save_disagreement_masks(input, output)
+
             self.save_error_map(pred, gt, input["file_name"])
 
             gt[gt == self._ignore_label] = self._num_classes
