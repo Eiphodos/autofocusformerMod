@@ -60,6 +60,7 @@ from mask2former import (
     InstanceSegEvaluator,
     MetaLossSemSegEvaluator,
     MaskFinerSemSegEvaluator,
+    MaskFinerCOCOSemSegEvaluator,
     MaskFinerCityscapesInstanceEvaluator,
     MaskFinerCityscapesSemSegEvaluator,
     SemSegEvaluatorSave,
@@ -153,6 +154,8 @@ class Trainer(DefaultTrainer):
             evaluator_list.append(COCOEvaluator(dataset_name, output_dir=output_folder))
         if evaluator_type == "coco_panoptic_seg" and cfg.MODEL.MASK_FORMER.TEST.SEMANTIC_ON:
             evaluator_list.append(SemSegEvaluator(dataset_name, distributed=True, output_dir=output_folder))
+        if evaluator_type == 'coco_sem_seg':
+            evaluator_list.append(MaskFinerCOCOSemSegEvaluator(dataset_name, distributed=True, output_dir=output_folder))
         # Mapillary Vistas
         if evaluator_type == "mapillary_vistas_panoptic_seg" and cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON:
             evaluator_list.append(InstanceSegEvaluator(dataset_name, output_dir=output_folder))

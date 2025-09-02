@@ -214,7 +214,7 @@ def register_all_coco_stuff(root):
         MetadataCatalog.get(name).set(
             image_root=image_dir,
             sem_seg_root=gt_dir,
-            evaluator_type="sem_seg",
+            evaluator_type="coco_sem_seg",
             ignore_label=255,
             **meta,
         )
