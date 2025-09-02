@@ -158,7 +158,7 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
                 segmentation prediction in the same format.
         """
         for input, output in zip(inputs, outputs):
-            self.save_disagreement_masks(input, output)
+
 
             output = output["sem_seg"].argmax(dim=0).to(self._cpu_device)
             pred = np.array(output, dtype=int)
@@ -170,6 +170,7 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
             mapped = np.array([self.data_id_to_cont_id[x] for x in dataset_classes]).astype("int")
             gt = mapped[inverse].reshape(gt.shape)
 
+            self.save_disagreement_masks(input, output, gt)
             self.save_error_map(pred, gt, input["file_name"])
 
             gt[gt == self._ignore_label] = self._num_classes
@@ -190,7 +191,7 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
 
             self._predictions.extend(self.encode_json_sem_seg(pred, input["file_name"]))
 
-    def save_disagreement_masks(self, inp, outp):
+    def save_disagreement_masks(self, inp, outp, gt):
         inference_out_dir = os.path.join(self._output_dir, 'inference_output')
         os.makedirs(inference_out_dir, exist_ok=True)
         fp = inp['file_name']
@@ -211,6 +212,7 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
 
         image.save(os.path.join(inference_out_dir, fn + '_sem_seg.png'))
         np.save(os.path.join(inference_out_dir, fn + '_sem_seg_raw.npy'), ss)
+        np.save(os.path.join(inference_out_dir, fn + '_gt_raw.npy'), gt)
 
         disagreement_masks_only_dict = {k:v for k, v in outp.items() if "disagreement_mask_" in k}
         for k, v in disagreement_masks_only_dict.items():

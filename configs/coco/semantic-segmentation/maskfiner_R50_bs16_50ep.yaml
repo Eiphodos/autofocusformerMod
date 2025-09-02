@@ -1,4 +1,4 @@
-_BASE_: Base-COCO-SemanticSegmentation2.yaml
+_BASE_: Base-COCO-SemanticSegmentation.yaml
 MODEL:
   META_ARCHITECTURE: "MaskFiner"
   MR_SEM_SEG_HEAD:
