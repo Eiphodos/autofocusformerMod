@@ -201,8 +201,8 @@ def register_all_coco_stuff(root):
     root = os.path.join(root, "coco")
     meta = _get_coco_stuff_meta()
     for name, image_dirname, sem_seg_dirname in [
-        ("train", "train2017", "stuff_train2017_pixelmaps"),
-        ("test", "val2017", "stuff_val2017_pixelmaps"),
+        ("train", "train2017", "semseg_train2017"),
+        ("val", "val2017", "semseg_val2017"),
     ]:
         image_dir = os.path.join(root, image_dirname)
         gt_dir = os.path.join(root, sem_seg_dirname)

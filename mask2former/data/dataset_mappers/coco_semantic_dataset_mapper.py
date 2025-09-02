@@ -17,7 +17,7 @@ from detectron2.structures import BitMasks, Instances
 __all__ = ["COCOSemanticDatasetMapper"]
 
 
-class MaskFormerSemanticDatasetMapper:
+class COCOSemanticDatasetMapper:
     """
     A callable which takes a dataset dict in Detectron2 Dataset format,
     and map it into a format used by MaskFormer for semantic segmentation.
@@ -39,6 +39,7 @@ class MaskFormerSemanticDatasetMapper:
         image_format,
         ignore_label,
         size_divisibility,
+        data_id_to_cont_id
     ):
         """
         NOTE: this interface is experimental.
@@ -54,6 +55,24 @@ class MaskFormerSemanticDatasetMapper:
         self.img_format = image_format
         self.ignore_label = ignore_label
         self.size_divisibility = size_divisibility
+        self.data_id_to_cont_id = data_id_to_cont_id
+
+        # Fix ignore label and "no class"
+        self.data_id_to_cont_id[0] = self.ignore_label
+        self.data_id_to_cont_id[self.ignore_label] = self.ignore_label
+
+        # Fix removed classes
+        self.data_id_to_cont_id[12] = self.ignore_label #street sign
+        self.data_id_to_cont_id[26] = self.ignore_label #hat
+        self.data_id_to_cont_id[29] = self.ignore_label #shoe
+        self.data_id_to_cont_id[30] = self.ignore_label #eye glasses
+        self.data_id_to_cont_id[45] = self.ignore_label #plate
+        self.data_id_to_cont_id[66] = self.ignore_label #mirror
+        self.data_id_to_cont_id[68] = self.ignore_label #window
+        self.data_id_to_cont_id[69] = self.ignore_label #desk
+        self.data_id_to_cont_id[71] = self.ignore_label #door
+        self.data_id_to_cont_id[83] = self.ignore_label #blender
+        self.data_id_to_cont_id[91] = self.ignore_label #hair brush
 
         logger = logging.getLogger(__name__)
         mode = "training" if is_train else "inference"
@@ -87,12 +106,14 @@ class MaskFormerSemanticDatasetMapper:
         meta = MetadataCatalog.get(dataset_names[0])
         ignore_label = meta.ignore_label
 
+
         ret = {
             "is_train": is_train,
             "augmentations": augs,
             "image_format": cfg.INPUT.FORMAT,
             "ignore_label": ignore_label,
             "size_divisibility": cfg.INPUT.SIZE_DIVISIBILITY,
+            "data_id_to_cont_id": meta.stuff_dataset_id_to_contiguous_id
         }
         return ret
 
@@ -122,6 +143,14 @@ class MaskFormerSemanticDatasetMapper:
                     dataset_dict["file_name"]
                 )
             )
+        try:
+            if sem_seg_gt is not None:
+                dataset_classes, inverse = np.unique(sem_seg_gt, return_inverse=True)
+                mapped = np.array([self.data_id_to_cont_id[x.astype("int")] for x in dataset_classes]).astype("double")
+                sem_seg_gt = mapped[inverse].reshape(sem_seg_gt.shape)
+        except KeyError as e:
+            print("Error {} occurred for image {} and with unique classes {}".format(e, dataset_dict["file_name"], np.unique(sem_seg_gt)))
+
 
         aug_input = T.AugInput(image, sem_seg=sem_seg_gt)
         aug_input, transforms = T.apply_transform_gens(self.tfm_gens, aug_input)
