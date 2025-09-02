@@ -130,6 +130,23 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
         meta = MetadataCatalog.get(dataset_name)
         self.data_id_to_cont_id = meta.stuff_dataset_id_to_contiguous_id
 
+        # Fix ignore label and "no class"
+        self.data_id_to_cont_id[ignore_label] = ignore_label
+
+        # Fix removed classes
+        # Using Caffe-compatible labels which makes the indexes shifted by -1
+        self.data_id_to_cont_id[11] = ignore_label #street sign
+        self.data_id_to_cont_id[25] = ignore_label #hat
+        self.data_id_to_cont_id[28] = ignore_label #shoe
+        self.data_id_to_cont_id[29] = ignore_label #eye glasses
+        self.data_id_to_cont_id[44] = ignore_label #plate
+        self.data_id_to_cont_id[65] = ignore_label #mirror
+        self.data_id_to_cont_id[67] = ignore_label #window
+        self.data_id_to_cont_id[68] = ignore_label #desk
+        self.data_id_to_cont_id[70] = ignore_label #door
+        self.data_id_to_cont_id[82] = ignore_label #blender
+        self.data_id_to_cont_id[90] = ignore_label #hair brush
+
     def process(self, inputs, outputs):
         """
         Args:
