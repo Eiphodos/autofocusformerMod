@@ -124,21 +124,21 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
         self.data_id_to_cont_id = meta.stuff_dataset_id_to_contiguous_id
 
         # Fix ignore label and "no class"
-        self.data_id_to_cont_id[self.ignore_label] = self.ignore_label
+        self.data_id_to_cont_id[self._ignore_label] = self._ignore_label
 
         # Fix removed classes
         # Using Caffe-compatible labels which makes the indexes shifted by -1
-        self.data_id_to_cont_id[11] = self.ignore_label #street sign
-        self.data_id_to_cont_id[25] = self.ignore_label #hat
-        self.data_id_to_cont_id[28] = self.ignore_label #shoe
-        self.data_id_to_cont_id[29] = self.ignore_label #eye glasses
-        self.data_id_to_cont_id[44] = self.ignore_label #plate
-        self.data_id_to_cont_id[65] = self.ignore_label #mirror
-        self.data_id_to_cont_id[67] = self.ignore_label #window
-        self.data_id_to_cont_id[68] = self.ignore_label #desk
-        self.data_id_to_cont_id[70] = self.ignore_label #door
-        self.data_id_to_cont_id[82] = self.ignore_label #blender
-        self.data_id_to_cont_id[90] = self.ignore_label #hair brush
+        self.data_id_to_cont_id[11] = self._ignore_label #street sign
+        self.data_id_to_cont_id[25] = self._ignore_label #hat
+        self.data_id_to_cont_id[28] = self._ignore_label #shoe
+        self.data_id_to_cont_id[29] = self._ignore_label #eye glasses
+        self.data_id_to_cont_id[44] = self._ignore_label #plate
+        self.data_id_to_cont_id[65] = self._ignore_label #mirror
+        self.data_id_to_cont_id[67] = self._ignore_label #window
+        self.data_id_to_cont_id[68] = self._ignore_label #desk
+        self.data_id_to_cont_id[70] = self._ignore_label #door
+        self.data_id_to_cont_id[82] = self._ignore_label #blender
+        self.data_id_to_cont_id[90] = self._ignore_label #hair brush
 
     def process(self, inputs, outputs):
         """
