@@ -11,13 +11,44 @@ from detectron2.config import configurable
 from detectron2.data import MetadataCatalog
 from detectron2.data import detection_utils as utils
 from detectron2.data import transforms as T
-from detectron2.projects.point_rend import ColorAugSSDTransform
 from detectron2.structures import BitMasks, Instances
 
-__all__ = ["COCOSemanticDatasetMapper"]
+__all__ = ["COCOSemanticDatasetMapper2"]
 
 
-class COCOSemanticDatasetMapper:
+def build_transform_gen(cfg, is_train):
+    """
+    Create a list of default :class:`Augmentation` from config.
+    Now it includes resizing and flipping.
+    Returns:
+        list[Augmentation]
+    """
+    assert is_train, "Only support training augmentation"
+    image_size = cfg.INPUT.IMAGE_SIZE
+    min_scale = cfg.INPUT.MIN_SCALE
+    max_scale = cfg.INPUT.MAX_SCALE
+
+    augmentation = []
+
+    if cfg.INPUT.RANDOM_FLIP != "none":
+        augmentation.append(
+            T.RandomFlip(
+                horizontal=cfg.INPUT.RANDOM_FLIP == "horizontal",
+                vertical=cfg.INPUT.RANDOM_FLIP == "vertical",
+            )
+        )
+
+    augmentation.extend([
+        T.ResizeScale(
+            min_scale=min_scale, max_scale=max_scale, target_height=image_size, target_width=image_size
+        ),
+        T.FixedSizeCrop(crop_size=(image_size, image_size)),
+    ])
+
+    return augmentation
+
+
+class COCOSemanticDatasetMapper2:
     """
     A callable which takes a dataset dict in Detectron2 Dataset format,
     and map it into a format used by MaskFormer for semantic segmentation.
@@ -29,6 +60,8 @@ class COCOSemanticDatasetMapper:
     3. Find and applies suitable cropping to the image and annotation
     4. Prepare image and annotation to Tensors
     """
+
+
 
     @configurable
     def __init__(
@@ -81,25 +114,7 @@ class COCOSemanticDatasetMapper:
     @classmethod
     def from_config(cls, cfg, is_train=True):
         # Build augmentation
-        augs = [
-            T.ResizeShortestEdge(
-                cfg.INPUT.MIN_SIZE_TRAIN,
-                cfg.INPUT.MAX_SIZE_TRAIN,
-                cfg.INPUT.MIN_SIZE_TRAIN_SAMPLING,
-            )
-        ]
-        if cfg.INPUT.CROP.ENABLED:
-            augs.append(
-                T.RandomCrop_CategoryAreaConstraint(
-                    cfg.INPUT.CROP.TYPE,
-                    cfg.INPUT.CROP.SIZE,
-                    cfg.INPUT.CROP.SINGLE_CATEGORY_MAX_AREA,
-                    cfg.MODEL.SEM_SEG_HEAD.IGNORE_VALUE,
-                )
-            )
-        if cfg.INPUT.COLOR_AUG_SSD:
-            augs.append(ColorAugSSDTransform(img_format=cfg.INPUT.FORMAT))
-        augs.append(T.RandomFlip())
+        tfm_gens = build_transform_gen(cfg, is_train)
 
         # Assume always applies to the training set.
         dataset_names = cfg.DATASETS.TRAIN
@@ -109,7 +124,7 @@ class COCOSemanticDatasetMapper:
 
         ret = {
             "is_train": is_train,
-            "augmentations": augs,
+            "augmentations": tfm_gens,
             "image_format": cfg.INPUT.FORMAT,
             "ignore_label": ignore_label,
             "size_divisibility": cfg.INPUT.SIZE_DIVISIBILITY,

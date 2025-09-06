@@ -1,18 +1,18 @@
-_BASE_: ../maskfiner_R50_bs16_160k.yaml
+_BASE_: ../maskfiner_R50_bs16_90k.yaml
 MODEL:
   META_ARCHITECTURE: "MaskFinerOracleTeacherBB"
   BACKBONE:
     NAME: "UpDownBackbone"
   MR:
     NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResViT" ]
-    EMBED_DIM: [256,192,128,64,128,192,256]
-    DEPTHS: [1, 1, 1, 4, 2, 8, 2]
-    NUM_HEADS: [ 8, 6, 4, 2, 4, 6, 8 ]
+    EMBED_DIM: [384,256,128,64,128,256,384]
+    DEPTHS: [1, 1, 1, 4, 1, 2, 1]
+    NUM_HEADS: [ 16, 8, 4, 2, 4, 8, 16 ]
     PATCH_SIZES: [32, 16, 8, 4, 8, 16, 32]
     DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     DROP_PATH_RATE: 0.0
     ATTN_DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    UPSCALE_RATIO: [0.0, 0.85, 0.7, 0.6, 0.0, 0.0, 0.0]
+    UPSCALE_RATIO: [0.0, 0.5, 0.7, 0.65, 0.0, 0.0, 0.0]
     SPLIT_RATIO: [4, 4, 4, 4, 4, 4, 4]
     MLP_RATIO: [2., 2., 2., 2., 2., 2., 2.]
     CLUSTER_SIZE: [8, 8, 8, 8, 8, 8, 8]
@@ -44,4 +44,4 @@ MODEL:
 SOLVER:
   IMS_PER_BATCH: 32
   BASE_LR: 0.0002
-  MAX_ITER: 80000
+  MAX_ITER: 45000

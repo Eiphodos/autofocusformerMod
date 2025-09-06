@@ -5,9 +5,9 @@ MODEL:
     NAME: "UpDownBackbone"
   MR:
     NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResViT" ]
-    EMBED_DIM: [256,192,128,64,128,192,256]
-    DEPTHS: [1, 1, 1, 4, 2, 8, 2]
-    NUM_HEADS: [ 8, 6, 4, 2, 4, 6, 8 ]
+    EMBED_DIM: [384,256,128,64,128,256,384]
+    DEPTHS: [1, 1, 1, 4, 1, 2, 1]
+    NUM_HEADS: [ 16, 8, 4, 2, 4, 8, 16 ]
     PATCH_SIZES: [32, 16, 8, 4, 8, 16, 32]
     DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     DROP_PATH_RATE: 0.0

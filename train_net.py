@@ -53,11 +53,14 @@ import wandb
 
 # MaskFormer
 from mask2former import (
+    COCOSemanticDatasetMapper,
+    COCOSemanticDatasetMapper2,
     COCOInstanceNewBaselineDatasetMapper,
     COCOPanopticNewBaselineDatasetMapper,
     InstanceSegEvaluator,
     MetaLossSemSegEvaluator,
     MaskFinerSemSegEvaluator,
+    MaskFinerCOCOSemSegEvaluator,
     MaskFinerCityscapesInstanceEvaluator,
     MaskFinerCityscapesSemSegEvaluator,
     SemSegEvaluatorSave,
@@ -151,6 +154,8 @@ class Trainer(DefaultTrainer):
             evaluator_list.append(COCOEvaluator(dataset_name, output_dir=output_folder))
         if evaluator_type == "coco_panoptic_seg" and cfg.MODEL.MASK_FORMER.TEST.SEMANTIC_ON:
             evaluator_list.append(SemSegEvaluator(dataset_name, distributed=True, output_dir=output_folder))
+        if evaluator_type == 'coco_sem_seg':
+            evaluator_list.append(MaskFinerCOCOSemSegEvaluator(dataset_name, distributed=True, output_dir=output_folder))
         # Mapillary Vistas
         if evaluator_type == "mapillary_vistas_panoptic_seg" and cfg.MODEL.MASK_FORMER.TEST.INSTANCE_ON:
             evaluator_list.append(InstanceSegEvaluator(dataset_name, output_dir=output_folder))
@@ -221,6 +226,12 @@ class Trainer(DefaultTrainer):
         # coco panoptic segmentation lsj new baseline
         elif cfg.INPUT.DATASET_MAPPER_NAME == "coco_panoptic_lsj":
             mapper = COCOPanopticNewBaselineDatasetMapper(cfg, True)
+            return build_detection_train_loader(cfg, mapper=mapper)
+        elif cfg.INPUT.DATASET_MAPPER_NAME == 'coco_semantic':
+            mapper = COCOSemanticDatasetMapper(cfg, True)
+            return build_detection_train_loader(cfg, mapper=mapper)
+        elif cfg.INPUT.DATASET_MAPPER_NAME == 'coco_semantic2':
+            mapper = COCOSemanticDatasetMapper2(cfg, True)
             return build_detection_train_loader(cfg, mapper=mapper)
         else:
             mapper = None

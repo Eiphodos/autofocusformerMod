@@ -182,7 +182,8 @@ COCO_CATEGORIES = [
 def _get_coco_stuff_meta():
     # Id 0 is reserved for ignore_label, we change ignore_label for 0
     # to 255 in our pre-processing.
-    stuff_ids = [k["id"] for k in COCO_CATEGORIES]
+    # Using Caffe-compatible labels which makes the indexes shifted by -1
+    stuff_ids = [k["id"] - 1 for k in COCO_CATEGORIES]
     assert len(stuff_ids) == 171, len(stuff_ids)
 
     # For semantic segmentation, this mapping maps from contiguous stuff id
@@ -201,8 +202,8 @@ def register_all_coco_stuff(root):
     root = os.path.join(root, "coco")
     meta = _get_coco_stuff_meta()
     for name, image_dirname, sem_seg_dirname in [
-        ("train", "train2017", "stuff_train2017_pixelmaps"),
-        ("test", "val2017", "stuff_val2017_pixelmaps"),
+        ("train", "train2017", "semseg_train2017"),
+        ("val", "val2017", "semseg_val2017"),
     ]:
         image_dir = os.path.join(root, image_dirname)
         gt_dir = os.path.join(root, sem_seg_dirname)
@@ -213,7 +214,7 @@ def register_all_coco_stuff(root):
         MetadataCatalog.get(name).set(
             image_root=image_dir,
             sem_seg_root=gt_dir,
-            evaluator_type="sem_seg",
+            evaluator_type="coco_sem_seg",
             ignore_label=255,
             **meta,
         )

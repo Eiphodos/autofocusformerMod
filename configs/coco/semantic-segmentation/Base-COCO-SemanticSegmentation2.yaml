@@ -34,26 +34,29 @@ SOLVER:
   AMP:
     ENABLED: True
 INPUT:
-  MIN_SIZE_TRAIN: !!python/object/apply:eval ["[int(x * 0.1 * 512) for x in range(5, 21)]"]
+  IMAGE_SIZE: 1024
+  MIN_SCALE: 0.1
+  MAX_SCALE: 2.0
+  MIN_SIZE_TRAIN: [800]
   MIN_SIZE_TRAIN_SAMPLING: "choice"
-  MIN_SIZE_TEST: 512
-  MAX_SIZE_TRAIN: 2048
-  MAX_SIZE_TEST: 2048
+  MIN_SIZE_TEST: 800
+  MAX_SIZE_TRAIN: 1333
+  MAX_SIZE_TEST: 1333
   CROP:
-    ENABLED: True
-    TYPE: "absolute"
-    SIZE: (512, 512)
+    ENABLED: False
+    TYPE: "relative_range"
+    SIZE: [0.9,0.9]
     SINGLE_CATEGORY_MAX_AREA: 1.0
-  COLOR_AUG_SSD: True
-  SIZE_DIVISIBILITY: 512  # used in dataset mapper
+  COLOR_AUG_SSD: FALSE
+  SIZE_DIVISIBILITY: -1  # used in dataset mapper
   FORMAT: "RGB"
-  DATASET_MAPPER_NAME: "coco_semantic"
+  DATASET_MAPPER_NAME: "coco_semantic2"
 TEST:
   EVAL_PERIOD: 5000
   AUG:
     ENABLED: False
-    MIN_SIZES: [256, 384, 512, 640, 768, 896]
-    MAX_SIZE: 3584
+    MIN_SIZES: [400,500,600,700,800,900,1000,1100,1200]
+    MAX_SIZE: 4000
     FLIP: True
 DATALOADER:
   FILTER_EMPTY_ANNOTATIONS: True
