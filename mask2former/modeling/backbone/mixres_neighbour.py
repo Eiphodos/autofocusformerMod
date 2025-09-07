@@ -131,19 +131,23 @@ class ClusterAttention(nn.Module):
 
         super().__init__()
         self.dim = dim
+        self.q_heads = num_heads * 4
+        self.kv_heads = num_heads
+        assert self.q_heads % self.kv_heads == 0
+        self.group = self.q_heads // self.kv_heads
+        self.head_dim = dim // self.q_heads
+        self.scale = self.head_dim ** -0.5
         self.pos_dim = 2
-        self.num_heads = num_heads
+        self.scale = self.head_dim ** -0.5
 
-        head_dim = dim // num_heads
-        self.scale = head_dim ** -0.5
-        self.q = nn.Linear(dim, dim)
-        self.kv = nn.Linear(dim, 2*dim)
+        self.q = nn.Linear(dim, self.q_heads * self.head_dim, bias=True)
+        self.kv = nn.Linear(dim, 2 * self.kv_heads * self.head_dim, bias=True)
         self.softmax = nn.Softmax(dim=-1)
 
-        self.blank_k = nn.Parameter(torch.randn(dim))
-        self.blank_v = nn.Parameter(torch.randn(dim))
+        self.blank_k = nn.Parameter(torch.randn(self.kv_heads * self.head_dim))
+        self.blank_v = nn.Parameter(torch.randn(self.kv_heads * self.head_dim))
 
-        self.pos_embed = nn.Linear(self.pos_dim+3, num_heads)
+        self.pos_embed = nn.Linear(2 + 3, self.q_heads)
 
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
@@ -160,31 +164,25 @@ class ClusterAttention(nn.Module):
         """
 
         b, n, c = feat.shape
-        c_ = c // self.num_heads
-        d = self.pos_dim
+        hq, hk, d = self.q_heads, self.kv_heads, self.head_dim
+
         assert c == self.dim, "dim does not accord to input"
-        h = self.num_heads
 
         # get qkv
-        q = self.q(feat)  # b x n x c
+        q = self.q(feat).view(b, n, hq, d).permute(0,2,1,3)  # b x n x c
         q = q * self.scale
-        kv = self.kv(feat)  # b x n x 2c
+        kv = self.kv(feat).view(b, n, 2, hk, d).permute(2,0,3,1,4)  # b x n x 2c
+        key, v = kv[0], kv[1]
 
         # get attention
         if not global_attn:
             nbhd_size = member_idx.shape[-1]
             m = nbhd_size
-            q = q.reshape(b, n, h, -1).permute(0, 2, 1, 3)
-            kv = kv.view(b, n, h, 2, c_).permute(3, 0, 2, 1, 4)  # 2 x b x h x n x c_
-            key, v = kv[0], kv[1]
             attn = CLUSTENQKFunction.apply(q, key, member_idx)  # b x h x n x m
             mask = cluster_mask
             if mask is not None:
                 mask = mask.reshape(b, 1, n, m)
         else:
-            q = q.reshape(b, n, h, -1).permute(0, 2, 1, 3)  # b x h x n x c_
-            kv = kv.view(b, n, h, 2, c_).permute(3, 0, 2, 1, 4)  # 2 x b x h x n x c_
-            key, v = kv[0], kv[1]
             attn = q @ key.transpose(-1, -2)  # b x h x n x n
             mask = None
 
@@ -195,7 +193,7 @@ class ClusterAttention(nn.Module):
         pe_table = self.pos_embed(pre_table)  # 111 x 111 x h
 
         pe_shape = pe_idx.shape
-        pos_embed = pe_table.gather(index=pe_idx.view(-1, 1).expand(-1, h), dim=0).reshape(*(pe_shape), h).permute(0, 3, 1, 2)
+        pos_embed = pe_table.gather(0, pe_idx.view(-1,1).expand(-1,hq)).view(b,n,-1,hq).permute(0,3,1,2)
 
         attn = attn + pos_embed
 
@@ -203,27 +201,28 @@ class ClusterAttention(nn.Module):
             attn = attn + (1-mask)*(-100)
 
         # blank token
-        blank_attn = (q * self.blank_k.reshape(1, h, 1, c_)).sum(-1, keepdim=True)  # b x h x n x 1
+        blank_k = self.blank_k.view(hk, d).repeat_interleave(self.group, dim=0)
+        blank_attn = (q * blank_k.unsqueeze(0).unsqueeze(2)).sum(-1, keepdim=True)
         blank_attn = torch.clamp(blank_attn, -5, 5)
         attn = torch.cat([attn, blank_attn], dim=-1)
         attn = self.softmax(attn)
         attn = self.attn_drop(attn)
 
-        blank_attn = attn[..., -1:]
+        b_attn = attn[..., -1:]
         attn = attn[..., :-1]
-        blank_v = blank_attn * self.blank_v.reshape(1, h, 1, c_)  # b x h x n x c_
-
-        # aggregate v
         if global_attn:
-            feat = (attn @ v).permute(0, 2, 1, 3).reshape(b, n, c)
-            feat = feat + blank_v.permute(0, 2, 1, 3).reshape(b, n, c)
+            out = torch.matmul(attn, v)                     # [b,hq,n,d]
         else:
-            feat = CLUSTENAVFunction.apply(attn, v, member_idx).permute(0, 2, 1, 3).reshape(b, n, c)
-            feat = feat + blank_v.permute(0, 2, 1, 3).reshape(b, n, c)
-        feat = self.proj(feat)
-        feat = self.proj_drop(feat)
+            out = CLUSTENAVFunction.apply(attn, v, member_idx)  # [b,hq,n,d]
+        out = out.permute(0,2,1,3).reshape(b, n, hq * d)
 
-        return feat
+        # add blank value (repeat to hq heads)
+        blank_v = self.blank_v.view(hk, d).repeat_interleave(self.group, dim=0)
+        out = out + (b_attn.permute(0,2,1,3) * blank_v.unsqueeze(0).unsqueeze(1)).reshape(b, n, hq*d)
+
+        out = self.proj(out)
+        out = self.proj_drop(out)
+        return out
 
     def extra_repr(self) -> str:
         return f'dim={self.dim}, num_heads={self.num_heads}'
