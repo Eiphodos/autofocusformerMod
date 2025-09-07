@@ -174,6 +174,10 @@ class ClusterAttention(nn.Module):
         kv = self.kv(feat).view(b, n, 2, hk, d).permute(2,0,3,1,4)  # b x n x 2c
         key, v = kv[0], kv[1]
 
+        if hk != hq:
+            key = key.repeat_interleave(self.group, dim=1)    # [b,hq,n,d]
+            v = v.repeat_interleave(self.group, dim=1)
+
         # get attention
         if not global_attn:
             nbhd_size = member_idx.shape[-1]
