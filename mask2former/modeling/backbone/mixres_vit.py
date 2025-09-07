@@ -6,6 +6,7 @@ https://github.com/rwightman/pytorch-image-models
 import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from einops import rearrange
 from functools import partial
 from ..transformer_decoder.position_encoding import PositionEmbeddingSine
@@ -309,13 +310,13 @@ class DownSampleConvBlock(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.conv = nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=1)
-        self.g_norm = nn.GroupNorm(1, out_dim)
+        self.b_norm = nn.BatchNorm2d(out_dim)
         self.relu = nn.LeakyReLU()
 
     def forward(self, x):
         x = self.conv(x)
         x = self.relu(x)
-        x = self.g_norm(x)
+        x = self.b_norm(x)
 
         return x
 
@@ -350,24 +351,97 @@ class PatchEmbedding(nn.Module):
         return x
 
 
-class OverlapPatchEmbedding(nn.Module):
-    def __init__(self, patch_size, embed_dim, channels):
+class BlurPool(nn.Module):
+    """
+    Anti-aliased downsampling via fixed separable [1,4,6,4,1] kernel (Zhang et al. 2019).
+    Applies a depthwise blur then strides by 2 (or any stride).
+    """
+    def __init__(self, channels: int, filt_size: int = 5, stride: int = 2, pad_mode: str = "reflect"):
         super().__init__()
+        assert filt_size in (3, 5, 7), "Use 3, 5, or 7 for stable fixed kernels."
+        self.stride = stride
+        self.pad_mode = pad_mode
+
+        if filt_size == 3:
+            a = torch.tensor([1., 2., 1.])
+        elif filt_size == 5:
+            a = torch.tensor([1., 4., 6., 4., 1.])
+        else:  # 7
+            a = torch.tensor([1., 6., 15., 20., 15., 6., 1.])
+
+        kernel = (a[:, None] * a[None, :])
+        kernel = kernel / kernel.sum()
+        kernel = kernel[None, None, :, :]  # [1,1,H,W]
+        kernel = kernel.repeat(channels, 1, 1, 1)  # depthwise
+        self.register_buffer("kernel", kernel)
+        self.pad = (kernel.shape[-1] - 1) // 2  # symmetric pad
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.pad > 0:
+            x = F.pad(x, (self.pad, self.pad, self.pad, self.pad), mode=self.pad_mode)
+        return F.conv2d(x, self.kernel, stride=self.stride, groups=self.kernel.shape[0])
+
+
+class OverlapPatchEmbedding(nn.Module):
+    """
+    Anti-aliased overlap stem that maps an image to patch tokens of size `patch_size`.
+    Replaces stride-2 conv stacks with: Conv3x3 (s=1) -> GN -> GELU -> BlurPool(s=2) per stage.
+
+    Args:
+        patch_size: int, overall patch stride (typically power-of-two: 4/8/16/32)
+        embed_dim:  int, output channel dimension
+        channels:   int, input channels (3 for RGB, or previous stage's channels)
+        use_ln:     bool, apply LayerNorm after flattening to tokens
+        filt_size:  int, blur kernel size (3/5/7), default 5
+        norm_groups:int, groups for GroupNorm inside conv stack
+    """
+    def __init__(
+        self,
+        patch_size: int,
+        embed_dim: int,
+        channels: int,
+        use_ln: bool = True,
+        filt_size: int = 5,
+        norm_groups: int = 1,
+    ):
+        super().__init__()
+        assert patch_size >= 2, "patch_size should be >=2"
+        stages = int(math.log2(patch_size))
+        assert 2 ** stages == patch_size, "Expect power-of-two patch sizes for clean AA downsampling."
 
         self.patch_size = patch_size
+        self.embed_dim = embed_dim
+        self.use_ln = use_ln
 
-        n_layers = int(torch.log2(torch.tensor([patch_size])).item())
-        conv_layers = []
-        emb_dims = [int(embed_dim // 2**(n_layers -1 - i)) for i in range(n_layers) ]
-        emb_dim_list = [channels] + emb_dims
-        for i in range(n_layers):
-            conv = DownSampleConvBlock(emb_dim_list[i], emb_dim_list[i + 1])
-            conv_layers.append(conv)
-        self.conv_layers = nn.Sequential(*conv_layers)
-        self.out_norm = nn.LayerNorm(embed_dim)
+        # Progressively increase channels to embed_dim across stages (matches your old schedule)
+        stage_dims = [max(embed_dim // (2 ** (stages - 1 - i)), channels) for i in range(stages)]
+        dims = [channels] + stage_dims  # len = stages+1, last equals embed_dim (or close)
 
-    def forward(self, im):
-        x = self.conv_layers(im).flatten(2).transpose(1, 2)
+        blocks = []
+        for i in range(stages):
+            in_c, out_c = dims[i], stage_dims[i]
+            blocks += [
+                nn.Conv2d(in_c, out_c, kernel_size=3, stride=1, padding=1, bias=True),
+                nn.GELU(),
+                nn.GroupNorm(num_groups=norm_groups, num_channels=out_c),
+                BlurPool(out_c, filt_size=filt_size, stride=2, pad_mode="reflect"),
+            ]
+        self.stem = nn.Sequential(*blocks)
+
+        # Ensure exact embed_dim at the output (cheap projection if last stage dim != embed_dim)
+        last_c = stage_dims[-1]
+        self.proj = nn.Identity() if last_c == embed_dim else nn.Conv2d(last_c, embed_dim, kernel_size=1, bias=True)
+
+        self.out_norm = nn.LayerNorm(embed_dim) if use_ln else nn.Identity()
+
+    def forward(self, im: torch.Tensor) -> torch.Tensor:
+        """
+        Input:  im [B, C, H, W]
+        Output: tokens [B, N, D] with N = (H/patch_size)*(W/patch_size), D=embed_dim
+        """
+        x = self.stem(im)  # [B, C', H/ps, W/ps]
+        x = self.proj(x)  # [B, embed_dim, H/ps, W/ps]
+        x = x.flatten(2).transpose(1, 2)  # [B, N, D]
         x = self.out_norm(x)
         return x
 
