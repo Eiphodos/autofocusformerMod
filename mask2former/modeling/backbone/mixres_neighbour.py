@@ -225,7 +225,7 @@ class ClusterAttention(nn.Module):
         return out
 
     def extra_repr(self) -> str:
-        return f'dim={self.dim}, num_heads={self.num_heads}'
+        return f'dim={self.dim}, num_heads={self.q_heads}'
 
 
 class ClusterTransformerBlock(nn.Module):
