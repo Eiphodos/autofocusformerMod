@@ -6,6 +6,7 @@ https://github.com/rwightman/pytorch-image-models
 import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from einops import rearrange
 from ..transformer_decoder.position_encoding import PositionEmbeddingSine
 
@@ -131,7 +132,7 @@ class ClusterAttention(nn.Module):
 
         super().__init__()
         self.dim = dim
-        self.q_heads = num_heads * 4
+        self.q_heads = num_heads * 2
         self.kv_heads = num_heads
         assert self.q_heads % self.kv_heads == 0
         self.group = self.q_heads // self.kv_heads
@@ -170,9 +171,10 @@ class ClusterAttention(nn.Module):
 
         # get qkv
         q = self.q(feat).view(b, n, hq, d).permute(0,2,1,3)  # b x n x c
-        q = q * self.scale
+        q = F.layer_norm(q, (d,)) * self.scale
         kv = self.kv(feat).view(b, n, 2, hk, d).permute(2,0,3,1,4)  # b x n x 2c
         key, v = kv[0], kv[1]
+        key = F.layer_norm(key, (d,))
 
         if hk != hq:
             key = key.repeat_interleave(self.group, dim=1)    # [b,hq,n,d]
