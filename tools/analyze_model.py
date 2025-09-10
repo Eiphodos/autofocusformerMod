@@ -210,7 +210,7 @@ def do_fps(cfg):
         start_time = time.perf_counter()
 
         with torch.no_grad():
-            model(return_loss=False, rescale=True, **data)
+            model(data)
 
         torch.cuda.synchronize()
         elapsed = time.perf_counter() - start_time
