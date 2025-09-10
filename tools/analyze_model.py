@@ -3,6 +3,7 @@
 # Modified by Bowen Cheng from https://github.com/facebookresearch/detectron2/blob/main/tools/analyze_model.py
 
 import torch
+import time
 import logging
 import numpy as np
 from collections import Counter
@@ -178,6 +179,53 @@ def do_structure(cfg):
         model = instantiate(cfg.model)
     logger.info("Model Structure:\n" + str(model))
 
+def do_fps(cfg):
+    if isinstance(cfg, CfgNode):
+        if args.use_fixed_input_size:
+            mapper = MaskFormerSemanticDatasetMapper(cfg, True)
+            data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0], mapper=mapper)
+        else:
+            data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0])
+        model = build_model(cfg)
+        DetectionCheckpointer(model).load(cfg.MODEL.WEIGHTS)
+    else:
+        data_loader = instantiate(cfg.dataloader.test)
+        model = instantiate(cfg.model)
+        model.to(cfg.train.device)
+        DetectionCheckpointer(model).load(cfg.train.init_checkpoint)
+    model.eval()
+
+    # the first several iterations may be very slow so skip them
+
+
+    num_warmup = 5
+    pure_inf_time = 0
+    total_iters = 200
+
+    # benchmark with 200 image and take the average
+    for i, data in enumerate(data_loader):
+
+        torch.cuda.synchronize()
+        start_time = time.perf_counter()
+
+        with torch.no_grad():
+            model(return_loss=False, rescale=True, **data)
+
+        torch.cuda.synchronize()
+        elapsed = time.perf_counter() - start_time
+
+        if i >= num_warmup:
+            pure_inf_time += elapsed
+            if (i + 1) % args.log_interval == 0:
+                fps = (i + 1 - num_warmup) / pure_inf_time
+                print(f'Done image [{i + 1:<3}/ {total_iters}], '
+                      f'fps: {fps:.2f} img / s')
+
+        if (i + 1) == total_iters:
+            fps = (i + 1 - num_warmup) / pure_inf_time
+            print(f'Overall fps: {fps:.2f} img / s')
+            break
+
 
 if __name__ == "__main__":
     parser = default_argument_parser(
@@ -195,7 +243,7 @@ $ ./analyze_model.py --num-inputs 100 --tasks flop \\
     )
     parser.add_argument(
         "--tasks",
-        choices=["flop", "activation", "parameter", "structure", "memory"],
+        choices=["flop", "activation", "parameter", "structure", "memory", "fps"],
         required=True,
         nargs="+",
     )
@@ -224,4 +272,5 @@ $ ./analyze_model.py --num-inputs 100 --tasks flop \\
             "activation": do_activation,
             "parameter": do_parameter,
             "structure": do_structure,
+            "fps": do_fps,
         }[task](cfg)
