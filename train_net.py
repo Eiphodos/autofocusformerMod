@@ -287,7 +287,6 @@ class Trainer(DefaultTrainer):
                 if (
                     "relative_position_bias_table" in module_param_name
                     or "absolute_pos_embed" in module_param_name
-                    or module_param_name in ("gamma1", "gamma2")
                 ):
                     hyperparams["weight_decay"] = 0.0
                 if isinstance(module, norm_module_types):
