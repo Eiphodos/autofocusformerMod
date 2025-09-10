@@ -6,21 +6,20 @@ MODEL:
   MR:
     NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResNeighbour", "MixResViT" ]
     EMBED_DIM: [512,256,128,64,128,256,512]
-    DEPTHS: [2,2,2,4,6,24,3]
-    NUM_HEADS: [16,8,4,2,4,8,16]
+    DEPTHS: [1, 1, 1, 4, 4, 16, 4]
+    NUM_HEADS: [ 16, 8, 4, 2, 4, 8, 16 ]
     PATCH_SIZES: [32, 16, 8, 4, 8, 16, 32]
     DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     DROP_PATH_RATE: 0.3
     ATTN_DROP_RATE: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     UPSCALE_RATIO: [0.0, 0.7, 0.7, 0.6, 0.0, 0.0, 0.0]
     SPLIT_RATIO: [4, 4, 4, 4, 4, 4, 4]
-    MLP_RATIO: [4., 4., 4., 4., 4., 4., 4.]
+    MLP_RATIO: [3., 3., 3., 3., 3., 3., 3.]
     CLUSTER_SIZE: [8, 8, 8, 8, 8, 8, 8]
     NBHD_SIZE: [48,48,48,48,48,48,48]
     OUT_FEATURES: ["res2", "res3", "res4", "res5"]
     KEEP_OLD_SCALE: True
     ADD_IMAGE_DATA_TO_ALL: False
-    LAYER_SCALE: 1e-5
   WEIGHTS: "aff_mini.pkl"
   PIXEL_MEAN: [123.675, 116.280, 103.530]
   PIXEL_STD: [58.395, 57.120, 57.375]
@@ -45,7 +44,7 @@ MODEL:
 SOLVER:
   IMS_PER_BATCH: 32
   BASE_LR: 0.0002
-  MAX_ITER: 40000
+  MAX_ITER: 80000
   WARMUP_ITERS: 2500
   CHECKPOINT_PERIOD: 2500
 TEST:
