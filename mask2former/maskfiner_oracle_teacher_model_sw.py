@@ -54,7 +54,9 @@ class MaskFinerOracleTeacherBB(nn.Module):
         semantic_on: bool,
         panoptic_on: bool,
         instance_on: bool,
-        test_topk_per_image: int
+        test_topk_per_image: int,
+        test_sw_stride: Tuple[int],
+        test_sw_crop_size: Tuple[int]
     ):
         """
         Args:
@@ -101,6 +103,9 @@ class MaskFinerOracleTeacherBB(nn.Module):
         self.instance_on = instance_on
         self.panoptic_on = panoptic_on
         self.test_topk_per_image = test_topk_per_image
+        self.test_sw_stride = test_sw_stride
+        self.test_sw_crop_size = test_sw_crop_size
+        self.n_classes = self.sem_seg_head.num_classes
 
         if not self.semantic_on:
             assert self.sem_seg_postprocess_before_inference
@@ -184,7 +189,9 @@ class MaskFinerOracleTeacherBB(nn.Module):
             "semantic_on": cfg.MODEL.MASK_FINER.TEST.SEMANTIC_ON,
             "instance_on": cfg.MODEL.MASK_FINER.TEST.INSTANCE_ON,
             "panoptic_on": cfg.MODEL.MASK_FINER.TEST.PANOPTIC_ON,
-            "test_topk_per_image": cfg.TEST.DETECTIONS_PER_IMAGE
+            "test_topk_per_image": cfg.TEST.DETECTIONS_PER_IMAGE,
+            "test_sw_stride": cfg.TEST.SW_STRIDE,
+            "test_sw_crop_size": cfg.TEST.SW_CROP_SIZE,
         }
 
     @property
@@ -202,11 +209,13 @@ class MaskFinerOracleTeacherBB(nn.Module):
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
 
+        print("Image shape in eval is {}".format(images.tensor.shape))
+
         sem_seg_gt = None
         target_pad = None
 
         h_stride, w_stride = self.test_sw_stride
-        h_crop, w_crop = self.test_crop
+        h_crop, w_crop = self.test_sw_crop_size
         h_img, w_img = (images.tensor.shape[-2], images.tensor.shape[-1])
         batch_size = len(images)
         out_channels = self.n_classes
@@ -215,6 +224,8 @@ class MaskFinerOracleTeacherBB(nn.Module):
         preds = images.tensor.new_zeros((batch_size, out_channels, h_img, w_img))
         count_mat = images.tensor.new_zeros((batch_size, 1, h_img, w_img))
         processed_results = []
+
+        print("Output prediction shape in eval is {}".format(preds.shape))
 
         for h_idx in range(h_grids):
             for w_idx in range(w_grids):
@@ -226,6 +237,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
                 x1 = max(x2 - w_crop, 0)
 
                 crop_img = images.tensor[:, :, y1:y2, x1:x2]
+                print("Crop shape in eval is {}".format(crop_img.shape))
 
                 features = self.backbone(crop_img, sem_seg_gt, target_pad)
                 outputs = self.sem_seg_head(features)
@@ -233,6 +245,8 @@ class MaskFinerOracleTeacherBB(nn.Module):
 
                 mask_cls_results = outputs["pred_logits"]
                 mask_pred_results = outputs["pred_masks"]
+
+                print("Mask pred shape in eval before interpolation is {}".format(mask_pred_results.shape))
                 # upsample masks
                 mask_pred_results = F.interpolate(
                     mask_pred_results,
@@ -240,7 +254,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
                     mode="bilinear",
                     align_corners=False,
                 )
-
+                print("Mask pred shape in eval after interpolation is {}".format(mask_pred_results.shape))
 
                 i = 0
                 for mask_cls_result, mask_pred_result, input_per_image, image_size in zip(
@@ -260,20 +274,22 @@ class MaskFinerOracleTeacherBB(nn.Module):
                     if not self.sem_seg_postprocess_before_inference:
                         r = retry_if_cuda_oom(sem_seg_postprocess)(r, image_size, height, width)
 
-                    preds += F.pad(r, (int(x1), int(preds.shape[3] - x2), int(y1), int(preds.shape[2] - y2)))
+                    preds[i, :, :, :] += F.pad(r, (int(x1), int(preds.shape[3] - x2), int(y1), int(preds.shape[2] - y2)))
                     count_mat[i, :, y1:y2, x1:x2] += 1
                     i += 1
 
                 del outputs
         assert (count_mat == 0).sum() == 0
-        seg_logits = preds / count_mat
-        processed_results
+        seg_probs = preds / count_mat
+        processed_results[-1]["sem_seg"] = seg_probs
         return processed_results
 
     def forward_train(self, batched_inputs):
         images = [x["image"].to(self.device) for x in batched_inputs]
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
+
+        print("Image shape in train is {}".format(images.tensor.shape))
 
         if self.panoptic_on:
             key = "instances"

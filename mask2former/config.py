@@ -252,3 +252,6 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MR.NUM_REGISTER_TOKENS = 0
     cfg.MODEL.MR.DYNAMIC_UPSAMPLING_RATIOS = False
     cfg.MODEL.MR.DYNAMIC_UPSAMPLING_THRESHOLD = [0.0, 0.0075, 0.015, 0.03, 0.0, 0.0, 0.0]
+
+    cfg.TEST.SW_STRIDE = [768, 768]
+    cfg.TEST.SW_CROP_SIZE = [1024, 1024]
