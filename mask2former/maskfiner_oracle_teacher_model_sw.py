@@ -30,7 +30,7 @@ from .modeling.meta_arch.build import build_mask_predictor_indexed
 
 
 @META_ARCH_REGISTRY.register()
-class MaskFinerOracleTeacherBB(nn.Module):
+class MaskFinerOracleTeacherSW(nn.Module):
     """
     Main class for mask classification semantic segmentation architectures.
     """
