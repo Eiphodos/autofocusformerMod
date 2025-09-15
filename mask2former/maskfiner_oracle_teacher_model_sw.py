@@ -271,7 +271,7 @@ class MaskFinerOracleTeacherSW(nn.Module):
         seg_probs = preds / count_mat
         for b in range(seg_probs.shape[0]):
             processed_results.append({})
-            processed_results[-1]["sem_seg"] = seg_probs
+            processed_results[-1]["sem_seg"] = seg_probs[b]
         return processed_results
 
     def forward_train(self, batched_inputs):
