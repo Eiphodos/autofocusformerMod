@@ -28,6 +28,7 @@ def add_maskformer2_config(cfg):
     cfg.SOLVER.BACKBONE_MULTIPLIER = 0.1
     cfg.SOLVER.BETAS = (0.9, 0.999)
     cfg.SOLVER.EPSILON = 1e-8
+    cfg.SOLVER.CHECKPOINT_PERIOD = 2500
 
     # mask_former model config
     cfg.MODEL.MASK_FORMER = CN()
