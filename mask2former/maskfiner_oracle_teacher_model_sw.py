@@ -209,7 +209,7 @@ class MaskFinerOracleTeacherSW(nn.Module):
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
 
-        print("Image shape in eval is {}".format(images.tensor.shape))
+        #print("Image shape in eval is {}".format(images.tensor.shape))
 
         sem_seg_gt = None
         target_pad = None
@@ -225,7 +225,7 @@ class MaskFinerOracleTeacherSW(nn.Module):
         count_mat = images.tensor.new_zeros((batch_size, 1, h_img, w_img))
         processed_results = []
 
-        print("Output prediction shape in eval is {}".format(preds.shape))
+        #print("Output prediction shape in eval is {}".format(preds.shape))
 
         for h_idx in range(h_grids):
             for w_idx in range(w_grids):
@@ -237,7 +237,7 @@ class MaskFinerOracleTeacherSW(nn.Module):
                 x1 = max(x2 - w_crop, 0)
 
                 crop_img = images.tensor[:, :, y1:y2, x1:x2]
-                print("Crop shape in eval is {}".format(crop_img.shape))
+                #print("Crop shape in eval is {}".format(crop_img.shape))
 
                 features = self.backbone(crop_img, sem_seg_gt, target_pad)
                 outputs = self.sem_seg_head(features)
@@ -246,7 +246,7 @@ class MaskFinerOracleTeacherSW(nn.Module):
                 mask_cls_results = outputs["pred_logits"]
                 mask_pred_results = outputs["pred_masks"]
 
-                print("Mask pred shape in eval before interpolation is {}".format(mask_pred_results.shape))
+                #print("Mask pred shape in eval before interpolation is {}".format(mask_pred_results.shape))
                 # upsample masks
                 mask_pred_results = F.interpolate(
                     mask_pred_results,
@@ -254,7 +254,7 @@ class MaskFinerOracleTeacherSW(nn.Module):
                     mode="bilinear",
                     align_corners=False,
                 )
-                print("Mask pred shape in eval after interpolation is {}".format(mask_pred_results.shape))
+                #print("Mask pred shape in eval after interpolation is {}".format(mask_pred_results.shape))
 
                 i = 0
                 for mask_cls_result, mask_pred_result, input_per_image, image_size in zip(
@@ -279,7 +279,7 @@ class MaskFinerOracleTeacherSW(nn.Module):
         images = [(x - self.pixel_mean) / self.pixel_std for x in images]
         images = ImageList.from_tensors(images, self.size_divisibility)
 
-        print("Image shape in train is {}".format(images.tensor.shape))
+        #print("Image shape in train is {}".format(images.tensor.shape))
 
         if self.panoptic_on:
             key = "instances"
