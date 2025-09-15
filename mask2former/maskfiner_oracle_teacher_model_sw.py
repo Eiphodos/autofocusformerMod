@@ -260,19 +260,7 @@ class MaskFinerOracleTeacherSW(nn.Module):
                 for mask_cls_result, mask_pred_result, input_per_image, image_size in zip(
                     mask_cls_results, mask_pred_results, batched_inputs, images.image_sizes
                 ):
-                    height = input_per_image.get("height", image_size[0])
-                    width = input_per_image.get("width", image_size[1])
-                    processed_results.append({})
-
-                    if self.sem_seg_postprocess_before_inference:
-                        mask_pred_result = retry_if_cuda_oom(sem_seg_postprocess)(
-                            mask_pred_result, image_size, height, width
-                        )
-                        mask_cls_result = mask_cls_result.to(mask_pred_result)
-
                     r = retry_if_cuda_oom(self.semantic_inference)(mask_cls_result, mask_pred_result)
-                    if not self.sem_seg_postprocess_before_inference:
-                        r = retry_if_cuda_oom(sem_seg_postprocess)(r, image_size, height, width)
 
                     preds[i, :, :, :] += F.pad(r, (int(x1), int(preds.shape[3] - x2), int(y1), int(preds.shape[2] - y2)))
                     count_mat[i, :, y1:y2, x1:x2] += 1
@@ -281,7 +269,9 @@ class MaskFinerOracleTeacherSW(nn.Module):
                 del outputs
         assert (count_mat == 0).sum() == 0
         seg_probs = preds / count_mat
-        processed_results[-1]["sem_seg"] = seg_probs
+        for b in range(seg_probs.shape[0]):
+            processed_results.append({})
+            processed_results[-1]["sem_seg"] = seg_probs
         return processed_results
 
     def forward_train(self, batched_inputs):
