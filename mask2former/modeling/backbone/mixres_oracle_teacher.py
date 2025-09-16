@@ -32,6 +32,44 @@ class MLP(nn.Module):
         return x
 
 
+class MLPBlock(nn.Module):
+    def __init__(self, in_dim, out_dim, final=False):
+        super().__init__()
+        self.linear = nn.Linear(in_dim, out_dim)
+        if not final:
+            self.norm = nn.LayerNorm(out_dim)
+        self.final = final
+
+    def forward(self, x):
+        x = self.linear(x)
+        if not self.final:
+            x = nn.functional.gelu(x)
+            x = self.norm(x)
+        return x
+
+
+class MLPDeepNorm(nn.Module):
+
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers):
+        super().__init__()
+        self.num_layers = num_layers
+        h = [hidden_dim] * (num_layers - 1)
+        layers = []
+        i = 1
+        final = False
+        for n, k in zip([input_dim] + h, h + [output_dim]):
+            if i == num_layers:
+                final = True
+            layers.append(MLPBlock(n, k, final))
+            i += 1
+        self.layers = nn.ModuleList(layers)
+
+    def forward(self, x):
+        for i, layer in enumerate(self.layers):
+            x = layer(x)
+        return x
+
+
 class MROTB(nn.Module):
     def __init__(self, backbones, backbone_dims, out_dim, oracle_teacher_ratio, all_out_features, n_scales):
         super().__init__()
@@ -45,7 +83,7 @@ class MROTB(nn.Module):
 
         upsamplers = []
         for i in range(self.n_scales - 1):
-            upsample_out = MLP(backbone_dims[i], backbone_dims[i], 1, num_layers=3)
+            upsample_out = MLPDeepNorm(backbone_dims[i], backbone_dims[i], 1, num_layers=3)
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
 
@@ -55,24 +93,6 @@ class MROTB(nn.Module):
             norm_out = nn.LayerNorm(norm_dim)
             out_norms.append(norm_out)
         self.out_norms = nn.ModuleList(out_norms)
-        '''
-        feat_projs = []
-        feat_norms = []
-        for i in range(len(self.backbones)):
-            scale_projs = []
-            scale_norms = []
-            for j in range(len(self.backbones[i]._out_features) - 1):
-                f_proj = nn.Linear(backbone_dims[i], backbone_dims[j])
-                f_norm = nn.LayerNorm(backbone_dims[j])
-                scale_projs.append(f_proj)
-                scale_norms.append(f_norm)
-            scale_projs = nn.ModuleList(scale_projs)
-            scale_norms = nn.ModuleList(scale_norms)
-            feat_projs.append(scale_projs)
-            feat_norms.append(scale_norms)
-        self.feat_proj = nn.ModuleList(feat_projs)
-        self.feat_norm = nn.ModuleList(feat_norms)
-        '''
 
         self.apply(self._init_weights)
 
