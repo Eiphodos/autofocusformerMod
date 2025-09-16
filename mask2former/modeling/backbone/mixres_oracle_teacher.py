@@ -71,7 +71,7 @@ class MLPDeepNorm(nn.Module):
 
 
 class MROTB(nn.Module):
-    def __init__(self, backbones, backbone_dims, out_dim, oracle_teacher_ratio, all_out_features, n_scales):
+    def __init__(self, backbones, backbone_dims, out_dim, oracle_teacher_ratio, all_out_features, n_scales, dynamic_up_ratios):
         super().__init__()
         self.backbones = nn.ModuleList(backbones)
         self.out_dim = out_dim
@@ -80,6 +80,7 @@ class MROTB(nn.Module):
         self.all_out_features = all_out_features
         self.all_out_features_scales = {k: len(all_out_features) - i - 1 for i, k in enumerate(all_out_features)}
         self.n_scales = n_scales
+        self.dynamic_up_ratios = dynamic_up_ratios
 
         upsamplers = []
         for i in range(self.n_scales - 1):
@@ -106,6 +107,8 @@ class MROTB(nn.Module):
         elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
+        elif isinstance(m, nn.Parameter):
+            nn.init.trunc_normal_(m, std=0.02)
 
 
     def forward(self, im, sem_seg_gt, target_pad):
@@ -199,7 +202,8 @@ class OracleTeacherBackbone(MROTB, Backbone):
             out_dim=out_dim,
             oracle_teacher_ratio=cfg.MODEL.MASK_FINER.ORACLE_TEACHER_RATIO,
             all_out_features=cfg.MODEL.MR.OUT_FEATURES,
-            n_scales=n_scales
+            n_scales=n_scales,
+            dynamic_up_ratios=cfg.MODEL.MR.DYNAMIC_UPSAMPLING_RATIOS
         )
 
         self._out_features = cfg.MODEL.MR.OUT_FEATURES
@@ -238,6 +242,8 @@ class OracleTeacherBackbone(MROTB, Backbone):
 
 
     def generate_initial_oracle_upsampling_mask_edge(self, targets, targets_pad):
+        if targets is None:
+            return None
         patch_size = self.backbones[0].patch_size
         disagreement_map = []
         for batch in range(len(targets)):
@@ -249,12 +255,18 @@ class OracleTeacherBackbone(MROTB, Backbone):
             disagreement = self.count_edges_per_patch_masked(edge_mask, patch_size=patch_size)
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
+        if self.dynamic_up_ratios:
+            disagreement_map = disagreement_map / patch_size ** 2
+        else:
+            disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
+        #disagreement_map = disagreement_map / (disagreement_map.max() + 1e-6)
         #print("Initial disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map
 
 
     def generate_subsequent_oracle_upsampling_mask_edge(self, targets, pos, level, targets_pad):
+        if targets is None:
+            return None
         B,N,C = pos.shape
         patch_size = self.backbones[level].patch_size
         initial_patch_size = self.backbones[0].patch_size
@@ -289,8 +301,11 @@ class OracleTeacherBackbone(MROTB, Backbone):
             #print("disagreement is shape {} and has nan: {}".format(disagreement.shape, (disagreement.isnan()).any()))
             disagreement_map.append(disagreement)
         disagreement_map = torch.stack(disagreement_map).float()
-        disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
-
+        if self.dynamic_up_ratios:
+            disagreement_map = disagreement_map / patch_size ** 2
+        else:
+            disagreement_map = (disagreement_map - disagreement_map.mean(dim=1, keepdim=True)) / (disagreement_map.var(dim=1, keepdim=True) + 1e-6).sqrt()
+        #disagreement_map = disagreement_map / (disagreement_map.max() + 1e-6)
         #print("Subsequent disagreement map shape: {}".format(disagreement_map_tensor.shape))
         return disagreement_map
 
