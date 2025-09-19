@@ -204,18 +204,20 @@ class CNVNXT2(nn.Module):
 
         if self.first_layer:
             x = self.stem(im)
-            x = x.flatten(2).transpose(1, 2)
             pos = get_2dpos_of_curr_ps_in_min_ps(H, W, self.patch_size, self.min_patch_size, scale).to('cuda')
             pos = pos.repeat(B, 1, 1)
-            pos_embed = self.pe_layer(pos[:, :, 1:])
-            x = x + pos_embed
 
         else:
             features = self.token_norm(features)
             x = self.token_projection(features)
             pos = features_pos
+            x = x.transpose(1,2).view(B, -1, patched_im_size[0], patched_im_size[1])
 
         x = self.stage(x)
+        x = x.flatten(2).transpose(1, 2)
+        if self.first_layer:
+            pos_embed = self.pe_layer(pos[:, :, 1:])
+            x = x + pos_embed
         x = self.norm(x)
 
         outs = {}
