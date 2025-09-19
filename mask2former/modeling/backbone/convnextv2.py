@@ -153,7 +153,7 @@ class CNVNXT2(nn.Module):
 
     def __init__(self, in_chans=3, patch_sizes=[32],
                  depth=2, dim=512, scale=0, min_patch_size=4,
-                 n_scales=4, upscale_ratio=0.5
+                 n_scales=4, upscale_ratio=0.5, first_layer=True,
                  ):
         super().__init__()
         self.depths = depth
@@ -164,13 +164,25 @@ class CNVNXT2(nn.Module):
         self.n_scales = n_scales
         self.upscale_ratio = upscale_ratio
         self.pe_layer = PositionEmbeddingSine(dim // 2, normalize=True)
+        self.first_layer = first_layer
         '''
         self.stem = nn.Sequential(
             nn.Conv2d(in_chans, dim, kernel_size=self.patch_size, stride=self.patch_size),
             LayerNorm(dim, eps=1e-6, data_format="channels_first")
         )  
         '''
-        self.stem = OverlapPatchEmbedding(self.patch_size, dim, in_chans)
+        if self.first_layer:
+            # Pos Embs
+            self.pe_layer = PositionEmbeddingSine(dim // 2, normalize=True)
+            self.stem = OverlapPatchEmbedding(self.patch_size, dim, in_chans)
+        else:
+            self.token_norm = nn.LayerNorm(in_chans)
+            if in_chans != dim:
+                self.token_projection = nn.Linear(in_chans, dim)
+                #self.token_projection = Mlp(in_features=channels, out_features=d_model, hidden_features=channels)
+            else:
+                self.token_projection = nn.Identity()
+
 
         self.stage = nn.Sequential(
             *[Block(dim=dim, drop_path=0.0) for j in range(depth)]
@@ -185,19 +197,25 @@ class CNVNXT2(nn.Module):
             trunc_normal_(m.weight, std=.02)
             nn.init.constant_(m.bias, 0)
 
-    def forward_features(self, x, scale, features, features_pos, upsampling_mask):
-        B, _, H, W = x.shape
+    def forward_features(self, im, scale, features, features_pos, upsampling_mask):
+        B, _, H, W = im.shape
         patched_im_size = (H // self.patch_size, W // self.patch_size)
         min_patched_im_size = (H // self.min_patch_size, W // self.min_patch_size)
 
-        x = self.stem(x)
-        x = self.stage(x)
+        if self.first_layer:
+            x = self.stem(im)
+            x = x.flatten(2).transpose(1, 2)
+            pos = get_2dpos_of_curr_ps_in_min_ps(H, W, self.patch_size, self.min_patch_size, scale).to('cuda')
+            pos = pos.repeat(B, 1, 1)
+            pos_embed = self.pe_layer(pos[:, :, 1:])
+            x = x + pos_embed
 
-        x = x.flatten(2).transpose(1, 2)
-        pos = get_2dpos_of_curr_ps_in_min_ps(H, W, self.patch_size, self.min_patch_size, scale).to('cuda')
-        pos = pos.repeat(B, 1, 1)
-        pos_embed = self.pe_layer(pos[:, :, 1:])
-        x = x + pos_embed
+        else:
+            features = self.token_norm(features)
+            x = self.token_projection(features)
+            pos = features_pos
+
+        x = self.stage(x)
         x = self.norm(x)
 
         outs = {}
@@ -218,19 +236,27 @@ class CNVNXT2(nn.Module):
 @BACKBONE_REGISTRY.register()
 class ConvNeXtV2(CNVNXT2, Backbone):
     def __init__(self, cfg, layer_index):
-        in_chans = 3
+        if layer_index == 0:
+            in_chans = 3
+            first_layer = True
+        else:
+            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1]
+            first_layer = False
         n_scales = cfg.MODEL.MASK_FINER.NUM_RESOLUTION_SCALES
-        min_patch_size = cfg.MODEL.MR.PATCH_SIZES[-1]
+        min_patch_size = cfg.MODEL.MR.PATCH_SIZES[n_scales - 1]
+        n_layers = len(cfg.MODEL.MR.EMBED_DIM)
+        if layer_index >= n_scales:
+            scale = n_layers - layer_index - 1
+            patch_sizes = cfg.MODEL.MR.PATCH_SIZES[layer_index:]
+            down = True
+            in_chans = cfg.MODEL.MR.EMBED_DIM[layer_index - 1] + cfg.MODEL.MR.EMBED_DIM[n_layers - layer_index - 1]
+        else:
+            scale = layer_index
+            patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
+            down = False
 
-        #patch_size = cfg.MODEL.MR.PATCH_SIZES[layer_index]
-        patch_sizes = cfg.MODEL.MR.PATCH_SIZES[:layer_index + 1]
         embed_dim = cfg.MODEL.MR.EMBED_DIM[layer_index]
         depths = cfg.MODEL.MR.DEPTHS[layer_index]
-        mlp_ratio = cfg.MODEL.MR.MLP_RATIO[layer_index]
-        num_heads = cfg.MODEL.MR.NUM_HEADS[layer_index]
-        drop_rate = cfg.MODEL.MR.DROP_RATE[layer_index]
-        drop_path_rate = cfg.MODEL.MR.DROP_PATH_RATE[layer_index]
-        split_ratio = cfg.MODEL.MR.SPLIT_RATIO[layer_index]
         upscale_ratio = cfg.MODEL.MR.UPSCALE_RATIO[layer_index]
 
         super().__init__(
@@ -238,20 +264,30 @@ class ConvNeXtV2(CNVNXT2, Backbone):
             patch_sizes=patch_sizes,
             depth=depths,
             dim=embed_dim,
-            scale=layer_index,
+            scale=scale,
             min_patch_size=min_patch_size,
             n_scales=n_scales,
-            upscale_ratio=upscale_ratio
+            upscale_ratio=upscale_ratio,
+            first_layer=first_layer,
         )
 
-        self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
-        out_index = (n_scales - 1) + 2
-        self._out_feature_strides = {"res{}".format(out_index): cfg.MODEL.MR.PATCH_SIZES[layer_index]}
-        # self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in range(num_scales)}
-        # print("backbone strides: {}".format(self._out_feature_strides))
-        # self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
-        self._out_feature_channels = {"res{}".format(out_index): embed_dim}
-        # print("backbone channels: {}".format(self._out_feature_channels))
+        if down:
+            self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(n_layers - layer_index):]
+            self._in_features_channels = in_chans
+            self._out_feature_strides = {"res{}".format(n_scales + 1 - i): cfg.MODEL.MR.PATCH_SIZES[i] for i in
+                                         range(n_layers - layer_index)}
+            self._out_feature_channels = {"res{}".format(n_scales + 1 - i): embed_dim for i in
+                                          range(n_layers - layer_index)}
+        else:
+            self._out_features = cfg.MODEL.MR.OUT_FEATURES[-(layer_index+1):]
+            out_index = (n_scales - 1) + 2
+            self._out_feature_strides = {"res{}".format(out_index): cfg.MODEL.MR.PATCH_SIZES[layer_index]}
+            # self._out_feature_strides = {"res{}".format(i + 2): cfg.MODEL.MRML.PATCH_SIZES[-1] for i in range(num_scales)}
+            # print("backbone strides: {}".format(self._out_feature_strides))
+            # self._out_feature_channels = { "res{}".format(i+2): list(reversed(self.num_features))[i] for i in range(num_scales)}
+            self._out_feature_channels = {"res{}".format(out_index): embed_dim}
+            # print("backbone channels: {}".format(self._out_feature_channels))
+            self._in_features_channels = in_chans
 
     def forward(self, x, scale, features, features_pos, upsampling_mask):
         """
