@@ -508,7 +508,7 @@ class MaskFinerOracleTeacherBB(nn.Module):
 
         x_pos = pos_at_org_scale[...,0].long()
         y_pos = pos_at_org_scale[...,1].long()
-        disagreement_map[y_pos, x_pos] = 255 #dis_mask_at_scale
+        disagreement_map[y_pos, x_pos] = 200 #dis_mask_at_scale
         return disagreement_map
 
 

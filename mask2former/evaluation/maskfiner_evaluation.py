@@ -82,7 +82,7 @@ class MaskFinerSemSegEvaluator(SemSegEvaluator):
         for k, v in disagreement_masks_only_dict.items():
             ml_out = outp[k]
             scale = k[-1]
-            plt.imsave(os.path.join(inference_out_dir, fn + '_' + k + '.png'), np.asarray(ml_out), cmap='afmhot')
+            plt.imsave(os.path.join(inference_out_dir, f"{fn}_{k}.png"), np.asarray(ml_out), cmap='gray', vmin=0, vmax=255)
 
 
     def save_input_image(self, image_tensor, fp):
@@ -210,7 +210,7 @@ class MaskFinerCOCOSemSegEvaluator(SemSegEvaluator):
         for k, v in disagreement_masks_only_dict.items():
             ml_out = outp[k]
             scale = k[-1]
-            plt.imsave(os.path.join(inference_out_dir, fn + '_' + k + '.png'), np.asarray(ml_out), cmap='afmhot')
+            plt.imsave(os.path.join(inference_out_dir, f"{fn}_{k}.png"), np.asarray(ml_out), cmap='gray', vmin=0, vmax=255)
 
 
     def save_input_image(self, image_tensor, fp):
