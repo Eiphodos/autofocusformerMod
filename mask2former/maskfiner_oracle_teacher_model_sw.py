@@ -219,8 +219,9 @@ class MaskFinerOracleTeacherSW(nn.Module):
         h_crop, w_crop = self.test_sw_crop_size
 
         if h_crop > h_img or w_crop > w_img:
-            h_stride, w_stride = 0, 0
-            h_crop, w_crop = h_img, w_img
+            sw_size = min(h_img, w_img)
+            h_stride, w_stride = sw_size, sw_size
+            h_crop, w_crop = sw_size, sw_size
 
         batch_size = len(images)
         out_channels = self.n_classes
