@@ -282,7 +282,7 @@ class MaskFinerOracleTeacherSW(nn.Module):
             image_size = images.image_sizes[b]
             final_height = batched_inputs[b].get("height", image_size[0])
             final_width = batched_inputs[b].get("width", image_size[1])
-            print("Final height: {}, width: {} and image_size: {]".format(final_height, final_width, image_size))
+            print("Final height: {}, width: {} and image_size: {}".format(final_height, final_width, image_size))
             processed_results[-1]["sem_seg"] = retry_if_cuda_oom(sem_seg_postprocess)(seg_probs[b], image_size, final_height, final_width)
             print("Final output shape: {}".format(processed_results[-1]["sem_seg"].shape))
         return processed_results
