@@ -223,6 +223,8 @@ class MaskFinerOracleTeacherSW(nn.Module):
             h_stride, w_stride = sw_size, sw_size
             h_crop, w_crop = sw_size, sw_size
 
+        print("Image size: {}, sw_crop_size: {},{}, sw_stride: {},{}".format(images.tensor.shape, h_crop, w_crop,
+                                                                             h_stride, w_stride))
         batch_size = len(images)
         out_channels = self.n_classes
         h_grids = max(h_img - h_crop + h_stride - 1, 0) // h_stride + 1
@@ -277,7 +279,12 @@ class MaskFinerOracleTeacherSW(nn.Module):
         seg_probs = preds / count_mat
         for b in range(seg_probs.shape[0]):
             processed_results.append({})
-            processed_results[-1]["sem_seg"] = seg_probs[b]
+            image_size = images.image_sizes[b]
+            final_height = batched_inputs[b].get("height", image_size[0])
+            final_width = batched_inputs[b].get("width", image_size[1])
+            print("Final height: {}, width: {} and image_size: {]".format(final_height, final_width, image_size))
+            processed_results[-1]["sem_seg"] = retry_if_cuda_oom(sem_seg_postprocess)(seg_probs[b], image_size, final_height, final_width)
+            print("Final output shape: {}".format(processed_results[-1]["sem_seg"].shape))
         return processed_results
 
     def forward_train(self, batched_inputs):
