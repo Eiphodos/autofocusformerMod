@@ -214,9 +214,14 @@ class MaskFinerOracleTeacherSW(nn.Module):
         sem_seg_gt = None
         target_pad = None
 
+        h_img, w_img = (images.tensor.shape[-2], images.tensor.shape[-1])
         h_stride, w_stride = self.test_sw_stride
         h_crop, w_crop = self.test_sw_crop_size
-        h_img, w_img = (images.tensor.shape[-2], images.tensor.shape[-1])
+
+        if h_crop > h_img or w_crop > w_img:
+            h_stride, w_stride = 0, 0
+            h_crop, w_crop = h_img, w_img
+
         batch_size = len(images)
         out_channels = self.n_classes
         h_grids = max(h_img - h_crop + h_stride - 1, 0) // h_stride + 1
