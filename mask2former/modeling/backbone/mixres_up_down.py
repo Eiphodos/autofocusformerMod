@@ -68,7 +68,7 @@ class MLP(nn.Module):
 
 
 class MRUD(nn.Module):
-    def __init__(self, backbones, backbone_dims, out_dim, all_out_features, n_scales, bb_in_feats, dynamic_up_ratios):
+    def __init__(self, backbones, backbone_dims, out_dim, all_out_features, n_scales, bb_in_feats, dynamic_up_ratios, oracle_ratio):
         super().__init__()
         self.backbones = nn.ModuleList(backbones)
         self.out_dim = out_dim
@@ -80,6 +80,7 @@ class MRUD(nn.Module):
         scales = list(range(self.n_scales))
         self.bb_scales = scales + scales[-2::-1]
         self.dynamic_up_ratios = dynamic_up_ratios
+        self.oracle_ratio = oracle_ratio
 
         upsamplers = []
         for i in range(self.n_scales - 1):
@@ -169,7 +170,13 @@ class MRUD(nn.Module):
                 outs['upsampling_mask_pred_{}'.format(scale)] = upsampling_mask_pred
                 outs['upsampling_mask_oracle_{}'.format(scale)] = upsampling_mask_oracle
                 outs['upsampling_mask_pos_{}'.format(scale)] = torch.cat([all_scale[0].unsqueeze(2), all_pos[0]], dim=2)
-                upsampling_mask = upsampling_mask_pred
+                if self.training and self.oracle_ratio > 0:
+                    if torch.rand(1).item() < self.oracle_ratio:
+                        upsampling_mask = upsampling_mask_oracle
+                    else:
+                        upsampling_mask = upsampling_mask_pred
+                else:
+                    upsampling_mask = upsampling_mask_pred
             else:
                 upsampling_mask = None
 
@@ -214,7 +221,8 @@ class UpDownBackbone(MRUD, Backbone):
             all_out_features=cfg.MODEL.MR.OUT_FEATURES,
             n_scales=n_scales,
             bb_in_feats=bb_in_feats,
-            dynamic_up_ratios=cfg.MODEL.MR.DYNAMIC_UPSAMPLING_RATIOS
+            dynamic_up_ratios=cfg.MODEL.MR.DYNAMIC_UPSAMPLING_RATIOS,
+            oracle_ratio=cfg.MODEL.MASK_FINER.ORACLE_TEACHER_RATIO
         )
 
         self._out_features = cfg.MODEL.MR.OUT_FEATURES
