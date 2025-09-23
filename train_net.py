@@ -93,6 +93,12 @@ class EmptyCudaCacheHook(HookBase):
         torch.cuda.empty_cache()
 
 
+class CUDAMemProfilerHook(HookBase):
+    def before_step(self):
+        torch.cuda.reset_peak_memory_stats()
+    def after_step(self):
+        torch.cuda.synchronize()
+
 class Trainer(DefaultTrainer):
     """
     Extension of the Trainer class adapted to MaskFormer.
@@ -398,6 +404,8 @@ def main(args):
     #trainer.register_hooks([nan_check_hook])
     #empty_cuda_hook = EmptyCudaCacheHook()
     #trainer.register_hooks([empty_cuda_hook])
+    cudamemstats_hook = CUDAMemProfilerHook()
+    trainer.register_hooks([cudamemstats_hook])
     torch.autograd.set_detect_anomaly(False)
     #if args.resume:
     trainer.resume_or_load(resume=args.resume)
