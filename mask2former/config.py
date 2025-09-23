@@ -103,6 +103,25 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.AFF.SHEPARD_POWER = 6.0
     cfg.MODEL.AFF.SHEPARD_POWER_LEARNABLE = True
 
+    # swin transformer backbone
+    cfg.MODEL.SWIN = CN()
+    cfg.MODEL.SWIN.PRETRAIN_IMG_SIZE = 224
+    cfg.MODEL.SWIN.PATCH_SIZE = 4
+    cfg.MODEL.SWIN.EMBED_DIM = 96
+    cfg.MODEL.SWIN.DEPTHS = [2, 2, 6, 2]
+    cfg.MODEL.SWIN.NUM_HEADS = [3, 6, 12, 24]
+    cfg.MODEL.SWIN.WINDOW_SIZE = 7
+    cfg.MODEL.SWIN.MLP_RATIO = 4.0
+    cfg.MODEL.SWIN.QKV_BIAS = True
+    cfg.MODEL.SWIN.QK_SCALE = None
+    cfg.MODEL.SWIN.DROP_RATE = 0.0
+    cfg.MODEL.SWIN.ATTN_DROP_RATE = 0.0
+    cfg.MODEL.SWIN.DROP_PATH_RATE = 0.3
+    cfg.MODEL.SWIN.APE = False
+    cfg.MODEL.SWIN.PATCH_NORM = True
+    cfg.MODEL.SWIN.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
+    cfg.MODEL.SWIN.USE_CHECKPOINT = False
+
 
     # metaloss backbone
     cfg.MODEL.MRML = CN()
@@ -247,12 +266,12 @@ def add_maskformer2_config(cfg):
     cfg.MODEL.MR.OUT_FEATURES = ["res2", "res3", "res4", "res5"]
     cfg.MODEL.MR.CLUSTER_SIZE = [8, 8, 8, 8]
     cfg.MODEL.MR.NBHD_SIZE = [48, 48, 48, 48]
-    cfg.MODEL.MR.KEEP_OLD_SCALE = False
+    cfg.MODEL.MR.KEEP_OLD_SCALE = True
     cfg.MODEL.MR.ADD_IMAGE_DATA_TO_ALL = False
     cfg.MODEL.MR.LAYER_SCALE = 0.0
     cfg.MODEL.MR.NUM_REGISTER_TOKENS = 0
-    cfg.MODEL.MR.DYNAMIC_UPSAMPLING_RATIOS = False
-    cfg.MODEL.MR.DYNAMIC_UPSAMPLING_THRESHOLD = [0.0, 0.0075, 0.015, 0.03, 0.0, 0.0, 0.0]
+    cfg.MODEL.MR.DYNAMIC_UPSAMPLING_RATIOS = True
+    cfg.MODEL.MR.DYNAMIC_UPSAMPLING_THRESHOLD = [0.0, 0.01, 0.02, 0.04, 0.0, 0.0, 0.0]
 
     cfg.TEST.SW_STRIDE = [768, 768]
     cfg.TEST.SW_CROP_SIZE = [1024, 1024]
