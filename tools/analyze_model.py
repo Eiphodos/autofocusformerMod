@@ -23,6 +23,7 @@ from detectron2.utils.analysis import (
 )
 from detectron2.utils.logger import setup_logger
 from detectron2.export import TracingAdapter
+from torch.profiler import profile, ProfilerActivity, record_function
 
 # fmt: off
 import os
@@ -80,6 +81,7 @@ def do_flop(cfg):
         #    import torch
         #    crop_size = cfg.INPUT.CROP.SIZE[0]
         #    data[0]["image"] = torch.zeros((3, crop_size, crop_size))
+        print("Image size is {}".format(data[0]["image"].shape))
         flops = FlopCountAnalysis(model, data)
         if idx > 0:
             flops.unsupported_ops_warnings(False).uncalled_modules_warnings(False)
@@ -163,6 +165,42 @@ def do_memory(cfg):
     logger.info(p.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
 
 
+def do_peak_memory(cfg):
+    if isinstance(cfg, CfgNode):
+        if args.use_fixed_input_size:
+            mapper = MaskFormerSemanticDatasetMapper(cfg, True)
+            data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0], mapper=mapper)
+        else:
+            data_loader = build_detection_test_loader(cfg, cfg.DATASETS.TEST[0])
+        model = build_model(cfg)
+        if args.load_weights:
+            DetectionCheckpointer(model).load(cfg.MODEL.WEIGHTS)
+    else:
+        data_loader = instantiate(cfg.dataloader.test)
+        model = instantiate(cfg.model)
+        model.to(cfg.train.device)
+        if args.load_weights:
+            DetectionCheckpointer(model).load(cfg.train.init_checkpoint)
+    model.eval()
+    print(model.device)
+    total_alloc = []
+    total_res = []
+    for i, data in enumerate(data_loader):
+        torch.cuda.reset_peak_memory_stats()
+        with torch.inference_mode():
+            with torch.autocast('cuda'):
+                model(data)
+        torch.cuda.synchronize()
+        peak_alloc = torch.cuda.max_memory_allocated()
+        peak_res = torch.cuda.memory_reserved()
+        #logger.info("Peak Memory: {:.1f}GB".format(peak_mem / (1024**3)))
+        total_alloc.append(peak_alloc)
+        total_res.append(peak_res)
+        if (i + 1) == args.num_inputs:
+            break
+    logger.info("Peak Allocated Memory: {:.1f}±{:.1f}GB".format(np.mean(total_alloc) / (1024**3), np.std(total_alloc) / (1024**3)))
+    logger.info("Peak Reserved Memory: {:.1f}±{:.1f}GB".format(np.mean(total_res) / (1024**3), np.std(total_res) / (1024**3)))
+
 
 def do_parameter(cfg):
     if isinstance(cfg, CfgNode):
@@ -180,6 +218,9 @@ def do_structure(cfg):
     logger.info("Model Structure:\n" + str(model))
 
 def do_fps(cfg):
+    torch.backends.cudnn.benchmark = True
+    #torch.backends.cuda.matmul.allow_tf32 = True
+    #torch.backends.cudnn.allow_tf32 = True
     if isinstance(cfg, CfgNode):
         if args.use_fixed_input_size:
             mapper = MaskFormerSemanticDatasetMapper(cfg, True)
@@ -194,25 +235,31 @@ def do_fps(cfg):
         model.to(cfg.train.device)
         DetectionCheckpointer(model).load(cfg.train.init_checkpoint)
     model.eval()
-
+    #model = model.to(memory_format=torch.channels_last).eval()
     # the first several iterations may be very slow so skip them
 
 
-    num_warmup = 5
+    num_warmup = 50
     pure_inf_time = 0
-    total_iters = 200
+    total_iters = 250
     log_interval = 25
-
+    device = "cuda"
+    sort_by_keyword = device + "_time_total"
     # benchmark with 200 image and take the average
     for i, data in enumerate(data_loader):
-
-        torch.cuda.synchronize()
+    #for i in range(total_iters):
+        #crop_size = cfg.INPUT.CROP.SIZE[0]
+        #data = [{"image": torch.zeros((3, crop_size, crop_size))}]
+        #torch.cuda.synchronize()
         start_time = time.perf_counter()
 
-        with torch.no_grad():
-            model(data)
-
-        torch.cuda.synchronize()
+        #with torch.inference_mode():
+        #        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True) as prof:
+        #            with record_function("model_inference"):
+        #with torch.autocast('cuda'):
+        model(data)
+        #print(prof.key_averages().table(sort_by=sort_by_keyword, row_limit=10))
+        #torch.cuda.synchronize()
         elapsed = time.perf_counter() - start_time
 
         if i >= num_warmup:
@@ -244,7 +291,7 @@ $ ./analyze_model.py --num-inputs 100 --tasks flop \\
     )
     parser.add_argument(
         "--tasks",
-        choices=["flop", "activation", "parameter", "structure", "memory", "fps"],
+        choices=["flop", "activation", "parameter", "structure", "memory", "pmemory", "fps"],
         required=True,
         nargs="+",
     )
@@ -261,6 +308,11 @@ $ ./analyze_model.py --num-inputs 100 --tasks flop \\
         action="store_true",
         help="use fixed input size when calculating flops",
     )
+    parser.add_argument(
+        "--load-weights",
+        action="store_true",
+        help="If trained weights should be loaded",
+    )
     args = parser.parse_args()
     assert not args.eval_only
     assert args.num_gpus == 1
@@ -274,4 +326,5 @@ $ ./analyze_model.py --num-inputs 100 --tasks flop \\
             "parameter": do_parameter,
             "structure": do_structure,
             "fps": do_fps,
+            "pmemory": do_peak_memory,
         }[task](cfg)

@@ -38,8 +38,8 @@ MODEL:
     NAME: "MaskFinerOTHead"
   MASK_FINER:
     TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoder5S"
-    DECODER_LEVELS: [1, 2, 3, 3, 3]
-    DEC_LAYERS: [3,3,4,10,10]
+    DECODER_LEVELS: [1, 2, 3, 3, 4]
+    DEC_LAYERS: [3,3,4,10,13]
     ENC_LAYERS: [0, 0, 0, 0, 0]
     DIM_FEEDFORWARD: [1024,1024,1024,2048,2048]
     HIDDEN_DIM: [256,256,256,256,256]

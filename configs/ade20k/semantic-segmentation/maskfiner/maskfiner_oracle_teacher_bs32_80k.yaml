@@ -5,34 +5,35 @@ MODEL:
     NAME: "MixRes"
   MR:
     NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour"]
-    EMBED_DIM: [512,256,128,64]
-    DEPTHS: [2, 2, 8, 12]
-    NUM_HEADS: [ 32, 16, 8, 4 ]
+    EMBED_DIM: [256,256,256,256]
+    DEPTHS: [4, 4, 6, 8]
+    NUM_HEADS: [ 16, 16, 16, 16 ]
     PATCH_SIZES: [32, 16, 8, 4]
     DROP_RATE: [0.0, 0.0, 0.0, 0.0]
     DROP_PATH_RATE: [0.0, 0.0, 0.0, 0.0]
     ATTN_DROP_RATE: [0.0, 0.0, 0.0, 0.0]
-    UPSCALE_RATIO: [0.5, 0.5, 0.5, 0.5]
+    UPSCALE_RATIO: [0.0, 0.6, 0.6, 0.6]
     SPLIT_RATIO: [4, 4, 4, 4]
-    MLP_RATIO: [2., 2., 2., 2.]
+    MLP_RATIO: [3., 3., 3., 3.]
     CLUSTER_SIZE: [8, 8, 8, 8]
     NBHD_SIZE: [48,48,48,48]
     OUT_FEATURES: ["res2", "res3", "res4", "res5"]
     KEEP_OLD_SCALE: True
+    ADD_IMAGE_DATA_TO_ALL: True
   WEIGHTS: "aff_mini.pkl"
   PIXEL_MEAN: [123.675, 116.280, 103.530]
   PIXEL_STD: [58.395, 57.120, 57.375]
   MR_SEM_SEG_HEAD:
-    PIXEL_DECODER_NAME: "MSDeformAttnPixelDecoderMaskFinerOracleTeacher"
+    PIXEL_DECODER_NAME: ["ProjMaskFinerOracleTeacher", "ProjMaskFinerOracleTeacher", "ProjMaskFinerOracleTeacher", "MSDeformAttnPixelDecoderMaskFinerOracleTeacher"]
     NAME: "MaskPredictorOracleTeacher"
-    CONVS_DIM: [512,256,128,128]
-    TRANSFORMER_ENC_LAYERS: [1, 2, 4, 6]
-    NHEADS: [16, 8, 8, 8]
+    CONVS_DIM: [256,256,256,256]
+    TRANSFORMER_ENC_LAYERS: [2, 2, 4, 6]
+    NHEADS: [8, 8, 8, 8]
   MASK_FINER:
     TRANSFORMER_DECODER_NAME: "MultiScaleMaskFinerTransformerDecoderOracleTeacher"
-    DECODER_LEVELS: [1, 2, 3, 4]
-    DEC_LAYERS: [3,3,4,9]
-    DIM_FEEDFORWARD: [1024,1024,1024,1024]
+    DECODER_LEVELS: [1, 2, 3, 3]
+    DEC_LAYERS: [3,3,4,10]
+    DIM_FEEDFORWARD: [1024,1024,1024,2048]
     HIDDEN_DIM: [256,256,256,256]
     MASK_DIM: [256,256,256,256]
     NHEADS: [8, 8, 8, 8]

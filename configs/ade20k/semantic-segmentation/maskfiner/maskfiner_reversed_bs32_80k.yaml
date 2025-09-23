@@ -4,9 +4,9 @@ MODEL:
     NAME: "MixRes"
   MR:
     NAME: ["MixResViT","MixResNeighbour", "MixResNeighbour", "MixResNeighbour"]
-    EMBED_DIM: [64,128,256,512]
-    DEPTHS: [2, 2, 2, 6]
-    NUM_HEADS: [ 4, 8, 16, 32 ]
+    EMBED_DIM: [256,256,256,256]
+    DEPTHS: [2, 2, 2, 8]
+    NUM_HEADS: [ 8, 8, 8, 8 ]
     PATCH_SIZES: [32, 16, 8, 4]
     DROP_RATE: [0.0, 0.0, 0.0, 0.0]
     DROP_PATH_RATE: [0.0, 0.0, 0.0, 0.0]
