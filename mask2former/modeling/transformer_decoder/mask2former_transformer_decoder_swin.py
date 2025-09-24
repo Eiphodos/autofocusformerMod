@@ -11,7 +11,7 @@ from detectron2.config import configurable
 from detectron2.layers import Conv2d
 from detectron2.utils.registry import Registry
 
-from .position_encoding import PositionEmbeddingSine
+from .position_encoding import PositionEmbeddingSineSwin
 
 from .build import TRANSFORMER_DECODER_REGISTRY
 
