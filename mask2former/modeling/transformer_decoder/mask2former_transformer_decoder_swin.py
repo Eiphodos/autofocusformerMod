@@ -274,7 +274,7 @@ class MultiScaleMaskedTransformerDecoderSwin(nn.Module):
 
         # positional encoding
         N_steps = hidden_dim // 2
-        self.pe_layer = PositionEmbeddingSine(N_steps, normalize=True)
+        self.pe_layer = PositionEmbeddingSineSwin(N_steps, normalize=True)
         
         # define Transformer decoder here
         self.num_heads = nheads

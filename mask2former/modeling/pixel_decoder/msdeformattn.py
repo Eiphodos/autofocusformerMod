@@ -239,7 +239,7 @@ class MSDeformAttnPixelDecoderSwin(nn.Module):
             num_feature_levels=self.transformer_num_feature_levels,
         )
         N_steps = conv_dim // 2
-        self.pe_layer = PositionEmbeddingSine(N_steps, normalize=True)
+        self.pe_layer = PositionEmbeddingSineSwin(N_steps, normalize=True)
 
         self.mask_dim = mask_dim
         # use 1x1 conv instead
