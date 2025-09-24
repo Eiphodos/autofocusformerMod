@@ -1,4 +1,4 @@
-_BASE_: ../maskformer2_swin_bs16_90k-SW.yaml
+_BASE_: ../maskformer2_swin_bs16_90k.yaml
 MODEL:
   BACKBONE:
     NAME: "D2SwinTransformer"
