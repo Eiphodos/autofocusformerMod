@@ -9,7 +9,7 @@ from detectron2.config import configurable
 from detectron2.layers import ShapeSpec
 from detectron2.modeling import SEM_SEG_HEADS_REGISTRY
 
-from ..transformer_decoder.build_maskformer_decoder import build_transformer_decoder
+from ..transformer_decoder.build import build_transformer_decoder
 from ..pixel_decoder.build import build_pixel_decoder
 
 

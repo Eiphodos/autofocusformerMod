@@ -14,7 +14,7 @@ from detectron2.config import configurable
 from .position_encoding import PositionEmbeddingSine
 from ..backbone.point_utils import upsample_feature_shepard
 
-from .build_maskfiner_decoder import TRANSFORMER_DECODER_REGISTRY
+from .build import TRANSFORMER_DECODER_REGISTRY
 
 
 def scale_pos(last_pos, last_ss, cur_ss, no_bias=False):

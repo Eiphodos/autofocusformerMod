@@ -12,7 +12,7 @@ from detectron2.layers import ShapeSpec
 from detectron2.modeling import SEM_SEG_HEADS_REGISTRY, build_backbone
 from detectron2.modeling.backbone import Backbone
 
-from ..transformer_decoder.build_maskfiner_decoder import build_transformer_decoder
+from ..transformer_decoder.build import build_transformer_decoder_indexed
 from ..pixel_decoder.build import build_pixel_decoder_indexed
 from ..backbone.build import build_backbone_indexed
 
@@ -92,7 +92,7 @@ class MaskPredictorOracleTeacher(nn.Module):
         pixel_decoder = build_pixel_decoder_indexed(cfg, layer_index, bb_output_shape)
         if final_layer or mask_decoder_all_levels:
             mask_decoder_input_dim = cfg.MODEL.MR_SEM_SEG_HEAD.CONVS_DIM[layer_index]
-            mask_decoder = build_transformer_decoder(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
+            mask_decoder = build_transformer_decoder_indexed(cfg, layer_index, mask_decoder_input_dim, mask_classification=True)
         else:
             mask_decoder = None
         return {

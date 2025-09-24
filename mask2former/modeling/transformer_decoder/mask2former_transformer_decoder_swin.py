@@ -13,7 +13,7 @@ from detectron2.utils.registry import Registry
 
 from .position_encoding import PositionEmbeddingSine
 
-from .mask2former_transformer_decoder import TRANSFORMER_DECODER_REGISTRY
+from .build import TRANSFORMER_DECODER_REGISTRY
 
 
 class SelfAttentionLayer(nn.Module):

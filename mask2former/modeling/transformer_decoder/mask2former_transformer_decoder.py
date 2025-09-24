@@ -15,10 +15,7 @@ from detectron2.utils.registry import Registry
 from .position_encoding import PositionEmbeddingSine
 from ..backbone.point_utils import upsample_feature_shepard
 
-TRANSFORMER_DECODER_REGISTRY = Registry("TRANSFORMER_MODULE")
-TRANSFORMER_DECODER_REGISTRY.__doc__ = """
-Registry for transformer module in MaskFormer.
-"""
+from .build import TRANSFORMER_DECODER_REGISTRY
 
 def point2img(x, pos, mask_size=None):
     '''
