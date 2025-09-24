@@ -23,6 +23,7 @@ from .data.dataset_mappers.mask_former_semantic_dataset_mapper import (
 
 # models
 from .maskformer_model import MaskFormer
+from .maskformer_model_swin import MaskFormerSwin
 from .maskformer_model_ml import MaskFormerML
 from .maskfiner_model import MaskFiner
 from .maskfiner_oracle_model import MaskFinerOracle
