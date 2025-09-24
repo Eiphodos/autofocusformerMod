@@ -34,7 +34,7 @@ SOLVER:
   AMP:
     ENABLED: False
 INPUT:
-  MIN_SIZE_TRAIN: !!python/object/apply:eval ["[int(x * 0.1 * 1024) for x in range(10, 21)]"]
+  MIN_SIZE_TRAIN: !!python/object/apply:eval ["[int(x * 0.1 * 1024) for x in range(5, 21)]"]
   MIN_SIZE_TRAIN_SAMPLING: "choice"
   MIN_SIZE_TEST: 1024
   MAX_SIZE_TRAIN: 4096
