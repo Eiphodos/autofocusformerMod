@@ -9,9 +9,14 @@ from torch.nn import functional as F
 
 from detectron2.config import configurable
 from detectron2.layers import Conv2d
+from detectron2.utils.registry import Registry
 
 from .position_encoding import PositionEmbeddingSine
-from .maskformer_transformer_decoder import TRANSFORMER_DECODER_REGISTRY
+
+TRANSFORMER_DECODER_REGISTRY = Registry("TRANSFORMER_MODULE")
+TRANSFORMER_DECODER_REGISTRY.__doc__ = """
+Registry for transformer module in MaskFormer.
+"""
 
 
 class SelfAttentionLayer(nn.Module):
