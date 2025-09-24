@@ -1,6 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 
 from .mask2former_transformer_decoder import MultiScaleMaskedTransformerDecoder
+from .mask2former_transformer_decoder_swin import MultiScaleMaskedTransformerDecoderSwin
 from .maskfiner_transformer_decoder import MultiScaleMaskFinerTransformerDecoder
 from .maskfiner_transformer_decoder_oracle_teacher import MultiScaleMaskFinerTransformerDecoderOracleTeacher
 from .maskfiner_transformer_decoder_5s import MultiScaleMaskFinerTransformerDecoder5S

@@ -13,6 +13,7 @@ from .backbone.mixres_oracle_teacher import OracleTeacherBackbone
 from .backbone.mixres_up_down import UpDownBackbone
 from .backbone.swin import D2SwinTransformer
 
+from .pixel_decoder.msdeformattn import MSDeformAttnPixelDecoderSwin
 from .pixel_decoder.msdeformattn_pc_maskfiner_oracle_teacher import MSDeformAttnPixelDecoderMaskFinerOracleTeacher
 from .pixel_decoder.proj_maskfiner_oracle_teacher import ProjMaskFinerOracleTeacher
 from .pixel_decoder.msdeformattn_pc_maskfiner_proj import MSDeformAttnPixelDecoderMaskFinerProj

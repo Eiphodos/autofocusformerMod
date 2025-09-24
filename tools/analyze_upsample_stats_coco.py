@@ -123,11 +123,11 @@ def find_pos_org_order(pos_org, pos_shuffled):
 if __name__ == "__main__":
     dataset_dir = Path(os.getenv("DETECTRON2_DATASETS", "datasets")) / "coco"
 
-    task = "instance"
+    task = "semseg"
     if task == "instance" or task == "panoptic":
         annotation_dir = dataset_dir / "panoptic_train2017"
     elif task == "semseg":
-        annotation_dir = dataset_dir / "stuff_train2017_pixelmaps"
+        annotation_dir = dataset_dir / "semseg_val2017"
     files = glob.glob(os.path.join(annotation_dir, '*.png'))
     patch_sizes = [32, 16, 8]
     print_freq = 1000

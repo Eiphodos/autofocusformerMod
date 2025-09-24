@@ -231,7 +231,6 @@ class MaskFinerOracleTeacherSW(nn.Module):
         count_mat = images.tensor.new_zeros((batch_size, 1, h_img, w_img))
         processed_results = []
 
-        #print("Output prediction shape in eval is {}".format(preds.shape))
 
         for h_idx in range(h_grids):
             for w_idx in range(w_grids):
@@ -248,6 +247,16 @@ class MaskFinerOracleTeacherSW(nn.Module):
                 features = self.backbone(crop_img, sem_seg_gt, target_pad)
                 outputs = self.sem_seg_head(features)
 
+                disagreement_masks_pred = []
+                for i in range(self.backbone.n_scales - 1):
+                    upsampling_mask_pred = features['upsampling_mask_pred_{}'.format(i)]
+                    upsampling_mask_pos = features['upsampling_mask_pos_{}'.format(i)]
+
+                    # For visualizations
+                    dm_pred = {}
+                    dm_pred["disagreement_mask_pred_{}".format(i)] = upsampling_mask_pred
+                    dm_pred["disagreement_mask_pred_pos_{}".format(i)] = upsampling_mask_pos
+                    disagreement_masks_pred.append(dm_pred)
 
                 mask_cls_results = outputs["pred_logits"]
                 mask_pred_results = outputs["pred_masks"]
