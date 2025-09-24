@@ -1,4 +1,4 @@
-_BASE_: Base-Cityscapes-SemanticSegmentation.yaml
+_BASE_: Base-Cityscapes-SemanticSegmentation-SW.yaml
 MODEL:
   META_ARCHITECTURE: "MaskFormerSwin"
   SEM_SEG_HEAD:
