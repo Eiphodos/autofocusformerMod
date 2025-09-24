@@ -13,10 +13,7 @@ from detectron2.utils.registry import Registry
 
 from .position_encoding import PositionEmbeddingSine
 
-TRANSFORMER_DECODER_REGISTRY = Registry("TRANSFORMER_MODULE")
-TRANSFORMER_DECODER_REGISTRY.__doc__ = """
-Registry for transformer module in MaskFormer.
-"""
+from .mask2former_transformer_decoder import TRANSFORMER_DECODER_REGISTRY
 
 
 class SelfAttentionLayer(nn.Module):
