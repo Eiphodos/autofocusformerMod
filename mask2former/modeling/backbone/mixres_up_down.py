@@ -88,6 +88,8 @@ class MRUD(nn.Module):
             upsamplers.append(upsample_out)
         self.upsamplers = nn.ModuleList(upsamplers)
 
+        self.upsample_stats = {}
+
         self.apply(self._init_weights)
 
         print("Successfully built UpDownBackbone model!")
@@ -143,6 +145,8 @@ class MRUD(nn.Module):
                     outs[f + '_pos'] = feat_pos
                     outs[f + '_scale'] = feat_scale
                     outs[f + '_spatial_shape'] = feat_ss
+                if i == 0 and j in [1, 2, 3]:
+                    self.upsample_stats["scale_{}:{}_tokens".format(i,f)].append(feat.shape[1])
                 # If feature is an input to the next layer
                 if f in self.bb_in_feats[j + 1]:
                     # We only do residual connections if we are on the right side in the U-Net
@@ -192,6 +196,7 @@ class MRUD(nn.Module):
             #outs[f] = torch.cat(outs[f][-(i + 1):], dim=2)
             outs[f] = outs[f][-1]
         outs['min_spatial_shape'] = output['min_spatial_shape']
+        print(self.upsample_stats)
         return outs
 
 
