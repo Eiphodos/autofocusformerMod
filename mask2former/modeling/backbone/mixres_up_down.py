@@ -146,6 +146,8 @@ class MRUD(nn.Module):
                     outs[f + '_scale'] = feat_scale
                     outs[f + '_spatial_shape'] = feat_ss
                 if i == 0 and j in [1, 2, 3]:
+                    if not "scale_{}_{}_tokens".format(j,f) in self.upsample_stats.keys():
+                        self.upsample_stats["scale_{}_{}_tokens".format(j, f)] = []
                     self.upsample_stats["scale_{}_{}_tokens".format(j,f)].append(feat.shape[1])
                 # If feature is an input to the next layer
                 if f in self.bb_in_feats[j + 1]:
