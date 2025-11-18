@@ -388,7 +388,7 @@ def main(args):
             cfg.MODEL.WEIGHTS, resume=args.resume
         )
         res = Trainer.test(cfg, model)
-        for k, v in model.backbone.upsample_stats:
+        for k, v in model.backbone.upsample_stats.items():
             print("Average upsampled tokens for {}: {}".format(k, np.mean(v)))
         if cfg.TEST.AUG.ENABLED:
             res.update(Trainer.test_with_TTA(cfg, model))
