@@ -705,10 +705,10 @@ class MRNB(nn.Module):
             dyn_ratio = min(((importance_scores > self.dynamic_up_threshold).sum(-1) / N).max(), upscale_ratio)
             dyn_ratio = max(dyn_ratio, 0.1)
             k_split = int(N * dyn_ratio)
-            self.last_upsample_ratio = dyn_ratio
+            #self.last_upsample_ratio = dyn_ratio
         else:
             k_split = int(N * self.upscale_ratio)
-            self.last_upsample_ratio = self.upscale_ratio
+            #self.last_upsample_ratio = self.upscale_ratio
 
         _, sorted_indices = torch.sort(importance_scores, dim=1, descending=False)
         bottomk_idx = sorted_indices[:, :-k_split]

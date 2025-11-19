@@ -123,11 +123,11 @@ class MRUD(nn.Module):
             all_ss = []
             #print("Backbone {} has {} out features".format(j, all_out_features))
             #print("Next Backbone {} has {} in features".format(j + 1, self.bb_in_feats[j + 1]))
-            if j in [1, 2, 3]:
-                if not "scale_{}_ratio".format(j) in self.upsample_stats.keys():
-                    self.upsample_stats["scale_{}_ratio".format(j)] = []
-                last_up_ratio = self.backbones[j].last_upsample_ratio.item()
-                self.upsample_stats["scale_{}_ratio".format(j)].append(last_up_ratio)
+            #if j in [1, 2, 3]:
+            #    if not "scale_{}_ratio".format(j) in self.upsample_stats.keys():
+            #        self.upsample_stats["scale_{}_ratio".format(j)] = []
+            #    last_up_ratio = self.backbones[j].last_upsample_ratio.item()
+            #    self.upsample_stats["scale_{}_ratio".format(j)].append(last_up_ratio)
             for i, f in enumerate(bb_out_features):
                 feat = output[f]
                 feat_pos = output[f + '_pos']
@@ -199,7 +199,6 @@ class MRUD(nn.Module):
             #outs[f] = torch.cat(outs[f][-(i + 1):], dim=2)
             outs[f] = outs[f][-1]
         outs['min_spatial_shape'] = output['min_spatial_shape']
-        print(self.upsample_stats)
         return outs
 
 
