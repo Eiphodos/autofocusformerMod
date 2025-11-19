@@ -137,11 +137,11 @@ class MRUD(nn.Module):
                 # If feature has already been processed
                 if f + '_pos' in outs:
                     # Features in the same resolution need to be ordered in the same way
-                    #pos_indices = self.find_pos_org_order(outs[f + '_pos'], feat_pos)
-                    #b_ = torch.arange(B).unsqueeze(-1).expand(-1, N)
-                    #feat = feat[b_, pos_indices]
-                    #feat_pos = feat_pos[b_, pos_indices]
-                    #feat_scale = feat_scale[b_, pos_indices]
+                    pos_indices = self.find_pos_org_order(outs[f + '_pos'], feat_pos)
+                    b_ = torch.arange(B).unsqueeze(-1).expand(-1, N)
+                    feat = feat[b_, pos_indices]
+                    feat_pos = feat_pos[b_, pos_indices]
+                    feat_scale = feat_scale[b_, pos_indices]
                     assert (outs[f + '_pos'] == feat_pos).all()
                     outs[f].append(feat)
                 else:
