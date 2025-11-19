@@ -126,7 +126,7 @@ class MRUD(nn.Module):
             if j in [1, 2, 3]:
                 if not "scale_{}_ratio".format(j) in self.upsample_stats.keys():
                     self.upsample_stats["scale_{}_ratio".format(j)] = []
-                last_up_ratio = self.backbones[j].last_upsample_ratio
+                last_up_ratio = self.backbones[j].last_upsample_ratio.item()
                 self.upsample_stats["scale_{}_ratio".format(j)].append(last_up_ratio)
             for i, f in enumerate(bb_out_features):
                 feat = output[f]
